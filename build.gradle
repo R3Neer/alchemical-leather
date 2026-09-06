@@ -1,0 +1,32 @@
+plugins { id 'net.fabricmc.fabric-loom' version '1.17.20' }
+repositories { mavenCentral() }
+loom {
+    splitEnvironmentSourceSets()
+    mods { alchemical_leather { sourceSet sourceSets.main; sourceSet sourceSets.client } }
+}
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'alchemical_leather-test'
+        enableGameTests = true
+        enableClientGameTests = true
+        eula = true
+        clearRunDirectory = false
+    }
+}
+dependencies {
+    minecraft 'com.mojang:minecraft:26.2'
+    implementation 'net.fabricmc:fabric-loader:0.19.5'
+    implementation 'net.fabricmc.fabric-api:fabric-api:0.159.0+26.2'
+}
+processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+tasks.withType(JavaExec).configureEach {
+    if (providers.gradleProperty('compatMods').isPresent()) {
+        systemProperty 'fabric.addMods', file(providers.gradleProperty('compatMods').get()).absolutePath
+        systemProperty 'alchemical.compatRequired', 'true'
+    }
+}
+
+jar { from('LICENSE') { rename { "${it}_alchemical-leather" } } }
