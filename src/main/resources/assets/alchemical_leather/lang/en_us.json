@@ -1,0 +1,16 @@
+{
+  "tooltip.alchemical_leather.title": "Alchemical Infusion",
+  "tooltip.alchemical_leather.remaining": "%s remaining",
+  "tooltip.alchemical_leather.stable": "Permanent",
+  "tooltip.alchemical_leather.instant": "Activates once when equipped",
+  "message.alchemical_leather.multiple_effects": "This potion contains multiple effects.",
+  "message.alchemical_leather.no_effect": "This potion has no effect.",
+  "message.alchemical_leather.unsupported": "This effect cannot be infused.",
+  "message.alchemical_leather.invalid": "Infusion data is unavailable or invalid.",
+  "message.alchemical_leather.sneak": "Sneak to pour this potion.",
+  "message.alchemical_leather.different": "The cauldron contains a different potion or bottle type.",
+  "message.alchemical_leather.full": "The cauldron is full.",
+  "message.alchemical_leather.enchanted": "Enchanted armor cannot be infused.",
+  "message.alchemical_leather.slot": "This effect needs a different armor piece.",
+  "message.alchemical_leather.fractional": "This cauldron contains a partial potion dose."
+}

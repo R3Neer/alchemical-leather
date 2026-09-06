@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "alchemical_leather",
+  "version": "${version}",
+  "name": "Alchemical Leather",
+  "description": "Leather armor can absorb potion effects from potion-filled cauldrons.",
+  "authors": [
+    "R3Neer"
+  ],
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.r3neer.alchemicalleather.AlchemicalLeather"
+    ],
+    "client": [
+      "io.github.r3neer.alchemicalleather.client.AlchemicalLeatherClient"
+    ]
+  },
+  "mixins": [
+    "alchemical_leather.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.159.0+26.2"
+  },
+  "license": "GPL-3.0-or-later"
+}

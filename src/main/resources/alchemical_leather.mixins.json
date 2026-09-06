@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "io.github.r3neer.alchemicalleather.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "LivingEffectsMixin",
+    "LivingEffectsAccess",
+    "EffectAccess",
+    "EnchantableStackMixin",
+    "AnvilMixin",
+    "RepairMixin",
+    "GrindstoneMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
