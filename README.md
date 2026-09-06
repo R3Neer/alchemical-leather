@@ -1,104 +1,107 @@
 # Alchemical Leather
 
-> Leather armor can absorb potion effects from potion-filled cauldrons.
+Alchemical Leather is a Fabric mod that lets leather armor absorb potion effects. Each piece can hold one effect, turning a basic set of leather armor into a flexible set of alchemical equipment.
 
-Alchemical Leather is a Fabric mod for Minecraft 26.2. It lets the four vanilla leather armor pieces hold one potion effect each, with the effect assigned to an appropriate equipment slot.
-
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Minecraft](https://img.shields.io/badge/Minecraft-26.2-62B47A)](https://www.minecraft.net/)
+[![Minecraft 26.2](https://img.shields.io/badge/Minecraft-26.2-62B47A)](https://www.minecraft.net/)
 [![Fabric](https://img.shields.io/badge/Loader-Fabric-DDBD3B)](https://fabricmc.net/)
+[![GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-## The familiar cauldron
+![Potion-filled cauldrons in game](docs/images/vanilla-cauldron.png)
 
-There is no new block, item, recipe, screen, or crafting station. You use the ordinary Minecraft cauldron: it keeps its vanilla item, name, recipe, body, outline, and placement behavior. Only its liquid changes when it contains a potion. Breaking it or using pick-block returns an ordinary cauldron.
+## How it works
 
-![Three ordinary cauldrons: potion liquid, empty vanilla cauldron, and a second potion cauldron](docs/images/vanilla-cauldron.png)
+1. Pour a potion into a normal cauldron. It can hold up to three identical bottles.
+2. Use an unenchanted piece of leather armor on the potion-filled cauldron. One dose is consumed and the armor takes on the potion's color.
+3. Equip the armor to receive its effect.
+4. Wash the armor in a water cauldron when you want to remove the infusion and its color.
 
-## How it plays
+Splash and lingering potions are poured with **sneak + right-click**, which prevents them from being thrown accidentally.
 
-1. Fill a cauldron with a potion. Use **sneak + right-click** for splash and lingering potions.
-2. Add up to three identical bottles. Different bottle types or potion contents never mix.
-3. Right-click the liquid with unenchanted vanilla leather armor. One dose gives one infusion, if the effect belongs to that armor slot.
-4. Equip the piece to activate the effect.
-5. Wash it in a water cauldron to remove the infusion and leather dye, consuming one water level.
+Only one effect can be stored on each piece. Infusing it again replaces the previous effect instead of combining levels or durations. Potions with multiple effects, such as Turtle Master, cannot be used.
 
-![Infused vanilla leather leggings grant Speed II while equipped](docs/images/infused-leather.png)
+### Potion types
 
-An infusion replaces the previous effect, amplifier, duration, and leather color. It never combines effects, raises a level, or extends a duration. Potions carrying several effects, such as Turtle Master, are rejected without consuming a dose.
-
-## Infusion rules
-
-| Potion source | Result while equipped |
+| Potion | Infusion behavior |
 |---|---|
-| Normal potion | The original duration runs only while worn. It pauses in inventory. |
-| Splash potion | Same as a normal potion, poured with sneak + right-click. |
-| Lingering potion | A non-instant effect remains active permanently at its original amplifier. |
-| Instant effect | Activates once on equipping, then the infusion is consumed. |
+| Normal | Keeps its original level and duration. Time passes only while the armor is equipped. |
+| Splash | Behaves like a normal potion after being poured into the cauldron. |
+| Lingering | Provides its effect indefinitely while equipped. |
+| Instant effect | Activates once when the armor is equipped, then the infusion is consumed. |
 
-The armor remains vanilla leather. Its trim, custom name, damage, and unrelated components are preserved. Infused armor cannot receive legitimate survival enchantments; existing enchanted armor cannot be infused. Rename it or repair it with leather in an anvil, and wash it before combining armor pieces or using a grindstone.
+![Speed II supplied by infused leather leggings](docs/images/infused-leather.png)
 
-## Effect slots
+Infused armor cannot be enchanted, and enchanted armor cannot be infused. Armor trims, custom names, durability and other item data are preserved. Renaming and repairing with leather work normally.
 
-Effect-to-slot assignments are datapack data, not a hard-coded potion list.
+## Effects and armor slots
 
-| Equipment slot | Included effects |
+| Armor piece | Effects |
 |---|---|
-| Helmet | Night Vision, Invisibility, Water Breathing, Deeper Dark Blindness, Alex's Mobs Lava Vision |
-| Chestplate | Strength, Weakness, Regeneration, Fire Resistance, Poison, Instant Health/Damage, Wind Charged, Oozing, Infested, Scale Brews Growth/Shrinking, Alex's Mobs body effects, Friends&Foes Reaching, Wilder Wild Reach Boost/Scorching |
-| Leggings | Speed, Slowness, Jump Boost, Weaving |
-| Boots | Slow Falling, Alex's Mobs Knockback Resistance and Clinging |
-
-Growth and Shrinking compete for the chestplate. Speed and Jump Boost compete for leggings. Lingering Growth III and Shrinking III deliberately stay level III for as long as the chestplate is worn.
+| Leather Cap | Night Vision, Invisibility, Water Breathing, Blindness (Deeper Dark), Lava Vision (Alex's Mobs) |
+| Leather Tunic | Strength, Weakness, Regeneration, Fire Resistance, Poison, Instant Health, Instant Damage, Wind Charged, Oozing, Infested, Growth, Shrinking, Poison Resistance, Bug Pheromones, Soulsteal, Reaching, Reach Boost, Scorching |
+| Leather Pants | Speed, Slowness, Jump Boost, Weaving |
+| Leather Boots | Slow Falling, Knockback Resistance, Clinging |
 
 ## Installation
 
-Install on **both client and server**:
+Alchemical Leather must be installed on both the client and server.
 
-1. Install Java 25, Minecraft 26.2, Fabric Loader 0.19.5 or later, and Fabric API 0.159.0+26.2 or later.
-2. Download the release JAR and place it in the instance or server's `mods` directory.
-3. Start the game. No configuration is required for vanilla use.
+- Minecraft 26.2
+- Fabric Loader 0.19.5 or newer
+- Fabric API 0.159.0+26.2 or newer
+- Java 25
 
-The current first release is `0.1.0-alpha.1`.
+Download the JAR from the [latest release](https://github.com/R3Neer/alchemical-leather/releases/latest) and place it in the instance's `mods` folder.
 
-## Optional mod compatibility
+## Mod compatibility
 
-No optional mod is required. Alchemical Leather works standalone and recognizes these audited providers when they are present:
+Alchemical Leather works on its own. It also includes support for effects and mechanics from these tested versions:
 
-- BedrockIfy 1.11.8: compatible potion-cauldron import at complete doses 1, 2, and 3. Partial arrow doses are left unchanged. Its dyed water can recolor infused leather.
-- Scale Brews beta.3 and beta.4: Growth and Shrinking, including uncapped lingering level III infusions.
-- Alex's Mobs Continued 2.1.9, Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1, and Grind Enchantments 4.2.1+26.1.2.
+- BedrockIfy 1.11.8
+- Scale Brews 0.1.0-beta.3 and beta.4
+- Alex's Mobs Continued 2.1.9
+- Friends&Foes 4.0.27
+- Wilder Wild 4.2.11
+- Deeper Dark 4.4.1
+- Additional Additions 10.0.12
+- Enchancement 26.2-r4
+- Functional Armor Trims 2.2.1
+- Grind Enchantments 4.2.1+26.1.2
 
-The technical full-cauldron block is internal and has no item or creative-menu entry. BedrockIfy uses a different storage model, so custom potion data already lost by BedrockIfy cannot be recovered. Converted cauldrons use Alchemical Leather's three-dose rules and no longer tip arrows.
+BedrockIfy potion cauldrons can be picked up by Alchemical Leather when they contain complete bottle doses. Dyed water from BedrockIfy can also recolor infused armor without removing its effect.
 
-## Datapacks
+## Datapack support
 
-Rules live at:
+The armor slot for an effect is controlled by datapack files. A rule goes in:
 
 ```text
 data/<effect_namespace>/alchemical_leather/effect_slots/<effect_path>.json
 ```
 
-For example:
-
 ```json
-{"slot":"chestplate"}
+{
+  "slot": "chestplate"
+}
 ```
 
-Supported slots are `helmet`, `chestplate`, `leggings`, and `boots`. A pack can disable a rule with `{"enabled":false}`. It can also use `requires_mod` and `requires_resource` for optional providers. Changing a rule suspends incompatible equipped armor without deleting its stored infusion, so it can still be washed.
+Valid values are `helmet`, `chestplate`, `leggings` and `boots`. Rules may also use `enabled`, `requires_mod` and `requires_resource` for overrides and optional content.
 
-## Build and validate
+## Building
+
+Use Java 25 and the included Gradle wrapper:
 
 ```powershell
 .\gradlew.bat build
-.\gradlew.bat runGameTest
-.\gradlew.bat runClientGameTest
-.\gradlew.bat runGameTest '-PcompatMods=C:/path/to/fixture/mods'
 ```
 
-The final standalone build passed 28 required server GameTests. Compatibility fixtures passed 63 required server GameTests with both Scale Brews beta.3 and beta.4. The client GameTest verified cauldron color synchronization, equipping, effect synchronization, removal on unequipping, and produced the screenshots above.
+Additional test tasks:
 
-Read [the validation report](docs/validation.md) for coverage, fixture versions, and the remaining real-game checks. Automated checks do not replace full-modpack client QA for ItemSwapper, dispensers, resource packs, camera/collision effects, death/respawn, reconnects, and Enchancement's alternate overhaul mode.
+```powershell
+.\gradlew.bat runGameTest
+.\gradlew.bat runClientGameTest
+```
+
+The standalone suite contains 27 project GameTests, plus Fabric's environment check. Compatibility fixtures have also been run with both supported Scale Brews betas and the optional mods listed above. See [the validation report](docs/validation.md) for the complete results and remaining manual checks.
 
 ## License
 
-Alchemical Leather is licensed under the [GNU General Public License v3.0 or later](LICENSE). It does not bundle optional mod binaries or implementation classes. Vanilla geometry and textures are referenced by their Minecraft resource identifiers.
+Alchemical Leather is available under the [GNU General Public License v3.0 or later](LICENSE).
