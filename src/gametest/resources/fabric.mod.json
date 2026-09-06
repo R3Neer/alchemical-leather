@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "alchemical_leather-test",
+  "version": "1.0.0",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "io.github.r3neer.alchemicalleather.test.OwnershipTests",
+      "io.github.r3neer.alchemicalleather.test.CoreTests",
+      "io.github.r3neer.alchemicalleather.test.CompatibilityTests",
+      "io.github.r3neer.alchemicalleather.test.PersistenceTests"
+    ],
+    "fabric-client-gametest": [
+      "io.github.r3neer.alchemicalleather.test.ClientChecks"
+    ]
+  }
+}
