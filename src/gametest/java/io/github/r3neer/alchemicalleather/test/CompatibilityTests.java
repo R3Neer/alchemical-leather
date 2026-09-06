@@ -20,6 +20,36 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.*;
 import java.util.*;
 public class CompatibilityTests {
+    @GameTest public void reorientationInfusesOnlyBoots(GameTestHelper h){
+        var id=Identifier.parse("clinging_reoriented:reorientation");
+        if(!BuiltInRegistries.MOB_EFFECT.containsKey(id)){
+            h.assertTrue(EffectSlotRules.slot(id)==null,"Optional rule inactive without a version supplying Reorientation");h.succeed();return;
+        }
+        h.assertTrue(EffectSlotRules.slot(id)==EquipmentSlot.FEET,"Reorientation belongs to boots");
+        var brewing=h.getLevel().potionBrewing();
+        var base=BuiltInRegistries.POTION.get(Identifier.parse("alexsmobs:clinging")).orElseThrow();
+        for(var type:List.of(Items.POTION,Items.SPLASH_POTION,Items.LINGERING_POTION)){
+            var bottle=brewing.mix(new ItemStack(Items.SHULKER_SHELL),PotionContents.createItemStack(type,base));
+            var contents=bottle.get(DataComponents.POTION_CONTENTS);
+            h.assertTrue(contents.potion().orElseThrow().is(id),"Actual shell recipe");
+            var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));
+            CauldronService.write(h.getLevel(),pos,contents,type,1);
+            for(var wrong:List.of(Items.LEATHER_HELMET,Items.LEATHER_CHESTPLATE,Items.LEATHER_LEGGINGS)){
+                p.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(wrong));
+                h.assertTrue(CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false))==InteractionResult.FAIL,"Other armor rejected");
+            }
+            p.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.LEATHER_BOOTS));
+            CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false));
+            var boots=p.getMainHandItem();var infusion=boots.get(Infusions.TYPE);
+            h.assertTrue(infusion!=null && infusion.effect().equals(id),"Boot infusion retains Reorientation");
+            h.assertTrue(infusion.mode().equals(type==Items.LINGERING_POTION?"stable":"timed"),"Bottle lifetime policy");
+            p.setItemSlot(EquipmentSlot.FEET,boots);EquipmentInfusions.sync(p);
+            h.assertTrue(p.hasEffect(infusion.holder().orElseThrow()),"Worn boots apply effect");
+            p.setItemSlot(EquipmentSlot.FEET,ItemStack.EMPTY);EquipmentInfusions.sync(p);
+            h.assertFalse(p.hasEffect(infusion.holder().orElseThrow()),"Removing boots removes owned effect");
+        }
+        h.succeed();
+    }
     @GameTest public void requestedModsActuallyLoaded(GameTestHelper h){
         if(Boolean.getBoolean("alchemical.compatRequired"))for(String id:List.of("bedrockify","scalebrews","alexsmobs","friendsandfoes","wilderwild","mr_deeper_dark","enchancement","functional_trims"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required test mod "+id);
         h.succeed();

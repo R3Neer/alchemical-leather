@@ -1,0 +1,5 @@
+{
+  "slot": "boots",
+  "requires_mod": "clinging_reoriented",
+  "requires_effect": "clinging_reoriented:reorientation"
+}

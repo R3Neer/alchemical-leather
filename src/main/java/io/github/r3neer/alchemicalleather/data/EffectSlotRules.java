@@ -18,6 +18,7 @@ public final class EffectSlotRules implements SimpleSynchronousResourceReloadLis
             try(var reader=resource.openAsReader()) {
                 var json=JsonParser.parseReader(reader).getAsJsonObject();
                 if(json.has("requires_mod")&&!FabricLoader.getInstance().isModLoaded(json.get("requires_mod").getAsString()))return;
+                if(json.has("requires_effect")&&!BuiltInRegistries.MOB_EFFECT.containsKey(Identifier.parse(json.get("requires_effect").getAsString())))return;
                 if(json.has("requires_resource")&&manager.getResource(Identifier.parse(json.get("requires_resource").getAsString())).isEmpty())return;
                 if(json.has("enabled")&&!json.get("enabled").getAsBoolean())return;
                 var effect=Identifier.fromNamespaceAndPath(path.getNamespace(),path.getPath().substring(prefix.length(),path.getPath().length()-5));

@@ -39,7 +39,7 @@ Infused armor cannot be enchanted, and enchanted armor cannot be infused. Armor 
 | Leather Cap | Night Vision, Invisibility, Water Breathing, Blindness (Deeper Dark), Lava Vision (Alex's Mobs) |
 | Leather Tunic | Strength, Weakness, Regeneration, Fire Resistance, Poison, Instant Health, Instant Damage, Wind Charged, Oozing, Infested, Growth, Shrinking, Poison Resistance, Bug Pheromones, Soulsteal, Reaching, Reach Boost, Scorching |
 | Leather Pants | Speed, Slowness, Jump Boost, Weaving |
-| Leather Boots | Slow Falling, Knockback Resistance, Clinging |
+| Leather Boots | Slow Falling, Knockback Resistance, Clinging, Reorientation (Clinging Reoriented) |
 
 ## Installation
 
@@ -59,6 +59,7 @@ Alchemical Leather works on its own. It also includes support for effects and me
 - BedrockIfy 1.11.8
 - Scale Brews 0.1.0-beta.3 and beta.4
 - Alex's Mobs Continued 2.1.9
+- Clinging Reoriented 0.1.0-alpha.4
 - Friends&Foes 4.0.27
 - Wilder Wild 4.2.11
 - Deeper Dark 4.4.1
@@ -68,6 +69,8 @@ Alchemical Leather works on its own. It also includes support for effects and me
 - Grind Enchantments 4.2.1+26.1.2
 
 BedrockIfy potion cauldrons can be picked up by Alchemical Leather when they contain complete bottle doses. Dyed water from BedrockIfy can also recolor infused armor without removing its effect.
+
+With Clinging Reoriented 0.1.0-alpha.4 or newer, Reorientation potions can be infused into leather boots. Brew one by adding a shulker shell to a Clinging potion. Clinging permits one gravity change per airborne stretch, restored on landing; Reorientation permits unlimited changes. Normal, splash and lingering infusions follow the duration rules above. This integration is optional.
 
 ## Datapack support
 
@@ -83,7 +86,7 @@ data/<effect_namespace>/alchemical_leather/effect_slots/<effect_path>.json
 }
 ```
 
-Valid values are `helmet`, `chestplate`, `leggings` and `boots`. Rules may also use `enabled`, `requires_mod` and `requires_resource` for overrides and optional content.
+Valid values are `helmet`, `chestplate`, `leggings` and `boots`. Rules may also use `enabled`, `requires_mod`, `requires_resource` and `requires_effect` for overrides and optional content. `requires_effect` takes a registered effect ID; the rule stays inactive if that effect is absent, including when an older optional mod version is installed.
 
 ## Building
 
@@ -100,7 +103,7 @@ Additional test tasks:
 .\gradlew.bat runClientGameTest
 ```
 
-The standalone suite contains 27 project GameTests, plus Fabric's environment check. Compatibility fixtures have also been run with both supported Scale Brews betas and the optional mods listed above. See [the validation report](docs/validation.md) for the complete results and remaining manual checks.
+The standalone suite contains 28 project GameTests, plus Fabric's environment check. Compatibility fixtures have also been run with both supported Scale Brews betas and the optional mods listed above. See [the validation report](docs/validation.md) for the complete results and remaining manual checks.
 
 ## License
 

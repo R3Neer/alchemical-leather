@@ -1,5 +1,27 @@
 # Validation of 0.1.0-alpha.1
 
+## Reorientation update — 6 September 2026
+
+The updated prerelease adds optional `clinging_reoriented:reorientation` support
+for leather boots. A `requires_effect` guard keeps the rule inactive when the effect
+is absent, including older Clinging Reoriented versions. Clinging's existing slot
+is unchanged. No new mandatory dependency is introduced.
+
+- Final standalone build: 29/29 required tests passed at 23:33:54 local time
+  (28 project tests and Fabric's environment check).
+- Full compatibility fixture including Clinging Reoriented alpha.4 and Gravity
+  Changer 1.5.2-beta.5: 64/64 passed at 23:35:11 (28 project, 35 upstream, one runner).
+- A separate real-server run with Clinging Reoriented alpha.3 passed at 23:36:29;
+  the new effect is absent and its optional boots rule stays inactive.
+- The new test actually brews Reorientation with a shulker shell, pours its normal,
+  splash and lingering contents into a cauldron, rejects helmet/tunic/pants, infuses
+  boots, checks the lifetime mode, and verifies equip/unequip effect ownership.
+- The Clinging Reoriented project's client suite separately passed physical Shift,
+  repeated Reorientation, failure/success sounds and First Person checks at 23:30:15.
+  This does not replace human playtesting of the combined armor and gravity behavior.
+
+The earlier test counts and fixtures below describe the original alpha build.
+
 Local validation on 6 September 2026, Windows, Java 25.0.3, Minecraft 26.2, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2, Loom 1.17.20 and Gradle 9.5.1. This is an alpha with automated coverage and a reviewed client capture, not a claim of completed human playtesting of the full modpack.
 
 ## Automated coverage
@@ -45,7 +67,9 @@ The full fixture runs 63 required server tests: the 27 project tests, 35 tests s
 - Enchancement's alternate overhaul menu and late confirmation changes.
 - Profiling many simultaneous wearers and equipment synchronization traffic. Source inspection confirms no global entity or full-inventory scans; no quantitative load benchmark is claimed.
 
-The GitHub Actions workflow is provided but has not run remotely. There is no published release, remote repository or installation into the user's gameplay profile as part of this delivery.
+The repository and alpha prerelease are published on GitHub. Subsequent pushes run
+the provided GitHub Actions workflow; consult the run attached to the current commit
+for its outcome. The original delivery's local-only status is historical.
 
 ## Reproduction
 
