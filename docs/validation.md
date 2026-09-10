@@ -6,13 +6,15 @@ This is alpha validation: automated coverage is broad and the client path is exe
 
 ## Release-candidate CI evidence
 
-The alpha.3 feature candidate is exercised by the normal GitHub Actions pipeline. Candidate run `34540349307` completed successfully after the final implementation correction.
+The final alpha.3 release candidate is merge commit `224aadc7c2cf06198e4afac496d2536711da4518` on `main`. Main run `34541183384` completed successfully after the pull-request candidate and its independent PR run had already passed the same pipeline.
 
 | Run | Result |
 |---|---|
 | Standalone build + server GameTests | **PASS — 41/41 required GameTests** |
 | Client GameTest under Xvfb / llvmpipe | **PASS** |
 | Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 41/41 required GameTests** |
+
+The earlier implementation-candidate run `34540349307` and pull-request run `34540989217` also completed successfully. The release record therefore reflects the same feature set passing on the implementation candidate, the PR path and the merged `main` commit.
 
 The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
