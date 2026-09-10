@@ -31,6 +31,8 @@ public final class CauldronService {
         boolean bedActive=BedrockifyBridge.cauldronsActive();boolean bedPotion=bedActive&&BedrockifyBridge.potion(state),bedDyed=bedActive&&BedrockifyBridge.dyed(state);
         boolean armor=armorForSide(stack,level),dye=stack.has(DataComponents.DYE);
 
+        // Creation of dyed water is the only vanilla-water entry point shared with BedrockIfy.
+        // When BedrockIfy's cauldron feature is actually active, let it own this gesture to avoid double consumption.
         if(dye&&state.is(Blocks.WATER_CAULDRON)) {
             if(bedActive)return InteractionResult.PASS;
             if(!allowed(player,level,pos))return InteractionResult.FAIL;
@@ -66,6 +68,12 @@ public final class CauldronService {
                 if(level.isClientSide())return InteractionResult.SUCCESS;
                 Item used=stack.getItem();player.setItemInHand(hand,ItemUtils.createFilledResult(stack,player,new ItemStack(Items.WATER_BUCKET)));
                 player.awardStat(Stats.USE_CAULDRON);player.awardStat(Stats.ITEM_USED.get(used));level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());fluidFeedback(level,pos,SoundEvents.BUCKET_FILL,GameEvent.FLUID_PICKUP);return InteractionResult.SUCCESS;
+            }
+            if(stack.is(Items.WATER_BUCKET)) {
+                if(!allowed(player,level,pos))return InteractionResult.FAIL;
+                if(level.isClientSide())return InteractionResult.SUCCESS;
+                Item used=stack.getItem();player.setItemInHand(hand,ItemUtils.createFilledResult(stack,player,new ItemStack(Items.BUCKET)));
+                player.awardStat(Stats.FILL_CAULDRON);player.awardStat(Stats.ITEM_USED.get(used));level.setBlockAndUpdate(pos,Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL,3));fluidFeedback(level,pos,SoundEvents.BUCKET_EMPTY,GameEvent.FLUID_PLACE);return InteractionResult.SUCCESS;
             }
             if(stack.is(Items.POTION)&&incoming!=null&&incoming.is(Potions.WATER)) {
                 if(!allowed(player,level,pos))return InteractionResult.FAIL;
