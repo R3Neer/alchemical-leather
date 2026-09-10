@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_dye",
+  "category": "misc",
+  "dye": "#minecraft:dyes",
+  "group": "alchemical_test_dyed_armor",
+  "result": { "id": "minecraft:iron_helmet" },
+  "target": "minecraft:iron_helmet"
+}
