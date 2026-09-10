@@ -40,14 +40,15 @@ public final class AnimalArmorTests {
             Items.LEATHER_BOOTS,EquipmentSlot.FEET,
             Items.LEATHER_HORSE_ARMOR,EquipmentSlot.BODY,
             Items.WOLF_ARMOR,EquipmentSlot.BODY);
-        vanilla.forEach((item,slot)->h.assertTrue(Infusions.slot(new ItemStack(item))==slot,"Vanilla standard-dye armor discovered: "+item));
-        h.assertTrue(Infusions.slot(new ItemStack(Items.IRON_HELMET))==EquipmentSlot.HEAD,"Direct crafting_dye target gives mod-like humanoid support");
-        h.assertTrue(Infusions.slot(new ItemStack(Items.COPPER_HORSE_ARMOR))==EquipmentSlot.BODY,"Direct crafting_dye target gives mod-like BODY support");
-        h.assertTrue(Infusions.slot(new ItemStack(Items.GOLDEN_HORSE_ARMOR))==EquipmentSlot.BODY,"Tag target is discovered");
-        h.assertTrue(Infusions.slot(new ItemStack(Items.DIAMOND_HORSE_ARMOR))==EquipmentSlot.BODY,"List target first entry is discovered");
-        h.assertTrue(Infusions.slot(new ItemStack(Items.NETHERITE_HORSE_ARMOR))==EquipmentSlot.BODY,"List target second entry is discovered");
+        vanilla.forEach((item,slot)->h.assertTrue(Infusions.slot(new ItemStack(item))==slot,"Vanilla standard dye/wash armor discovered: "+item));
+        h.assertTrue(Infusions.slot(new ItemStack(Items.IRON_HELMET))==EquipmentSlot.HEAD,"Direct self-recoloring crafting_dye recipe gives mod-like humanoid support");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.COPPER_HORSE_ARMOR))==EquipmentSlot.BODY,"Direct self-recoloring crafting_dye recipe gives mod-like BODY support");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.GOLDEN_HORSE_ARMOR))==EquipmentSlot.BODY,"Tagged self-recoloring target is discovered");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.DIAMOND_HORSE_ARMOR))==EquipmentSlot.BODY,"List target admits its actual result item");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.NETHERITE_HORSE_ARMOR))==null,"A transmuting crafting_dye input is not mistaken for an in-place dyeable item");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.IRON_CHESTPLATE))==EquipmentSlot.CHEST,"Standard cauldron_can_remove_dye tag gives mod-like support without a dye recipe special case");
         h.assertTrue(Infusions.slot(new ItemStack(Items.GOLDEN_HELMET))==EquipmentSlot.HEAD,"Fallback tag covers custom dye systems");
-        h.assertTrue(Infusions.slot(new ItemStack(Items.IRON_HORSE_ARMOR))==null,"Armor slot without dyeability is rejected");
+        h.assertTrue(Infusions.slot(new ItemStack(Items.IRON_HORSE_ARMOR))==null,"Armor slot without dyeability evidence is rejected");
         var wrongSlot=new ItemStack(Items.IRON_HELMET);wrongSlot.set(DataComponents.EQUIPPABLE,Equippable.builder(EquipmentSlot.SADDLE).build());
         h.assertTrue(Infusions.slot(wrongSlot)==null,"Dyeability alone cannot turn non-armor equipment into Alchemical Leather");h.succeed();
     }
