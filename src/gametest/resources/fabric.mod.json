@@ -8,7 +8,8 @@
       "io.github.r3neer.alchemicalleather.test.OwnershipTests",
       "io.github.r3neer.alchemicalleather.test.CoreTests",
       "io.github.r3neer.alchemicalleather.test.CompatibilityTests",
-      "io.github.r3neer.alchemicalleather.test.PersistenceTests"
+      "io.github.r3neer.alchemicalleather.test.PersistenceTests",
+      "io.github.r3neer.alchemicalleather.test.ConnectionLifecycleRegressionTests"
     ],
     "fabric-client-gametest": [
       "io.github.r3neer.alchemicalleather.test.ClientChecks"
