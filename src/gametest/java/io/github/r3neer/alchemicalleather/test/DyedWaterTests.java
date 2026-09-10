@@ -18,6 +18,7 @@ import net.minecraft.world.phys.*;
 
 public final class DyedWaterTests {
     private InteractionResult use(GameTestHelper h,net.minecraft.world.entity.player.Player p,BlockPos pos,ItemStack stack){p.setItemInHand(InteractionHand.MAIN_HAND,stack);return CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false));}
+    private BlockHitResult hit(BlockPos pos){return new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false);}
     private int dye(Item item){return new ItemStack(item).get(DataComponents.DYE).getTextureDiffuseColor()&0xffffff;}
     private int color(GameTestHelper h,BlockPos pos){return ((DyedWaterCauldronEntity)h.getLevel().getBlockEntity(pos)).color;}
 
@@ -37,10 +38,7 @@ public final class DyedWaterTests {
     @GameTest public void nativeColorMixingAndNoOpDoesNotConsumeDye(GameTestHelper h){
         var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));int red=dye(Items.DYE.red()),blue=dye(Items.DYE.blue());CauldronService.writeDyed(h.getLevel(),pos,red,4);
         var blueStack=new ItemStack(Items.DYE.blue());h.assertTrue(use(h,p,pos,blueStack)==InteractionResult.SUCCESS,"Second dye mixes into native colored water");h.assertTrue(color(h,pos)==DyeColors.blend(red,blue),"Native water uses brightness-preserving dye blend");h.assertTrue(h.getLevel().getBlockState(pos).getValue(DyedWaterCauldron.LEVEL)==4,"Mixing dye changes no fluid amount");h.assertTrue(blueStack.isEmpty(),"Changed mix consumes one dye");
-        int current=color(h,pos);CauldronService.writeDyed(h.getLevel(),pos,current,4);var same=new ItemStack(Items.DYE.blue());int before=same.getCount();
-        // Force a mathematically identical blend by using the exact current color as both operands through a pre-dyed red case.
-        CauldronService.writeDyed(h.getLevel(),pos,red,4);var redStack=new ItemStack(Items.DYE.red());h.assertTrue(use(h,p,pos,redStack)==InteractionResult.SUCCESS,"Identical dye interaction is accepted");h.assertTrue(color(h,pos)==red&&redStack.getCount()==1,"No-op color mix consumes no dye");h.assertTrue(h.getLevel().getBlockState(pos).getValue(DyedWaterCauldron.LEVEL)==4,"No-op mix changes no fluid");
-        h.assertTrue(before==1,"Fixture sanity");h.succeed();
+        CauldronService.writeDyed(h.getLevel(),pos,red,4);var redStack=new ItemStack(Items.DYE.red());h.assertTrue(use(h,p,pos,redStack)==InteractionResult.SUCCESS,"Identical dye interaction is accepted");h.assertTrue(color(h,pos)==red&&redStack.getCount()==1,"No-op color mix consumes no dye");h.assertTrue(h.getLevel().getBlockState(pos).getValue(DyedWaterCauldron.LEVEL)==4,"No-op mix changes no fluid");h.succeed();
     }
 
     @GameTest public void nativeArmorDyeingBlendsPreservesAndUsesSixUnits(GameTestHelper h){
@@ -56,7 +54,7 @@ public final class DyedWaterTests {
         }h.succeed();
     }
 
-    @GameTest public void nativeBottleBucketAndWaterPotionAccounting(GameTestHelper h){
+    @GameTest public void nativeBottleBucketAndWaterRefillAccounting(GameTestHelper h){
         var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));
         CauldronService.writeDyed(h.getLevel(),pos,0x123456,1);var bottle=new ItemStack(Items.GLASS_BOTTLE);h.assertTrue(use(h,p,pos,bottle)==InteractionResult.FAIL,"Half-bottle unit cannot create a full bottle");h.assertTrue(h.getLevel().getBlockState(pos).getValue(DyedWaterCauldron.LEVEL)==1&&bottle.is(Items.GLASS_BOTTLE),"Insufficient bottle extraction is atomic");
         CauldronService.writeDyed(h.getLevel(),pos,0x123456,2);bottle=new ItemStack(Items.GLASS_BOTTLE);h.assertTrue(use(h,p,pos,bottle)==InteractionResult.SUCCESS,"Two units fill one water bottle");var waterBottle=p.getMainHandItem();h.assertTrue(waterBottle.is(Items.POTION)&&waterBottle.get(DataComponents.POTION_CONTENTS).is(Potions.WATER),"Colored water extracts as ordinary water potion");h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.CAULDRON),"Two-unit bottle extraction empties cauldron");
@@ -66,7 +64,9 @@ public final class DyedWaterTests {
             CauldronService.writeDyed(h.getLevel(),pos,0x123456,dyed);var water=PotionContents.createItemStack(Items.POTION,Potions.WATER);var result=use(h,p,pos,water);h.assertTrue(result==InteractionResult.SUCCESS,"Water potion refill interaction accepted at level "+dyed);
             if(dyed==6){h.assertTrue(h.getLevel().getBlockState(pos).is(DyedWaterCauldron.BLOCK)&&h.getLevel().getBlockState(pos).getValue(DyedWaterCauldron.LEVEL)==6,"Full dyed cauldron stays full");h.assertTrue(p.getMainHandItem().is(Items.POTION),"Full cauldron does not consume water potion");}
             else {int expected=Math.min(dyed/2+1,3);h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.WATER_CAULDRON)&&h.getLevel().getBlockState(pos).getValue(LayeredCauldronBlock.LEVEL)==expected,"Dyed volume converts back to vanilla water conservatively");h.assertTrue(p.getMainHandItem().is(Items.GLASS_BOTTLE),"Accepted refill consumes water potion");}
-        }h.succeed();
+        }
+        CauldronService.writeDyed(h.getLevel(),pos,0x123456,3);var waterBucket=new ItemStack(Items.WATER_BUCKET);h.assertTrue(use(h,p,pos,waterBucket)==InteractionResult.PASS,"Water bucket is delegated to native cauldron dispatcher");p.setItemInHand(InteractionHand.MAIN_HAND,waterBucket);var state=h.getLevel().getBlockState(pos);h.assertTrue(state.useItemOn(waterBucket,h.getLevel(),p,InteractionHand.MAIN_HAND,hit(pos))==InteractionResult.SUCCESS,"Delegated water bucket interaction succeeds");h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.WATER_CAULDRON)&&h.getLevel().getBlockState(pos).getValue(LayeredCauldronBlock.LEVEL)==3&&p.getMainHandItem().is(Items.BUCKET),"Water bucket clears tint, fills vanilla cauldron and becomes empty bucket");
+        h.succeed();
     }
 
     @GameTest public void nativeDyedWaterRejectsUnqualifiedTargets(GameTestHelper h){
