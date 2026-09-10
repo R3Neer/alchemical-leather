@@ -1,8 +1,8 @@
 # Alchemical Leather
 
-What if leather armor could carry your potions?
+What if **dyeable armor** could carry your potions?
 
-A **Fabric mod for Minecraft 26.2** that gives a familiar set of armor a new job. Infuse a piece in a potion-filled cauldron, put it on, and take the effect with you.
+A **Fabric mod for Minecraft 26.2** that turns familiar armor into alchemical equipment. Pour a potion into a cauldron, infuse a compatible piece, equip it, and take the effect with you.
 
 ![Potion-filled cauldrons in game](docs/images/vanilla-cauldron.png)
 
@@ -14,11 +14,12 @@ Once that works:
 
 - Put the armor away for a while, then return to it.
 - Try a different kind of potion bottle.
-- Think about which piece of an adventurer's outfit might suit another effect.
+- Try armor that is dyeable but is not ordinary player leather armor.
+- Add dye to a water cauldron and see what compatible armor does with it.
 
-Not every potion belongs on every piece. Each piece holds one effect, and **infusions and enchantments are mutually exclusive**. Use **Crouch + Use** to pour splash or lingering potions without throwing them. Washing infused armor in a water cauldron removes the infusion and its color.
+Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Use **Crouch + Use** to pour splash or lingering potions without throwing them. Water cauldrons wash compatible armor clean.
 
-Want the answers? The **[player guide](docs/GUIDE.md)** includes the full slot table, duration rules and compatibility details. It contains spoilers.
+Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, dyed water and compatibility. It contains spoilers.
 
 ## Install
 
@@ -31,7 +32,7 @@ This is an **alpha**. Back up worlds before updating and check [validation and r
 ## Go further
 
 - [Player guide / wiki](docs/GUIDE.md) — complete mechanics, with spoilers.
-- [Datapack rules](docs/GUIDE.md#datapack-support) — choose which effects belong where.
+- [Datapack support](docs/GUIDE.md#datapack-support) — effect slots and custom dyeable-armor fallback.
 - [Build and tests](docs/GUIDE.md#building) · [Architecture](docs/architecture.md) · [Issues](https://github.com/R3Neer/alchemical-leather/issues)
 
 [GPL-3.0-or-later](LICENSE). Not an official Minecraft product; not approved by or associated with Mojang or Microsoft.

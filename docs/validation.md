@@ -1,78 +1,108 @@
-# Validation of 0.1.0-alpha.1
+# Validation of 0.1.0-alpha.2
 
-## Reorientation update — 6 September 2026
+Validation date: **10 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
-The updated prerelease adds optional `clinging_reoriented:reorientation` support
-for leather boots. A `requires_effect` guard keeps the rule inactive when the effect
-is absent, including older Clinging Reoriented versions. Clinging's existing slot
-is unchanged. No new mandatory dependency is introduced.
+This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination or physical gameplay path has been manually tested.
 
-- Final standalone build: 29/29 required tests passed at 23:33:54 local time
-  (28 project tests and Fabric's environment check).
-- Full compatibility fixture including Clinging Reoriented alpha.4 and Gravity
-  Changer 1.5.2-beta.5: 64/64 passed at 23:35:11 (28 project, 35 upstream, one runner).
-- A separate real-server run with Clinging Reoriented alpha.3 passed at 23:36:29;
-  the new effect is absent and its optional boots rule stays inactive.
-- The new test actually brews Reorientation with a shulker shell, pours its normal,
-  splash and lingering contents into a cauldron, rejects helmet/tunic/pants, infuses
-  boots, checks the lifetime mode, and verifies equip/unequip effect ownership.
-- The Clinging Reoriented project's client suite separately passed physical Shift,
-  repeated Reorientation, failure/success sounds and First Person checks at 23:30:15.
-  This does not replace human playtesting of the combined armor and gravity behavior.
+## Release-candidate CI evidence
 
-The earlier test counts and fixtures below describe the original alpha build.
-
-Local validation on 6 September 2026, Windows, Java 25.0.3, Minecraft 26.2, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2, Loom 1.17.20 and Gradle 9.5.1. This is an alpha with automated coverage and a reviewed client capture, not a claim of completed human playtesting of the full modpack.
-
-## Automated coverage
+The feature-freeze implementation was tested through the pull-request merge result against the then-current `main` branch.
 
 | Run | Result |
 |---|---|
-| Final standalone `build --offline` | PASS, 28/28 required server tests |
-| Full fixture, installed Scale Brews beta.4 | PASS, 63/63 required server tests |
-| Full fixture, requested Scale Brews beta.3 | PASS, 63/63 required server tests |
-| Standalone client GameTest | PASS, synchronization/equip/unequip assertions and two reviewed captures |
+| Standalone build + server GameTests | **PASS — 32/32 required GameTests** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + BedrockIfy fixture | **PASS — 32/32 required GameTests** |
 
-The server totals include Fabric's environment check; fixture totals also include tests from other mods. They are not 63 distinct Alchemical Leather tests. `build` runs the server suite; the client task is invoked separately.
+The final implementation round also added a thread-safety correction for dynamic cauldron tinting. The same three CI stages passed again after that change, including client assertions for Fabric block-entity render-data snapshots.
 
-There are 27 project server GameTests: 6 effect-ownership tests, 11 core tests, 6 optional-compatibility tests and 4 persistence/behavior tests. Optional-provider branches run only when their providers are present. Passing without providers does not establish optional compatibility. With `-PcompatMods`, the suite first requires the audited providers to be loaded.
+The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6** release together with **BedrockIfy 1.11.8+mc26.2**, **Alex's Mobs Continued 2.1.9** and the Gravity Changer / CodxLib / Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
-Coverage includes:
+## What alpha.2 adds to automated coverage
 
-- Separate external and equipped effect clocks, stronger/weaker/equal sources, adding an external effect during an infusion, milk and hidden vanilla chains.
-- Complete PotionContents cardinality, real amplifier/duration, missing effect identifiers and component serialization.
-- Three doses, exact bottle extraction, rejecting mixed contents/types, slot/enchantment failures without consumption, replacement color and one-level washing.
-- Pausing, resuming, expiry, stable effects, one-shot instant effects and enchanting/repair guards.
-- Real player save/load with equipment time and external effects; block-entity save/load of custom potion contents.
-- Regeneration pulse comparison against vanilla; generic consumption of the real instantaneous Saturation effect, with a test-only slot rule.
-- Loaded optional potion families and slot resolution; execution of Scale Brews brewing through Growth III and Shrinking III, conversion to splash/lingering, and uncapped stable level III equipment effects.
-- BedrockIfy canonical levels and fractional-dose rejection; decoding Deeper Dark's real Blindness loot item; smithing trim preservation.
+### Dyeable-armor classification
 
-Client automation creates an isolated integrated world, verifies block-entity contents/color synchronization, captures the ordinary cauldron body with colored liquid, equips infused vanilla leather, checks the synchronized effect, opens the inventory for a capture, and checks removal after unequipping. Both screenshots were visually inspected. This check uses commands for setup and does not replace real mouse interaction or full-modpack visual QA.
+Tests cover:
 
-## Compatibility fixtures
+- all six vanilla standard dyeable armor cases: four humanoid leather pieces, leather horse armor and wolf armor;
+- direct-item, item-list and tag-target `minecraft:crafting_dye` recipes;
+- `#minecraft:cauldron_can_remove_dye` as a dyeability signal;
+- `#alchemical_leather:dyeable_armor` as the custom fallback;
+- rejection of a transmuting dye-recipe input when only the different result item is recolored;
+- rejection of a self-dye recipe disabled by `fabric:false`;
+- rejection of a codec-invalid `crafting_dye` resource that Minecraft itself omits.
 
-The isolated fixture contains BedrockIfy 1.11.8, Alex's Mobs Continued 2.1.9, Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2, plus their dependencies. Scale Brews beta.4 matches the installed profile; beta.3 is checked in a separate fixture. No fixture binaries are bundled.
+The last two fixtures intentionally exercise failure paths. The invalid-recipe fixture therefore causes Minecraft to log the expected recipe parse error during GameTest startup; the test verifies that this local resource failure does not become phantom dyeability or break the test world.
 
-The test world's Enchancement configuration is a copy of the installed profile, including `overhaulEnchanting: DISABLED`, `disableDurability: NONE` and the disabled rebalance options. The user's profile was read, not modified. An earlier fixture with Enchancement defaults failed Additional Additions' own wrench durability test because those defaults disable durability globally; Alchemical Leather's tests passed in that run. The installed configuration resolves that external-test conflict. This does not establish compatibility of every Enchancement overhaul configuration.
+### Humanoid and BODY policy
 
-The full fixture runs 63 required server tests: the 27 project tests, 35 tests supplied by other mods, and Fabric's internal environment check. The standalone suite runs 28 including Fabric's check. Provider-family inspection distinguishes registered potions from recipes: Scale Brews recipes were executed, while the Deeper Dark loot item was decoded and the other families were enumerated and resolved. Not every optional brewing recipe was crafted.
+Tests prove that generalized humanoid armor keeps the original effect-to-slot restrictions and rejects multi-effect potions. BODY armor is separately tested with horse and wolf armor, including otherwise unmapped effects.
+
+BODY coverage includes:
+
+- one-potion replacement semantics;
+- Turtle Master / multi-effect bundles;
+- repeated entries of the same effect with independent clocks;
+- immediate fallback to a surviving weaker repeated source;
+- normal, splash and lingering timing modes;
+- mixed instant + timed effects, with instant entries consumed before firing;
+- equip/unequip pause and resume;
+- conflicts with external vanilla effects;
+- serialization of the animal-infusion component;
+- enchanted-target rejection without consuming a dose.
+
+### Lifecycle and persistence
+
+The current-main pre-login regression test constructs a `ServerPlayer` whose `connection` is still null. It verifies that equipment synchronization cannot project an armor effect through that missing network channel. The production fix defers the complete synchronization and reconciles it at `ServerPlayConnectionEvents.JOIN`.
+
+Persistence tests also cover separation of external and armor-owned effects across player save/load, custom potion-cauldron contents and dyed-water RGB block-entity data.
+
+### Native dyed water
+
+Tests cover the six-unit fluid model, color mixing, no-op dye application, blending with existing item color, preservation of infusion components, bottle and bucket extraction, water-potion tint removal, water-bucket delegation and insufficient-volume atomic failures.
+
+The client suite creates real custom cauldrons in an integrated world and verifies synchronized block-entity color. It additionally checks that both cauldron types expose the expected immutable Fabric render-data RGB used by the multithread-safe tint path.
+
+### BedrockIfy ownership
+
+With real BedrockIfy loaded, tests verify:
+
+- active BedrockIfy owns vanilla water + dye without Alchemical Leather side effects;
+- disabling the BedrockIfy cauldron setting returns that entry point to Alchemical Leather;
+- BedrockIfy colored water blends compatible armor color and loses exactly one fluid unit;
+- Alchemical Leather armor can consume a canonical BedrockIfy potion dose without replacing the foreign potion-cauldron block prematurely;
+- ordinary potion-bottle interactions on a BedrockIfy potion cauldron are left entirely to BedrockIfy;
+- fractional/noncanonical imported potion levels fail without mutation.
+
+### Real Clinging Reoriented integration
+
+The alpha.6 fixture verifies the actual Clinging and Reorientation effects, not synthetic identifiers. Compatible leather horse armor and wolf armor can both receive and project these effects under the BODY policy. The existing humanoid boots mapping remains separately covered.
+
+## Historical alpha.1 compatibility evidence
+
+Alpha.1 validation previously exercised Scale Brews beta.3/beta.4, Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but they are **not** presented as if every provider were rerun in the smaller alpha.2 CI fixture.
+
+The earlier Scale Brews tests executed real Growth III / Shrinking III brewing and splash/lingering conversion. Deeper Dark coverage decoded its real Blindness loot component. Other optional families were enumerated and resolved. See the alpha.1 prerelease history for the original run context.
 
 ## Remaining human/runtime checks
 
-- Real right-click/sneak behavior in both hands and under latency or third-party claim protection.
-- Full installed resource-pack rendering, translated tooltips, Functional Armor Trims visuals and functional combinations.
-- Growth/Shrinking camera, collision and health transitions; Night Vision transitions; Clinging surfaces and death-triggered effects.
-- Actual ItemSwapper and dispenser interactions, death/respawn, dimension travel and disconnect/reconnect. Serialization tests cover their storage foundation, not every live lifecycle path.
-- Enchancement's alternate overhaul menu and late confirmation changes.
-- Profiling many simultaneous wearers and equipment synchronization traffic. Source inspection confirms no global entity or full-inventory scans; no quantitative load benchmark is claimed.
-
-The repository and alpha prerelease are published on GitHub. Subsequent pushes run
-the provided GitHub Actions workflow; consult the run attached to the current commit
-for its outcome. The original delivery's local-only status is historical.
+- Physical right-click / crouch behavior in both hands, especially under latency or third-party claim protection.
+- Real gameplay feel of animal armor infusion on mounted/tamed entities rather than test-controlled entities.
+- Full installed resource-pack rendering, translated tooltips and combinations with armor-trim visual mods.
+- Growth/Shrinking camera/collision/health transitions, Night Vision transitions, gravity-surface behavior and death-triggered effects in a real modpack session.
+- Dispenser, ItemSwapper, death/respawn, dimension travel and disconnect/reconnect combinations beyond the covered storage/lifecycle foundations.
+- Alternate Enchancement overhaul configurations and other mods that replace crafting, enchanting or cauldron interaction semantics.
+- Quantitative profiling with many simultaneous wearers. Source review confirms event-driven equipment synchronization and no global inventory/entity scan, but no throughput benchmark is claimed.
 
 ## Reproduction
 
-Run `./gradlew build` with Java 25 for the standalone build/tests. Run `./gradlew runClientGameTest` in a graphical environment (CI uses Xvfb). For each optional fixture, run `./gradlew runGameTest -PcompatMods=/absolute/path/to/mods`, placing the intended Enchancement configuration in `build/run/gameTest/config/enchancement.json` first. Run directories persist to retain that configuration; use separate checkouts/run directories when testing different configurations concurrently.
+With Java 25:
 
-Logs are written under `build/run/gameTest/logs` and `build/run/clientGameTest/logs`; client captures under `build/run/clientGameTest/screenshots`. The production JAR must exclude the gametest source set, its Saturation rule, optional binaries and decompiled audit material.
+```bash
+./gradlew build
+./gradlew runClientGameTest
+```
+
+The GitHub Actions workflow runs both and also prepares the pinned Clinging Reoriented compatibility fixture before invoking `runGameTest` with the fixture directory.
+
+Logs are written under `build/run/*/logs`; client captures are written under `build/run/clientGameTest/screenshots`. The production JAR excludes the gametest source set, its synthetic recipes/tags and all third-party fixture binaries.
