@@ -11,7 +11,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.*;
 import net.minecraft.resources.*;
 import net.minecraft.world.*;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.*;
@@ -36,7 +36,7 @@ public class CompatibilityTests {
             CauldronService.write(h.getLevel(),pos,contents,type,1);
             for(var wrong:List.of(Items.LEATHER_HELMET,Items.LEATHER_CHESTPLATE,Items.LEATHER_LEGGINGS)){
                 p.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(wrong));
-                h.assertTrue(CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false))==InteractionResult.FAIL,"Other armor rejected");
+                h.assertTrue(CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false))==InteractionResult.FAIL,"Other humanoid armor rejected");
             }
             p.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.LEATHER_BOOTS));
             CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false));
@@ -50,8 +50,28 @@ public class CompatibilityTests {
         }
         h.succeed();
     }
+    @GameTest public void clingingAndReorientationInfuseAnimalArmor(GameTestHelper h){
+        if(!FabricLoader.getInstance().isModLoaded("clinging_reoriented")){h.succeed();return;}
+        var clingingId=Identifier.parse("alexsmobs:clinging");var reorientationId=Identifier.parse("clinging_reoriented:reorientation");
+        var base=BuiltInRegistries.POTION.get(clingingId).orElseThrow();var brewing=h.getLevel().potionBrewing();
+        var reorientation=brewing.mix(new ItemStack(Items.SHULKER_SHELL),PotionContents.createItemStack(Items.POTION,base)).get(DataComponents.POTION_CONTENTS);
+        for(var contents:List.of(new PotionContents(base),reorientation)){
+            var expected=contents.getAllEffects().iterator().next().getEffect();
+            for(var animalItem:List.of(Items.LEATHER_HORSE_ARMOR,Items.WOLF_ARMOR)){
+                var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));CauldronService.write(h.getLevel(),pos,contents,Items.POTION,1);
+                p.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(animalItem));
+                h.assertTrue(CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false))==InteractionResult.SUCCESS,"Real gravity potion infuses animal armor");
+                var armor=p.getMainHandItem();var bundle=armor.get(Infusions.ANIMAL_TYPE);h.assertTrue(bundle!=null&&bundle.effects().size()==1&&bundle.effects().getFirst().holder().orElseThrow().equals(expected),"Animal armor retains actual gravity effect");
+                var entityType=animalItem==Items.LEATHER_HORSE_ARMOR?EntityTypes.HORSE:EntityTypes.WOLF;var animal=(Mob)h.spawn(entityType,new BlockPos(3,2,3));animal.setNoAi(true);animal.setItemSlot(EquipmentSlot.BODY,armor);EquipmentInfusions.sync(animal);
+                h.assertTrue(animal.hasEffect(expected),"Equipped animal receives actual gravity effect");animal.setItemSlot(EquipmentSlot.BODY,ItemStack.EMPTY);EquipmentInfusions.sync(animal);h.assertFalse(animal.hasEffect(expected),"Unequip removes actual gravity effect");animal.discard();
+            }
+        }
+        h.assertTrue(BuiltInRegistries.MOB_EFFECT.containsKey(clingingId)&&BuiltInRegistries.MOB_EFFECT.containsKey(reorientationId),"Both real gravity effects loaded");h.succeed();
+    }
     @GameTest public void requestedModsActuallyLoaded(GameTestHelper h){
-        if(Boolean.getBoolean("alchemical.compatRequired"))for(String id:List.of("bedrockify","scalebrews","alexsmobs","friendsandfoes","wilderwild","mr_deeper_dark","enchancement","functional_trims"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required test mod "+id);
+        var profile=System.getProperty("alchemical.compatRequired","");
+        if(profile.equals("full"))for(String id:List.of("bedrockify","scalebrews","alexsmobs","friendsandfoes","wilderwild","mr_deeper_dark","enchancement","functional_trims"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required full-fixture mod "+id);
+        if(profile.equals("clinging"))for(String id:List.of("clinging_reoriented","alexsmobs"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required Clinging fixture mod "+id);
         h.succeed();
     }
     @GameTest public void allRegisteredFamiliesResolve(GameTestHelper h){
