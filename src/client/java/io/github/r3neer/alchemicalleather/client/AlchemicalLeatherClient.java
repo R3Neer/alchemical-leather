@@ -1,6 +1,7 @@
 package io.github.r3neer.alchemicalleather.client;
 import io.github.r3neer.alchemicalleather.cauldron.*;
-import io.github.r3neer.alchemicalleather.data.Infusions;
+import io.github.r3neer.alchemicalleather.data.*;
+import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
@@ -15,19 +16,25 @@ public final class AlchemicalLeatherClient implements ClientModInitializer {
             colors.add(color);
         },PotionCauldron.BLOCK);
         ItemTooltipCallback.EVENT.register((stack,context,flag,lines)->{
-            var infusion=stack.get(Infusions.TYPE);if(infusion==null)return;
+            var single=stack.get(Infusions.TYPE);var animal=stack.get(Infusions.ANIMAL_TYPE);
             var display=stack.get(DataComponents.TOOLTIP_DISPLAY);
-            if(display!=null&&!display.shows(Infusions.TYPE))return;
+            boolean showSingle=single!=null&&(display==null||display.shows(Infusions.TYPE));
+            boolean showAnimal=animal!=null&&(display==null||display.shows(Infusions.ANIMAL_TYPE));
+            if(!showSingle&&!showAnimal)return;
             lines.add(Component.translatable("tooltip.alchemical_leather.title").withStyle(ChatFormatting.DARK_AQUA));
-            var holder=infusion.holder();
-            if(holder.isEmpty()){lines.add(Component.translatable("message.alchemical_leather.invalid").withStyle(ChatFormatting.GRAY));return;}
-            var name=Component.translatable(holder.get().value().getDescriptionId());
-            if(infusion.amplifier()>0)name=Component.translatable("potion.withAmplifier",name,Component.translatable("potion.potency."+infusion.amplifier()));
-            lines.add(name.withStyle(ChatFormatting.GRAY));
-            if(infusion.mode().equals("timed")) {
-                int seconds=(infusion.remainingTicks()+19)/20;
-                lines.add(Component.translatable("tooltip.alchemical_leather.remaining",String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60)).withStyle(ChatFormatting.GRAY));
-            } else lines.add(Component.translatable("tooltip.alchemical_leather."+infusion.mode()).withStyle(ChatFormatting.GRAY));
+            if(showSingle)addInfusion(lines,single);
+            if(showAnimal)for(var infusion:animal.effects())addInfusion(lines,infusion);
         });
+    }
+    private static void addInfusion(List<Component> lines,Infusion infusion) {
+        var holder=infusion.holder();
+        if(holder.isEmpty()){lines.add(Component.translatable("message.alchemical_leather.invalid").withStyle(ChatFormatting.GRAY));return;}
+        var name=Component.translatable(holder.get().value().getDescriptionId());
+        if(infusion.amplifier()>0)name=Component.translatable("potion.withAmplifier",name,Component.translatable("potion.potency."+infusion.amplifier()));
+        lines.add(name.withStyle(ChatFormatting.GRAY));
+        if(infusion.mode().equals("timed")) {
+            int seconds=(infusion.remainingTicks()+19)/20;
+            lines.add(Component.translatable("tooltip.alchemical_leather.remaining",String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60)).withStyle(ChatFormatting.GRAY));
+        } else lines.add(Component.translatable("tooltip.alchemical_leather."+infusion.mode()).withStyle(ChatFormatting.GRAY));
     }
 }
