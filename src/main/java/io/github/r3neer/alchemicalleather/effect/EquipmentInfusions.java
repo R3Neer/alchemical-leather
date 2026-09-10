@@ -76,12 +76,13 @@ public final class EquipmentInfusions {
         }
         var stack=entity.getItemBySlot(EquipmentSlot.BODY);var bundle=stack.get(Infusions.ANIMAL_TYPE);
         if(bundle==null||!Infusions.animalArmor(stack))return;
-        boolean changed=false;var next=new ArrayList<Infusion>(bundle.effects().size());
+        boolean changed=false,expired=false;var next=new ArrayList<Infusion>(bundle.effects().size());
         for(var infusion:bundle.effects()) {
             if(infusion.mode().equals("timed")&&infusion.holder().isPresent()&&Infusions.accepts(stack,EquipmentSlot.BODY,infusion.effect())) {
-                changed=true;int remaining=infusion.remainingTicks()-1;if(remaining>0)next.add(infusion.remaining(remaining));
+                changed=true;int remaining=infusion.remainingTicks()-1;
+                if(remaining>0)next.add(infusion.remaining(remaining));else expired=true;
             } else next.add(infusion);
         }
-        if(changed)storeAnimal(stack,next);
+        if(changed){storeAnimal(stack,next);if(expired&&entity.isAlive())sync(entity);}
     }
 }
