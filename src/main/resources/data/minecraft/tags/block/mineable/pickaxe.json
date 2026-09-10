@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "alchemical_leather:potion_cauldron"
+    "alchemical_leather:potion_cauldron",
+    "alchemical_leather:dyed_water_cauldron"
   ]
 }
