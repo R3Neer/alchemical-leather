@@ -80,6 +80,10 @@ public final class CauldronService {
             }
         }
 
+        // BedrockIfy owns the ordinary bottle/fluid lifecycle of its own potion cauldron.
+        // Alchemical Leather only reads that block to perform its armor-specific infusion action.
+        if(bedPotion&&bottle(stack))return InteractionResult.PASS;
+
         if(armor&&state.is(Blocks.WATER_CAULDRON)) {
             if(!allowed(player,level,pos))return InteractionResult.FAIL;
             if(level.isClientSide())return InteractionResult.SUCCESS;
@@ -112,14 +116,14 @@ public final class CauldronService {
             if(!(level.getBlockEntity(pos) instanceof PotionCauldronEntity be))return error(player,"invalid");
             contents=be.contents;type=be.bottle;doses=state.getValue(PotionCauldron.LEVEL);
         } else if(bedPotion) {
-            if(!bottle(stack)&&!armor)return InteractionResult.PASS;
+            if(!armor)return InteractionResult.PASS;
             try {var snapshot=BedrockifyBridge.read(level,pos,state);contents=snapshot.contents();type=snapshot.bottle();doses=snapshot.doses();}
             catch(IllegalArgumentException e){return error(player,"fractional");}
             catch(ReflectiveOperationException|RuntimeException e){return error(player,"invalid");}
         }
         if(bottle(stack)) {
             var resolved=Infusions.resolveAll(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
-            if(!state.is(Blocks.CAULDRON)&&!ownPotion&&!bedPotion)return error(player,"different");
+            if(!state.is(Blocks.CAULDRON)&&!ownPotion)return error(player,"different");
             if(doses>=3)return error(player,"full");
             if(doses>0&&(!contents.equals(incoming)||type!=stack.getItem()))return error(player,"different");
             Item bottleType=stack.getItem();write(level,pos,incoming,bottleType,doses+1);
@@ -138,7 +142,9 @@ public final class CauldronService {
                 result.remove(Infusions.ANIMAL_TYPE);result.set(Infusions.TYPE,resolved.infusion());
             }
             result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
-            write(level,pos,contents,type,doses-1);player.setItemInHand(hand,result);feedback(level,pos);return InteractionResult.SUCCESS;
+            if(ownPotion)write(level,pos,contents,type,doses-1);
+            else consumeBedrockPotionDose(level,pos,state,doses);
+            player.setItemInHand(hand,result);feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(ownPotion&&stack.is(Items.GLASS_BOTTLE)) {
             if(type!=Items.POTION&&type!=Items.SPLASH_POTION&&type!=Items.LINGERING_POTION)return error(player,"invalid");
@@ -159,6 +165,10 @@ public final class CauldronService {
         if(amount==0){level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());return;}
         if(amount<1||amount>6)throw new IllegalArgumentException("Invalid dyed-water amount");
         level.setBlockAndUpdate(pos,DyedWaterCauldron.BLOCK.defaultBlockState().setValue(DyedWaterCauldron.LEVEL,amount));dyedEntity(level,pos).setColor(color);level.updateNeighbourForOutputSignal(pos,DyedWaterCauldron.BLOCK);
+    }
+    private static void consumeBedrockPotionDose(Level level,BlockPos pos,BlockState state,int doses){
+        if(doses<=1){level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());return;}
+        var property=BedrockifyBridge.property(state);int canonicalLevel=(doses-1)*3-1;level.setBlockAndUpdate(pos,state.setValue(property,canonicalLevel));
     }
     private static DyedWaterCauldronEntity dyedEntity(Level level,BlockPos pos){if(level.getBlockEntity(pos) instanceof DyedWaterCauldronEntity be)return be;throw new IllegalStateException("Missing dyed-water cauldron entity");}
     private static void lowerDyed(Level level,BlockPos pos,BlockState state,int amount){int next=state.getValue(DyedWaterCauldron.LEVEL)-amount;if(next<0)throw new IllegalArgumentException("Not enough dyed water");if(next==0)level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());else level.setBlockAndUpdate(pos,state.setValue(DyedWaterCauldron.LEVEL,next));}
