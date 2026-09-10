@@ -72,6 +72,7 @@ public class CompatibilityTests {
         var profile=System.getProperty("alchemical.compatRequired","");
         if(profile.equals("full"))for(String id:List.of("bedrockify","scalebrews","alexsmobs","friendsandfoes","wilderwild","mr_deeper_dark","enchancement","functional_trims"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required full-fixture mod "+id);
         if(profile.equals("clinging"))for(String id:List.of("clinging_reoriented","alexsmobs"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required Clinging fixture mod "+id);
+        if(profile.equals("trade"))for(String id:List.of("clinging_reoriented","alexsmobs","scalebrews","bedrockify"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required trade fixture mod "+id);
         h.succeed();
     }
     @GameTest public void allRegisteredFamiliesResolve(GameTestHelper h){
