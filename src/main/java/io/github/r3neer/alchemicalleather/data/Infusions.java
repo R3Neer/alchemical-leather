@@ -3,41 +3,26 @@ import net.minecraft.core.*;
 import net.minecraft.core.component.*;
 import net.minecraft.core.registries.*;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.equipment.EquipmentAssets;
 import java.util.*;
 public final class Infusions {
     public static final DataComponentType<Infusion> TYPE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
         Identifier.fromNamespaceAndPath("alchemical_leather","infusion"),DataComponentType.<Infusion>builder().persistent(Infusion.CODEC).networkSynchronized(Infusion.STREAM_CODEC).build());
     public static final DataComponentType<AnimalInfusion> ANIMAL_TYPE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
         Identifier.fromNamespaceAndPath("alchemical_leather","animal_infusion"),DataComponentType.<AnimalInfusion>builder().persistent(AnimalInfusion.CODEC).networkSynchronized(AnimalInfusion.STREAM_CODEC).build());
-    public static final TagKey<Item> ANIMAL_ARMOR=TagKey.create(Registries.ITEM,Identifier.fromNamespaceAndPath("alchemical_leather","animal_armor"));
     public static final List<EquipmentSlot> HUMANOID_SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET);
     public static final List<EquipmentSlot> SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET,EquipmentSlot.BODY);
-    private static EquipmentSlot humanoidSlot(ItemStack stack) {
-        if(stack.is(Items.LEATHER_HELMET)) return EquipmentSlot.HEAD;
-        if(stack.is(Items.LEATHER_CHESTPLATE)) return EquipmentSlot.CHEST;
-        if(stack.is(Items.LEATHER_LEGGINGS)) return EquipmentSlot.LEGS;
-        if(stack.is(Items.LEATHER_BOOTS)) return EquipmentSlot.FEET;
-        return null;
-    }
-    public static boolean animalArmor(ItemStack stack) {
-        var equippable=stack.get(DataComponents.EQUIPPABLE);
-        if(equippable==null||equippable.slot()!=EquipmentSlot.BODY)return false;
-        if(stack.is(ANIMAL_ARMOR))return true;
-        if(equippable.assetId().filter(EquipmentAssets.LEATHER::equals).isPresent())return true;
-        var repairable=stack.get(DataComponents.REPAIRABLE);
-        return repairable!=null&&repairable.isValidRepairItem(new ItemStack(Items.LEATHER));
-    }
     public static EquipmentSlot slot(ItemStack stack) {
-        var humanoid=humanoidSlot(stack);return humanoid!=null?humanoid:animalArmor(stack)?EquipmentSlot.BODY:null;
+        var equippable=stack.get(DataComponents.EQUIPPABLE);
+        if(equippable==null||!equippable.slot().isArmor()||!DyeableArmorRules.dyeable(stack))return null;
+        return equippable.slot();
     }
+    public static boolean animalArmor(ItemStack stack){return slot(stack)==EquipmentSlot.BODY;}
     public static boolean accepts(ItemStack stack,EquipmentSlot actualSlot,Identifier effect) {
         var target=slot(stack);if(target!=actualSlot)return false;
-        return actualSlot==EquipmentSlot.BODY||EffectSlotRules.slot(effect)==actualSlot;
+        return actualSlot.getType()==EquipmentSlot.Type.ANIMAL_ARMOR||EffectSlotRules.slot(effect)==actualSlot;
     }
     public static List<Infusion> entries(ItemStack stack) {
         var animal=stack.get(ANIMAL_TYPE);if(animal!=null)return animal.effects();
