@@ -27,12 +27,20 @@ public final class ClientChecks implements FabricClientGameTest {
             context.waitTicks(30);
             context.runOnClient(client->{
                 var stack=client.player.getItemBySlot(EquipmentSlot.LEGS);
-                if(!stack.has(Infusions.TYPE)||!client.player.hasEffect(MobEffects.SPEED)||client.player.getEffect(MobEffects.SPEED).getAmplifier()!=1)throw new AssertionError("Infusion/effect not synchronized");
+                if(!stack.has(Infusions.TYPE)||!client.player.hasEffect(MobEffects.SPEED)||client.player.getEffect(MobEffects.SPEED).getAmplifier()!=1)throw new AssertionError("Vanilla leather infusion/effect not synchronized");
             });
             context.setScreen(()->new InventoryScreen(net.minecraft.client.Minecraft.getInstance().player));
             context.waitTicks(5);context.takeScreenshot("alchemical-leather-inventory");context.setScreen(()->null);
             world.getServer().runCommand("item replace entity @a armor.legs with minecraft:air");context.waitTicks(10);
-            context.runOnClient(client->{if(client.player.hasEffect(MobEffects.SPEED))throw new AssertionError("Effect remains on client after unequip");});
+            context.runOnClient(client->{if(client.player.hasEffect(MobEffects.SPEED))throw new AssertionError("Effect remains on client after vanilla leather unequip");});
+            world.getServer().runCommand("item replace entity @a armor.head with minecraft:iron_helmet[alchemical_leather:infusion={effect:\"minecraft:night_vision\",amplifier:0,mode:\"stable\"},minecraft:dyed_color=65280]");
+            context.waitTicks(20);
+            context.runOnClient(client->{
+                var stack=client.player.getItemBySlot(EquipmentSlot.HEAD);
+                if(!stack.has(Infusions.TYPE)||!stack.has(net.minecraft.core.component.DataComponents.DYED_COLOR)||!client.player.hasEffect(MobEffects.NIGHT_VISION))throw new AssertionError("Synthetic dyeable humanoid infusion/effect not synchronized");
+            });
+            world.getServer().runCommand("item replace entity @a armor.head with minecraft:air");context.waitTicks(10);
+            context.runOnClient(client->{if(client.player.hasEffect(MobEffects.NIGHT_VISION))throw new AssertionError("Effect remains on client after generalized dyeable armor unequip");});
         }
     }
 }
