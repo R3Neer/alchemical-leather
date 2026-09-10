@@ -56,7 +56,11 @@ public final class DyeableArmorRules implements SimpleSynchronousResourceReloadL
                 if(DyeRecipe.MAP_CODEC.codec().parse(jsonOps,json).isError())return;
                 var result=resultId(json.get("result"));
                 collectSelfTarget(json.get("target"),result,nextItems,nextTagged);
-            } catch(Exception e){throw new IllegalArgumentException("Invalid dye recipe "+path,e);}
+            } catch(Exception ignored) {
+                // RecipeManager already reports malformed recipe resources and continues loading the rest.
+                // This auxiliary index must be no more disruptive: unreadable/invalid candidates contribute
+                // no dyeability evidence, but they never make an otherwise loadable datapack fail because of us.
+            }
         });
         selfItems=Set.copyOf(nextItems);taggedResults=Set.copyOf(nextTagged);
     }
