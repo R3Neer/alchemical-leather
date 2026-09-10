@@ -13,8 +13,9 @@ public final class AlchemicalLeatherClient implements ClientModInitializer {
         BlockColorRegistry.register((state,level,pos,colors)->{
             int color=0xffffffff;
             if(level.getBlockEntity(pos) instanceof PotionCauldronEntity be)color=be.contents.getColor()|0xff000000;
+            else if(level.getBlockEntity(pos) instanceof DyedWaterCauldronEntity be)color=be.color|0xff000000;
             colors.add(color);
-        },PotionCauldron.BLOCK);
+        },PotionCauldron.BLOCK,DyedWaterCauldron.BLOCK);
         ItemTooltipCallback.EVENT.register((stack,context,flag,lines)->{
             var single=stack.get(Infusions.TYPE);var animal=stack.get(Infusions.ANIMAL_TYPE);
             var display=stack.get(DataComponents.TOOLTIP_DISPLAY);
