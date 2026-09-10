@@ -14,10 +14,12 @@ public final class Infusions {
         Identifier.fromNamespaceAndPath("alchemical_leather","animal_infusion"),DataComponentType.<AnimalInfusion>builder().persistent(AnimalInfusion.CODEC).networkSynchronized(AnimalInfusion.STREAM_CODEC).build());
     public static final List<EquipmentSlot> HUMANOID_SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET);
     public static final List<EquipmentSlot> SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET,EquipmentSlot.BODY);
+    public static boolean armorCandidate(ItemStack stack) {
+        var equippable=stack.get(DataComponents.EQUIPPABLE);return equippable!=null&&equippable.slot().isArmor();
+    }
     public static EquipmentSlot slot(ItemStack stack) {
-        var equippable=stack.get(DataComponents.EQUIPPABLE);
-        if(equippable==null||!equippable.slot().isArmor()||!DyeableArmorRules.dyeable(stack))return null;
-        return equippable.slot();
+        if(!armorCandidate(stack)||!DyeableArmorRules.dyeable(stack))return null;
+        return stack.get(DataComponents.EQUIPPABLE).slot();
     }
     public static boolean animalArmor(ItemStack stack){return slot(stack)==EquipmentSlot.BODY;}
     public static boolean accepts(ItemStack stack,EquipmentSlot actualSlot,Identifier effect) {
