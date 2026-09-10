@@ -12,7 +12,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.world.entity.LivingEntity;
 public final class AlchemicalLeather implements ModInitializer {
     @Override public void onInitialize() {
-        Infusions.initialize();PotionCauldron.initialize();
+        Infusions.initialize();PotionCauldron.initialize();DyedWaterCauldron.initialize();
         var data=ResourceManagerHelper.get(PackType.SERVER_DATA);
         data.registerReloadListener(new DyeableArmorRules());
         data.registerReloadListener(new EffectSlotRules());
