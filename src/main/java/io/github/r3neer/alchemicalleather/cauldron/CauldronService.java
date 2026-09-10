@@ -31,7 +31,6 @@ public final class CauldronService {
         boolean bedActive=BedrockifyBridge.cauldronsActive();boolean bedPotion=bedActive&&BedrockifyBridge.potion(state),bedDyed=bedActive&&BedrockifyBridge.dyed(state);
         boolean armor=armorForSide(stack,level),dye=stack.has(DataComponents.DYE);
 
-        // Alchemical Leather owns vanilla water + dye unless BedrockIfy's corresponding feature is positively active.
         if(dye&&state.is(Blocks.WATER_CAULDRON)) {
             if(bedActive)return InteractionResult.PASS;
             if(!allowed(player,level,pos))return InteractionResult.FAIL;
@@ -75,7 +74,6 @@ public final class CauldronService {
                 int waterLevel=Math.min(dyedLevel/2+1,3);Item used=stack.getItem();player.setItemInHand(hand,ItemUtils.createFilledResult(stack,player,new ItemStack(Items.GLASS_BOTTLE)));
                 player.awardStat(Stats.USE_CAULDRON);player.awardStat(Stats.ITEM_USED.get(used));level.setBlockAndUpdate(pos,Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL,waterLevel));fluidFeedback(level,pos,SoundEvents.BOTTLE_EMPTY,GameEvent.FLUID_PLACE);return InteractionResult.SUCCESS;
             }
-            // WATER_BUCKET and the other ordinary bucket interactions deliberately fall through to the block's vanilla EMPTY dispatcher.
         }
 
         if(armor&&state.is(Blocks.WATER_CAULDRON)) {
@@ -164,5 +162,5 @@ public final class CauldronService {
     private static void feedback(Level level,BlockPos pos){level.playSound(null,pos,SoundEvents.BOTTLE_EMPTY,SoundSource.BLOCKS,1,1);level.gameEvent(null,GameEvent.BLOCK_CHANGE,pos);}
     private static void dyeFeedback(Level level,BlockPos pos){level.playSound(null,pos,SoundEvents.DYE_USE,SoundSource.BLOCKS,1,1);level.gameEvent(null,GameEvent.BLOCK_CHANGE,pos);}
     private static void splashFeedback(Level level,BlockPos pos){level.playSound(null,pos,SoundEvents.GENERIC_SPLASH,SoundSource.BLOCKS,.15F,1.25F);level.gameEvent(null,GameEvent.BLOCK_CHANGE,pos);}
-    private static void fluidFeedback(Level level,BlockPos pos,SoundEvent sound,GameEvent event){level.playSound(null,pos,sound,SoundSource.BLOCKS,1,1);level.gameEvent(null,event,pos);}
+    private static void fluidFeedback(Level level,BlockPos pos,SoundEvent sound,Holder<GameEvent> event){level.playSound(null,pos,sound,SoundSource.BLOCKS,1,1);level.gameEvent(null,event,pos);}
 }
