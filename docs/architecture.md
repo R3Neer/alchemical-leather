@@ -1,6 +1,6 @@
 # Architecture and implementation notes
 
-This document describes the architecture of Alchemical Leather 0.1.0-alpha.2. Player-facing mechanics live in [GUIDE.md](GUIDE.md).
+This document describes the architecture of Alchemical Leather 0.1.0-alpha.3. Player-facing mechanics live in [GUIDE.md](GUIDE.md).
 
 ## Armor classification
 
@@ -32,6 +32,33 @@ BODY / animal armor uses `alchemical_leather:animal_infusion`. `AnimalInfusion` 
 - ANIMAL_ARMOR accepts any valid potion effect and stores the one-potion bundle.
 
 This means modded dyeable humanoid armor inherits the same body-part rules as vanilla leather, while compatible BODY armor is independent of the humanoid effect-slot datapack.
+
+## Leatherworker trade economy
+
+Minecraft 26.2 exposes villager trades and trade sets as data-driven registries. Alchemical Leather adds exactly three `villager_trade` resources and appends their keys to the vanilla Leatherworker level tags without replacing the underlying vanilla `TradeSet` or removing any vanilla trade:
+
+- one Expert timed category at level IV;
+- one Master timed category at level V;
+- one Master persistent category at level V.
+
+Each category stays a single candidate regardless of how many armor/potion combinations it can generate. `InfusedArmorTradeFunction` is a registered loot-item function used by those trade resources. It delegates to `LeatherworkerTrades`, which first chooses among valid armor items and only then among valid potions for the selected slot. This two-stage selection prevents BODY armor from becoming more likely merely because its permitted potion union is larger.
+
+Trade economy eligibility is intentionally separate from mechanical infusion compatibility. The item tags `#alchemical_leather:leatherworker/expert_armor` and `#alchemical_leather:leatherworker/master_armor` are explicit economic allowlists. Slot-specific potion tags define curated tier pools. Optional Scale Brews and Alex's Mobs entries use non-required tag elements and introduce no compile-time dependency.
+
+Tag membership is only a candidate source, not authority. Runtime policy revalidates the generated stack and effect:
+
+- armor must still be actually dyeable/equippable and must not start enchanted;
+- Expert accepts only LEGS/FEET and amplifier 0;
+- Master timed accepts HEAD/CHEST/LEGS/FEET/BODY and amplifier at most 1;
+- every villager tier rejects amplifier 2 or greater;
+- persistent trades force stable mode and amplifier 0;
+- `clinging_reoriented:reorientation` is hard-rejected regardless of datapack tags;
+- humanoid effects must still match `EffectSlotRules`; BODY keeps its independent slot policy;
+- multi-effect and instantaneous trade potions are rejected.
+
+The output stack receives the same `infusion` or `animal_infusion` component used by manual infusion plus the potion-derived `DYED_COLOR`. Variant pricing is attached transiently through Minecraft's `ADDITIONAL_TRADE_COST`; `VillagerTrade` folds that into the first emerald cost and removes the component from the sold item. The persistent trade keeps one Dragon's Breath as `additional_wants`, so reputation/demand changes to the primary emerald cost cannot erase the End-resource gate.
+
+If datapacks leave a category with no valid armor/potion combination, the custom loot function returns an empty stack. Vanilla `VillagerTrade.getOffer` then omits that offer rather than exposing invalid equipment.
 
 ## Runtime effect ownership
 
@@ -94,6 +121,6 @@ Administrative component editing and third-party code that directly mutates inte
 
 ## Validation boundaries
 
-Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, BedrockIfy ownership and real Clinging Reoriented integration. The client suite covers synchronized cauldron state, render-data snapshots and equipment effect synchronization.
+Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Trade tests inspect actual registries/tags, TradeSet cardinality, generated offers, prices/use limits, Dragon's Breath gating, tier/slot boundaries, hard bans and optional-mod caps. The client suite covers synchronized cauldron state, render-data snapshots and equipment effect synchronization.
 
 See [validation.md](validation.md) for the exact release-candidate evidence and remaining human/runtime checks.
