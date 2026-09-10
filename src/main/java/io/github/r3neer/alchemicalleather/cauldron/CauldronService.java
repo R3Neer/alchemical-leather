@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.*;
 import net.minecraft.world.*;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.*;
@@ -31,8 +32,8 @@ public final class CauldronService {
         if(bottle(stack)&&incoming!=null&&incoming.is(Potions.WATER)&&!own&&!bed)return InteractionResult.PASS;
         if(level.isClientSide())return InteractionResult.SUCCESS;
         if(armor&&state.is(Blocks.WATER_CAULDRON)) {
-            if(!stack.has(Infusions.TYPE)&&!stack.has(DataComponents.DYED_COLOR))return InteractionResult.PASS;
-            stack.remove(Infusions.TYPE);stack.remove(DataComponents.DYED_COLOR);
+            if(!Infusions.blocked(stack)&&!stack.has(DataComponents.DYED_COLOR))return InteractionResult.PASS;
+            stack.remove(Infusions.TYPE);stack.remove(Infusions.ANIMAL_TYPE);stack.remove(DataComponents.DYED_COLOR);
             LayeredCauldronBlock.lowerFillLevel(state,level,pos);feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(armor&&BedrockifyBridge.dyed(state)) {
@@ -52,7 +53,7 @@ public final class CauldronService {
             catch(ReflectiveOperationException|RuntimeException e){return error(player,"invalid");}
         }
         if(bottle(stack)) {
-            var resolved=Infusions.resolve(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
+            var resolved=Infusions.resolveAll(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
             if(!state.is(Blocks.CAULDRON)&&!own&&!bed)return error(player,"different");
             if(doses>=3)return error(player,"full");
             if(doses>0&&(!contents.equals(incoming)||type!=stack.getItem()))return error(player,"different");
@@ -62,10 +63,17 @@ public final class CauldronService {
             feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(armor&&(own||bed)) {
-            var resolved=Infusions.resolve(contents,type);if(!resolved.ok())return error(player,resolved.error());
             if(Infusions.enchanted(stack))return error(player,"enchanted");
-            if(EffectSlotRules.slot(resolved.infusion().effect())!=Infusions.slot(stack))return error(player,"slot");
-            var result=stack.copy();result.set(Infusions.TYPE,resolved.infusion());result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
+            var target=Infusions.slot(stack);var result=stack.copy();
+            if(target==EquipmentSlot.BODY) {
+                var resolved=Infusions.resolveAll(contents,type);if(!resolved.ok())return error(player,resolved.error());
+                result.remove(Infusions.TYPE);result.set(Infusions.ANIMAL_TYPE,resolved.infusion());
+            } else {
+                var resolved=Infusions.resolve(contents,type);if(!resolved.ok())return error(player,resolved.error());
+                if(!Infusions.accepts(stack,target,resolved.infusion().effect()))return error(player,"slot");
+                result.remove(Infusions.ANIMAL_TYPE);result.set(Infusions.TYPE,resolved.infusion());
+            }
+            result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
             write(level,pos,contents,type,doses-1);player.setItemInHand(hand,result);feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(own&&stack.is(Items.GLASS_BOTTLE)) {
