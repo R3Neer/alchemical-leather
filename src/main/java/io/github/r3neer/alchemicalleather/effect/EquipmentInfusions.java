@@ -18,7 +18,7 @@ public final class EquipmentInfusions {
         if(ledger==null)ledger=EffectLedger.of(entity);
         ledger.equipmentManaged=true;
         Set<Holder<MobEffect>> wanted=new HashSet<>();
-        for(var slot:Infusions.HUMANOID_SLOTS)syncSingle(level,entity,slot,entity.getItemBySlot(slot),ledger,wanted);
+        for(var slot:Infusions.HUMANOID_SLOTS){syncSingle(level,entity,slot,entity.getItemBySlot(slot),ledger,wanted);if(!entity.isAlive())return;}
         syncAnimal(level,entity,entity.getItemBySlot(EquipmentSlot.BODY),ledger,wanted);
         if(entity.isAlive())ledger.retainArmor(wanted);
     }
