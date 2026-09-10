@@ -18,10 +18,10 @@ public final class BedrockifyOwnershipTests {
         p.setItemInHand(InteractionHand.MAIN_HAND,stack);
         return CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false));
     }
-    private Object fillBedrockPotion(GameTestHelper h,BlockPos pos,int level) throws Exception {
+    private void fillBedrockPotion(GameTestHelper h,BlockPos pos,int level) throws Exception {
         var block=BuiltInRegistries.BLOCK.getValue(Identifier.parse("bedrockify:potion_cauldron"));var state=block.defaultBlockState();var property=BedrockifyBridge.property(state);
         state=state.setValue(property,level);h.getLevel().setBlockAndUpdate(pos,state);var be=h.getLevel().getBlockEntity(pos);
-        be.getClass().getMethod("setPotion",ItemStack.class).invoke(be,PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS));return be;
+        be.getClass().getMethod("setPotion",ItemStack.class).invoke(be,PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS));
     }
 
     @GameTest public void armorConsumesDoseWithoutReplacingBedrockifyPotionBlock(GameTestHelper h) throws Exception {
@@ -34,8 +34,8 @@ public final class BedrockifyOwnershipTests {
 
     @GameTest public void ordinaryPotionBottleIsLeftEntirelyToBedrockify(GameTestHelper h) throws Exception {
         if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
-        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,2);var before=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var potion=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS);p.setShiftKeyDown(true);
+        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,2);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var potion=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS);var beforeStack=potion.copy();p.setShiftKeyDown(true);
         h.assertTrue(use(h,p,pos,potion)==InteractionResult.PASS,"Alchemical Leather yields BedrockIfy bottle lifecycle to BedrockIfy");
-        h.assertTrue(h.getLevel().getBlockState(pos).equals(before),"Yielding does not replace or mutate BedrockIfy's block");h.assertTrue(ItemStack.matches(p.getMainHandItem(),potion),"Yielding does not consume or replace the potion stack");h.succeed();
+        h.assertTrue(h.getLevel().getBlockState(pos).equals(beforeState),"Yielding does not replace or mutate BedrockIfy's block");h.assertTrue(ItemStack.matches(p.getMainHandItem(),beforeStack),"Yielding does not consume or replace the potion stack");h.succeed();
     }
 }
