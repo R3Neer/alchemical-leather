@@ -7,10 +7,15 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 public final class EquipmentInfusions {
     public static void sync(LivingEntity entity) {
         if(!(entity.level() instanceof ServerLevel level)||!entity.isAlive()||entity instanceof ArmorStand)return;
+        // Player NBT/equipment can be loaded before the play connection exists. Any projection at that point
+        // reaches ServerPlayer.onEffectAdded/onEffectUpdated and attempts to send through a null connection.
+        // Defer the entire operation, including instant consumption and clock creation, until JOIN reconciliation.
+        if(entity instanceof ServerPlayer player&&player.connection==null)return;
         boolean any=false;
         for(var slot:Infusions.SLOTS){var stack=entity.getItemBySlot(slot);if(Infusions.blocked(stack)&&Infusions.slot(stack)==slot){any=true;break;}}
         var ledger=((LedgerHolder)entity).alchemical$existingLedger();
