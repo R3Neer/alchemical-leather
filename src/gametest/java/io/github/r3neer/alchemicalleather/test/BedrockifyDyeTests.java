@@ -36,6 +36,12 @@ public final class BedrockifyDyeTests {
         }h.succeed();
     }
 
+    @GameTest public void activeBedrockIfyOwnsVanillaWaterDyeEntryPoint(GameTestHelper h){
+        if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
+        var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));var before=Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL,2);h.getLevel().setBlockAndUpdate(pos,before);var dye=new ItemStack(Items.DYE.red(),2);
+        h.assertTrue(use(h,p,pos,dye)==InteractionResult.PASS,"Alchemical Leather yields vanilla-water dyeing to active BedrockIfy");h.assertTrue(h.getLevel().getBlockState(pos).equals(before)&&dye.getCount()==2,"Yielding does not mutate water or consume dye, preventing double handling");h.succeed();
+    }
+
     @GameTest public void disabledBedrockIfyCauldronSettingReturnsVanillaDyeOwnership(GameTestHelper h) throws Exception {
         if(!FabricLoader.getInstance().isModLoaded("bedrockify")){h.succeed();return;}
         var type=Class.forName("me.juancarloscp52.bedrockify.Bedrockify");var instance=type.getMethod("getInstance").invoke(null);var settings=type.getField("settings").get(instance);var field=settings.getClass().getField("bedrockCauldron");boolean old=field.getBoolean(settings);
