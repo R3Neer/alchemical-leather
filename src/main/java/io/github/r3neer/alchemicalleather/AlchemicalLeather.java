@@ -15,7 +15,7 @@ public final class AlchemicalLeather implements ModInitializer {
     @Override public void onInitialize() {
         Infusions.initialize();PotionCauldron.initialize();DyedWaterCauldron.initialize();
         var data=ResourceManagerHelper.get(PackType.SERVER_DATA);
-        data.registerReloadListener(new DyeableArmorRules());
+        data.registerReloadListener(DyeableArmorRules.ID,DyeableArmorRules::new);
         data.registerReloadListener(new EffectSlotRules());
         UseBlockCallback.EVENT.register(CauldronService::interact);
         EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment,stack,context)->Infusions.blocked(stack)?TriState.FALSE:TriState.DEFAULT);
