@@ -1,5 +1,5 @@
 package io.github.r3neer.alchemicalleather.test;
-import io.github.r3neer.alchemicalleather.cauldron.PotionCauldronEntity;
+import io.github.r3neer.alchemicalleather.cauldron.*;
 import io.github.r3neer.alchemicalleather.data.Infusions;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -13,16 +13,18 @@ public final class ClientChecks implements FabricClientGameTest {
             world.getServer().runCommand("fill -4 -61 -2 4 -61 7 minecraft:stone");
             world.getServer().runCommand("time set noon");
             world.getServer().runCommand("weather clear");
-            world.getServer().runCommand("setblock -2 -60 4 minecraft:cauldron");
+            world.getServer().runCommand("setblock -2 -60 4 alchemical_leather:dyed_water_cauldron[level=4]{color:6636321}");
             world.getServer().runCommand("setblock 0 -60 4 alchemical_leather:potion_cauldron[level=1]{contents:{potion:\"minecraft:swiftness\",custom_color:1193046},bottle:\"minecraft:potion\"}");
             world.getServer().runCommand("setblock 2 -60 4 alchemical_leather:potion_cauldron[level=3]{contents:{potion:\"minecraft:strength\",custom_color:16733440},bottle:\"minecraft:lingering_potion\"}");
             world.getServer().runCommand("tp @a 0 -60 0 0 20");
             context.waitTicks(30);world.getConnection().waitForChunksRender();
             context.runOnClient(client->{
-                var be=client.level.getBlockEntity(new BlockPos(0,-60,4));
-                if(!(be instanceof PotionCauldronEntity cauldron)||cauldron.contents.getColor()!=1193046)throw new AssertionError("Potion block entity and color not synchronized");
+                var potionBe=client.level.getBlockEntity(new BlockPos(0,-60,4));
+                if(!(potionBe instanceof PotionCauldronEntity cauldron)||cauldron.contents.getColor()!=1193046)throw new AssertionError("Potion block entity and color not synchronized");
+                var dyedBe=client.level.getBlockEntity(new BlockPos(-2,-60,4));
+                if(!(dyedBe instanceof DyedWaterCauldronEntity dyed)||dyed.color!=6636321)throw new AssertionError("Dyed-water block entity color not synchronized");
             });
-            context.takeScreenshot("alchemical-leather-vanilla-cauldron");
+            context.takeScreenshot("alchemical-leather-cauldron-colors");
             world.getServer().runCommand("item replace entity @a armor.legs with minecraft:leather_leggings[alchemical_leather:infusion={effect:\"minecraft:speed\",amplifier:1,mode:\"stable\"},minecraft:dyed_color=1193046]");
             context.waitTicks(30);
             context.runOnClient(client->{
