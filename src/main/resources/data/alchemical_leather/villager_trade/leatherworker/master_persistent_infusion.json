@@ -1,0 +1,11 @@
+{
+  "wants": { "id": "minecraft:emerald", "count": 28 },
+  "additional_wants": { "id": "minecraft:dragon_breath", "count": 1 },
+  "gives": { "id": "minecraft:leather_chestplate" },
+  "max_uses": 1,
+  "xp": 30,
+  "reputation_discount": 0.2,
+  "given_item_modifiers": [
+    { "function": "alchemical_leather:infused_armor_trade", "tier": "master_persistent" }
+  ]
+}

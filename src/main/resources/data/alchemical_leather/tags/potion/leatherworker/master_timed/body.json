@@ -1,0 +1,17 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:long_night_vision",
+    "minecraft:long_water_breathing",
+    "minecraft:long_invisibility",
+    "minecraft:strong_strength",
+    "minecraft:strong_regeneration",
+    "minecraft:long_fire_resistance",
+    "minecraft:strong_swiftness",
+    "minecraft:strong_leaping",
+    "minecraft:long_slow_falling",
+    { "id": "scalebrews:strong_growth", "required": false },
+    { "id": "scalebrews:strong_shrinking", "required": false },
+    { "id": "alexsmobs:long_clinging", "required": false }
+  ]
+}

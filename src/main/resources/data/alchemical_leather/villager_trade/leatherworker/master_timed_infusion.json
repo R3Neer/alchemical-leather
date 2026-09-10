@@ -1,0 +1,10 @@
+{
+  "wants": { "id": "minecraft:emerald", "count": 16 },
+  "gives": { "id": "minecraft:leather_helmet" },
+  "max_uses": 2,
+  "xp": 30,
+  "reputation_discount": 0.2,
+  "given_item_modifiers": [
+    { "function": "alchemical_leather:infused_armor_trade", "tier": "master_timed" }
+  ]
+}

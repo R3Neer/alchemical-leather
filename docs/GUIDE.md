@@ -11,6 +11,7 @@ This is the detailed reference. The README deliberately leaves some mechanics fo
 - [Humanoid armor](#humanoid-armor)
 - [Animal / BODY armor](#animal--body-armor)
 - [Potion types and timing](#potion-types-and-timing)
+- [Leatherworker trades](#leatherworker-trades)
 - [Dyed water and washing](#dyed-water-and-washing)
 - [Installation](#installation)
 - [Mod compatibility](#mod-compatibility)
@@ -84,6 +85,49 @@ Instant effects are consumed before firing so they cannot replay. If a potion co
 
 Armor-owned effects and ordinary external Minecraft effects keep separate clocks. If both provide the same effect, Alchemical Leather projects the currently appropriate visible winner without deleting the external source. Removing the armor reveals any surviving external effect again.
 
+## Leatherworker trades
+
+High-level Leatherworkers can sell armor that is already infused. This is a deliberately narrower economy than the general infusion system: **being compatible with Alchemical Leather does not automatically make an armor item or potion eligible for villager trading**.
+
+| Leatherworker level | Infused trade | Default armor | Infusion ceiling | Default emerald price | Uses before restock |
+|---|---|---|---|---:|---:|
+| I–III | None | — | — | — | — |
+| IV — Expert | Timed | Leather leggings or boots | Level I | 12–14 | 3 |
+| V — Master | Advanced timed | Leather helmet, chestplate, leggings, boots, leather horse armor or wolf armor | Level II | 17–28 | 2 |
+| V — Master | Persistent | Same Master armor pool | Level I, stable | 29–39 + 1 Dragon's Breath | 1 |
+
+Normal villager reputation, demand and discounts can change the emerald payment. The **Dragon's Breath remains a separate second cost**, so reaching the End is still required for the default persistent-villager route.
+
+The default potion pools are intentionally curated:
+
+| Tier / slot | Default choices |
+|---|---|
+| Expert leggings | Speed I, Jump Boost I |
+| Expert boots | Slow Falling I |
+| Master timed helmet | extended Night Vision I, Water Breathing I, Invisibility I |
+| Master timed chestplate | Strength II, Regeneration II, extended Fire Resistance I; Growth II / Shrinking II when Scale Brews is installed |
+| Master timed leggings | Speed II, Jump Boost II |
+| Master timed boots | extended Slow Falling I; extended Clinging I when Alex's Mobs is installed |
+| Master timed BODY | union of the curated Master timed effects above |
+| Master persistent helmet | Night Vision I, Water Breathing I |
+| Master persistent chestplate | Fire Resistance I, Strength I, Regeneration I; Growth I / Shrinking I when Scale Brews is installed |
+| Master persistent leggings | Speed I, Jump Boost I |
+| Master persistent boots | Slow Falling I; Clinging I when Alex's Mobs is installed |
+| Master persistent BODY | union of the curated persistent effects above |
+
+Several limits are enforced by code rather than relying only on tags:
+
+- Expert never sells infused helmets, chestplates or animal/BODY armor.
+- Villager trades never sell a level-III-or-higher infusion.
+- Persistent villager infusions are always level I; therefore Scale Brews Growth/Shrinking can never exceed level I when persistent.
+- **Reorientation is never a Leatherworker trade**, even though players can still infuse it manually where normal Alchemical Leather rules allow it.
+- Multi-effect and instantaneous potions are not sold as infused armor.
+- The default persistent pool also reserves Invisibility, Turtle Master, Wind Charged, Oozing, Infested and Weaving rather than turning the villager into a replacement for brewing or exploration.
+
+In an otherwise vanilla Leatherworker trade pool, Minecraft still chooses two offers per high-level trade set. Adding one Alchemical candidate to Expert makes that category appear in **2/3** of Expert selections. Master has two vanilla candidates plus the two Alchemical categories, so each Alchemical category appears in **1/2** of Master selections, at least one appears in **5/6**, and both appear together in **1/6**. Datapacks or other mods that extend the same villager-trade tags can naturally change those probabilities.
+
+Trade-generated armor uses the potion's color and the same Alchemical Leather components as manually infused equipment, so its runtime behavior, washing rules and enchantment exclusion are identical after purchase.
+
 ## Dyed water and washing
 
 Alchemical Leather includes its own colored-water cauldron mechanic; **BedrockIfy is not required**.
@@ -116,18 +160,21 @@ Download the regular JAR from [releases](https://github.com/R3Neer/alchemical-le
 
 Alchemical Leather works without optional content mods. Standard modded dyeable armor can be discovered automatically through the rules above; that is a compatibility mechanism, not a promise that every mod combination has been playtested.
 
-The alpha.2 CI integration fixture specifically exercises:
+The alpha.3 CI integration fixture specifically exercises:
 
 - **Clinging Reoriented 0.1.0-alpha.6**;
+- **Scale Brews 0.1.0-beta.5**;
 - **BedrockIfy 1.11.8+mc26.2**;
 - **Alex's Mobs Continued 2.1.9**;
-- the Gravity Changer, CodxLib and Cloth Config versions required by that Clinging fixture.
+- the Gravity Changer, CodxLib and Cloth Config versions required by the Clinging fixture.
 
-With Clinging Reoriented, Clinging and Reorientation potions can be infused into compatible BODY armor as well as following their humanoid boots mapping. The CI fixture tests the real registered effects on both leather horse armor and wolf armor.
+With Alex's Mobs and Clinging Reoriented, Clinging and Reorientation can both still be manually infused into compatible BODY armor and follow their existing humanoid rules. The villager economy is deliberately different: Clinging can enter Master trade pools, while **Reorientation is hard-banned from every Leatherworker trade**.
+
+With Scale Brews, Growth/Shrinking II may appear in Master timed armor. Persistent villager equipment is restricted to Growth/Shrinking I, and level III is never sold; brewing therefore remains necessary for the strongest scale effects.
 
 BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
 
-Earlier alpha validation also exercised Scale Brews, Friends&Foes, Wilder Wild, Deeper Dark, Additional Additions, Enchancement, Functional Armor Trims and Grind Enchantments. See [validation.md](validation.md) for the distinction between current alpha.2 CI evidence and historical alpha.1 fixture coverage.
+Earlier alpha validation also exercised Friends&Foes, Wilder Wild, Deeper Dark, Additional Additions, Enchancement, Functional Armor Trims and Grind Enchantments. See [validation.md](validation.md) for current and historical fixture boundaries.
 
 ## Datapack support
 
@@ -159,6 +206,29 @@ If a mod implements a custom dye system that neither uses `#minecraft:cauldron_c
 
 The item must still have an `EQUIPPABLE` component whose slot is an armor slot. The tag does not turn arbitrary equipment into armor.
 
+### Leatherworker economy pools
+
+Villager eligibility is opt-in and separate from general dyeability. Armor can be added to:
+
+```text
+#alchemical_leather:leatherworker/expert_armor
+#alchemical_leather:leatherworker/master_armor
+```
+
+Potion pools are split by tier and slot:
+
+```text
+#alchemical_leather:leatherworker/expert/<slot>
+#alchemical_leather:leatherworker/master_timed/<slot>
+#alchemical_leather:leatherworker/master_persistent/<slot>
+```
+
+where `<slot>` is `head`, `chest`, `legs`, `feet` or `body` as applicable. Expert itself only accepts `legs` and `feet`.
+
+Adding an ID to one of these tags does **not** bypass runtime policy. The result must still be genuinely compatible dyeable armor, must not start enchanted, humanoid effects must match their slot, Expert remains level-I legs/feet only, no villager tier can sell level III+, persistent trades remain level I, and Reorientation remains forbidden.
+
+Optional mod entries can use ordinary optional tag entries (`required: false`), so no Java dependency is necessary merely to extend a trade pool.
+
 ## Building
 
 Use Java 25 and the included Gradle wrapper:
@@ -173,7 +243,7 @@ Additional test task:
 .\gradlew.bat runClientGameTest
 ```
 
-`build` runs the required server GameTests. CI also runs the client GameTest under Xvfb and a real Clinging Reoriented + BedrockIfy compatibility fixture. At the alpha.2 feature freeze, both server runs passed all **32 required GameTests**, and the client test passed synchronization, render-data and equip/unequip assertions. See [validation.md](validation.md) for coverage and remaining manual checks.
+`build` runs the required server GameTests. Alpha.3 CI also runs the client GameTest under Xvfb and a real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs compatibility fixture. The alpha.3 candidate passes **41 required server GameTests** in both the standalone and real optional-mod runs; the client suite also passes synchronization, render-data and equip/unequip assertions. See [validation.md](validation.md) for coverage and remaining manual checks.
 
 ## License
 

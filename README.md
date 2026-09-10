@@ -16,10 +16,11 @@ Once that works:
 - Try a different kind of potion bottle.
 - Try armor that is dyeable but is not ordinary player leather armor.
 - Add dye to a water cauldron and see what compatible armor does with it.
+- See what an experienced **Leatherworker** is willing to sell.
 
 Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Use **Crouch + Use** to pour splash or lingering potions without throwing them. Water cauldrons wash compatible armor clean.
 
-Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, dyed water and compatibility. It contains spoilers.
+Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, Leatherworker trades, dyed water and compatibility. It contains spoilers.
 
 ## Install
 
@@ -32,7 +33,7 @@ This is an **alpha**. Back up worlds before updating and check [validation and r
 ## Go further
 
 - [Player guide / wiki](docs/GUIDE.md) — complete mechanics, with spoilers.
-- [Datapack support](docs/GUIDE.md#datapack-support) — effect slots and custom dyeable-armor fallback.
+- [Datapack support](docs/GUIDE.md#datapack-support) — effect slots, custom dyeable armor and Leatherworker economy pools.
 - [Build and tests](docs/GUIDE.md#building) · [Architecture](docs/architecture.md) · [Issues](https://github.com/R3Neer/alchemical-leather/issues)
 
 [GPL-3.0-or-later](LICENSE). Not an official Minecraft product; not approved by or associated with Mojang or Microsoft.

@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:long_slow_falling",
+    { "id": "alexsmobs:long_clinging", "required": false }
+  ]
+}
