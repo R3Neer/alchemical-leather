@@ -23,6 +23,7 @@ dependencies {
     clingingCompat 'maven.modrinth:alexs-mobs-continued:fL9nXI68'
     clingingCompat 'maven.modrinth:codxlib:BwANM3tR'
     clingingCompat 'maven.modrinth:cloth-config:Nv3xnWXd'
+    clingingCompat 'maven.modrinth:bedrockify:4pyW4Uba'
 }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
