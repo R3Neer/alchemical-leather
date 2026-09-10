@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_dye",
+  "category": "equipment",
+  "group": "disabled_test",
+  "target": "minecraft:iron_boots",
+  "dye": "#minecraft:dyes",
+  "result": {
+    "id": "minecraft:iron_boots"
+  },
+  "fabric:load_conditions": {
+    "condition": "fabric:false"
+  }
+}

@@ -12,5 +12,6 @@
   "message.alchemical_leather.full": "The cauldron is full.",
   "message.alchemical_leather.enchanted": "Enchanted armor cannot be infused.",
   "message.alchemical_leather.slot": "This effect needs a different armor piece.",
-  "message.alchemical_leather.fractional": "This cauldron contains a partial potion dose."
+  "message.alchemical_leather.fractional": "This cauldron contains a partial potion dose.",
+  "tag.item.alchemical_leather.dyeable_armor": "Dyeable Armor"
 }

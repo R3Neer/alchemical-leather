@@ -7,10 +7,21 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-/** Optional public-getter adapter; never links BedrockIfy classes into standalone runtime. */
+/** Optional reflective adapter; never links BedrockIfy classes into standalone runtime. */
 public final class BedrockifyBridge {
-    public static boolean potion(BlockState s){return BuiltInRegistries.BLOCK.getKey(s.getBlock()).toString().equals("bedrockify:potion_cauldron");}
-    public static boolean dyed(BlockState s){return BuiltInRegistries.BLOCK.getKey(s.getBlock()).toString().equals("bedrockify:colored_water_cauldron");}
+    private static final Identifier POTION=Identifier.parse("bedrockify:potion_cauldron");
+    private static final Identifier DYED=Identifier.parse("bedrockify:colored_water_cauldron");
+    public static boolean potion(BlockState s){return BuiltInRegistries.BLOCK.getKey(s.getBlock()).equals(POTION);}
+    public static boolean dyed(BlockState s){return BuiltInRegistries.BLOCK.getKey(s.getBlock()).equals(DYED);}
+    public static boolean cauldronsActive(){
+        if(!BuiltInRegistries.BLOCK.containsKey(DYED))return false;
+        try {
+            var type=Class.forName("me.juancarloscp52.bedrockify.Bedrockify");
+            var instance=type.getMethod("getInstance").invoke(null);if(instance==null)return false;
+            var settings=type.getField("settings").get(instance);if(settings==null)return false;
+            return settings.getClass().getField("bedrockCauldron").getBoolean(settings);
+        } catch(ReflectiveOperationException|LinkageError|RuntimeException e){return false;}
+    }
     public static IntegerProperty property(BlockState state){return (IntegerProperty)state.getBlock().getStateDefinition().getProperty("c_level");}
     public record Snapshot(PotionContents contents,Item bottle,int doses){}
     public static int color(Level level,BlockPos pos) throws ReflectiveOperationException {

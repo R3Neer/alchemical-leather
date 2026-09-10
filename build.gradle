@@ -1,5 +1,6 @@
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.20' }
-repositories { mavenCentral() }
+repositories { mavenCentral(); maven { url = 'https://api.modrinth.com/maven' } }
+configurations { clingingCompat }
 loom {
     splitEnvironmentSourceSets()
     mods { alchemical_leather { sourceSet sourceSets.main; sourceSet sourceSets.client } }
@@ -18,6 +19,11 @@ dependencies {
     minecraft 'com.mojang:minecraft:26.2'
     implementation 'net.fabricmc:fabric-loader:0.19.5'
     implementation 'net.fabricmc.fabric-api:fabric-api:0.159.0+26.2'
+    clingingCompat 'maven.modrinth:gravity-changer-unofficial-port:vpktEkWn'
+    clingingCompat 'maven.modrinth:alexs-mobs-continued:fL9nXI68'
+    clingingCompat 'maven.modrinth:codxlib:BwANM3tR'
+    clingingCompat 'maven.modrinth:cloth-config:Nv3xnWXd'
+    clingingCompat 'maven.modrinth:bedrockify:4pyW4Uba'
 }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
@@ -25,8 +31,12 @@ java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCom
 tasks.withType(JavaExec).configureEach {
     if (providers.gradleProperty('compatMods').isPresent()) {
         systemProperty 'fabric.addMods', file(providers.gradleProperty('compatMods').get()).absolutePath
-        systemProperty 'alchemical.compatRequired', 'true'
+        systemProperty 'alchemical.compatRequired', providers.gradleProperty('compatProfile').orElse('full').get()
     }
+}
+tasks.register('prepareClingingCompat', Sync) {
+    from configurations.clingingCompat
+    into layout.buildDirectory.dir('clingingCompat')
 }
 
 jar { from('LICENSE') { rename { "${it}_alchemical-leather" } } }

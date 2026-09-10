@@ -36,6 +36,12 @@ public final class PersistenceTests {
         var loaded=new PotionCauldronEntity(pos,be.getBlockState());loaded.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING,h.getLevel().registryAccess(),saved));
         h.assertTrue(loaded.contents.equals(contents)&&loaded.bottle==Items.SPLASH_POTION,"Custom effects/color and splash provenance persist");h.succeed();
     }
+    @GameTest public void dyedWaterColorRoundTrip(GameTestHelper h){
+        var pos=h.absolutePos(new BlockPos(1,1,1));CauldronService.writeDyed(h.getLevel(),pos,0x2a7bc1,5);
+        var be=(DyedWaterCauldronEntity)h.getLevel().getBlockEntity(pos);var saved=be.saveWithoutMetadata(h.getLevel().registryAccess());
+        var loaded=new DyedWaterCauldronEntity(pos,be.getBlockState());loaded.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING,h.getLevel().registryAccess(),saved));
+        h.assertTrue(loaded.color==0x2a7bc1,"Dyed-water RGB survives block-entity save/load");h.assertTrue(be.getBlockState().getValue(DyedWaterCauldron.LEVEL)==5,"Dyed-water amount remains in block state independently of RGB data");h.succeed();
+    }
     @GameTest public void periodicEffectMatchesVanilla(GameTestHelper h){
         var normal=h.makeMockPlayer(GameType.SURVIVAL);var armored=h.makeMockPlayer(GameType.SURVIVAL);normal.setHealth(1);armored.setHealth(1);
         normal.addEffect(new MobEffectInstance(MobEffects.REGENERATION,120,0));

@@ -3,7 +3,7 @@
   "id": "alchemical_leather",
   "version": "${version}",
   "name": "Alchemical Leather",
-  "description": "Leather armor can absorb potion effects from potion-filled cauldrons.",
+  "description": "Dyeable armor can absorb potion effects from cauldrons, including animal armor and native dyed-water interactions.",
   "authors": [
     "R3Neer"
   ],
