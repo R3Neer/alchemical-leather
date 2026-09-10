@@ -20,7 +20,7 @@ public final class BedrockifyBridge {
             var instance=type.getMethod("getInstance").invoke(null);if(instance==null)return false;
             var settings=type.getField("settings").get(instance);if(settings==null)return false;
             return settings.getClass().getField("bedrockCauldron").getBoolean(settings);
-        } catch(ReflectiveOperationException|LinkageError e){return false;}
+        } catch(ReflectiveOperationException|LinkageError|RuntimeException e){return false;}
     }
     public static IntegerProperty property(BlockState state){return (IntegerProperty)state.getBlock().getStateDefinition().getProperty("c_level");}
     public record Snapshot(PotionContents contents,Item bottle,int doses){}
