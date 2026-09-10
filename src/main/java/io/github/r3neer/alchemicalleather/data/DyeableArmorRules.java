@@ -12,6 +12,7 @@ import net.minecraft.world.item.*;
 /** Caches the targets of standard minecraft:crafting_dye recipes for O(1)/small-tag runtime classification. */
 public final class DyeableArmorRules implements SimpleSynchronousResourceReloadListener {
     public static final TagKey<Item> FALLBACK_TAG=TagKey.create(Registries.ITEM,Identifier.fromNamespaceAndPath("alchemical_leather","dyeable_armor"));
+    private static final Identifier DYE_RECIPE=Identifier.withDefaultNamespace("crafting_dye");
     private static volatile Set<Identifier> items=Set.of();
     private static volatile Set<TagKey<Item>> tags=Set.of();
 
@@ -30,7 +31,7 @@ public final class DyeableArmorRules implements SimpleSynchronousResourceReloadL
         manager.listResources("recipe",path->path.getPath().endsWith(".json")).forEach((path,resource)->{
             try(var reader=resource.openAsReader()) {
                 var json=JsonParser.parseReader(reader).getAsJsonObject();
-                if(!json.has("type")||!json.get("type").getAsString().equals("minecraft:crafting_dye"))return;
+                if(!json.has("type")||!Identifier.parse(json.get("type").getAsString()).equals(DYE_RECIPE))return;
                 if(!json.has("target"))throw new IllegalArgumentException("Missing target");
                 collect(json.get("target"),nextItems,nextTags);
             } catch(Exception e){throw new IllegalArgumentException("Invalid dye recipe "+path,e);}
