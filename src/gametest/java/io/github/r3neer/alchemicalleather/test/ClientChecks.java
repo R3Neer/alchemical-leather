@@ -1,6 +1,7 @@
 package io.github.r3neer.alchemicalleather.test;
 import io.github.r3neer.alchemicalleather.cauldron.*;
 import io.github.r3neer.alchemicalleather.data.Infusions;
+import net.fabricmc.fabric.api.blockgetter.v2.FabricBlockGetter;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
@@ -19,10 +20,14 @@ public final class ClientChecks implements FabricClientGameTest {
             world.getServer().runCommand("tp @a 0 -60 0 0 20");
             context.waitTicks(30);world.getConnection().waitForChunksRender();
             context.runOnClient(client->{
-                var potionBe=client.level.getBlockEntity(new BlockPos(0,-60,4));
+                var potionPos=new BlockPos(0,-60,4);var dyedPos=new BlockPos(-2,-60,4);
+                var potionBe=client.level.getBlockEntity(potionPos);
                 if(!(potionBe instanceof PotionCauldronEntity cauldron)||cauldron.contents.getColor()!=1193046)throw new AssertionError("Potion block entity and color not synchronized");
-                var dyedBe=client.level.getBlockEntity(new BlockPos(-2,-60,4));
+                var dyedBe=client.level.getBlockEntity(dyedPos);
                 if(!(dyedBe instanceof DyedWaterCauldronEntity dyed)||dyed.color!=6636321)throw new AssertionError("Dyed-water block entity color not synchronized");
+                var getter=(FabricBlockGetter)client.level;
+                if(!(getter.getBlockEntityRenderData(potionPos) instanceof Integer potionColor)||potionColor!=1193046)throw new AssertionError("Potion cauldron render-data color not synchronized");
+                if(!(getter.getBlockEntityRenderData(dyedPos) instanceof Integer dyedColor)||dyedColor!=6636321)throw new AssertionError("Dyed-water render-data color not synchronized");
             });
             context.takeScreenshot("alchemical-leather-cauldron-colors");
             world.getServer().runCommand("item replace entity @a armor.legs with minecraft:leather_leggings[alchemical_leather:infusion={effect:\"minecraft:speed\",amplifier:1,mode:\"stable\"},minecraft:dyed_color=1193046]");

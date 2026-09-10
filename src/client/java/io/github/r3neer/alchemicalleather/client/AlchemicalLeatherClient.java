@@ -3,6 +3,7 @@ import io.github.r3neer.alchemicalleather.cauldron.*;
 import io.github.r3neer.alchemicalleather.data.*;
 import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.blockgetter.v2.FabricBlockGetter;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.ChatFormatting;
@@ -12,8 +13,7 @@ public final class AlchemicalLeatherClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         BlockColorRegistry.register((state,level,pos,colors)->{
             int color=0xffffffff;
-            if(level.getBlockEntity(pos) instanceof PotionCauldronEntity be)color=be.contents.getColor()|0xff000000;
-            else if(level.getBlockEntity(pos) instanceof DyedWaterCauldronEntity be)color=be.color|0xff000000;
+            if(level instanceof FabricBlockGetter getter&&getter.getBlockEntityRenderData(pos) instanceof Integer rgb)color=rgb|0xff000000;
             colors.add(color);
         },PotionCauldron.BLOCK,DyedWaterCauldron.BLOCK);
         ItemTooltipCallback.EVENT.register((stack,context,flag,lines)->{
