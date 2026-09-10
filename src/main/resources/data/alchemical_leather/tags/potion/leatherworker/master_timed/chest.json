@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:strong_strength",
+    "minecraft:strong_regeneration",
+    "minecraft:long_fire_resistance",
+    { "id": "scalebrews:strong_growth", "required": false },
+    { "id": "scalebrews:strong_shrinking", "required": false }
+  ]
+}

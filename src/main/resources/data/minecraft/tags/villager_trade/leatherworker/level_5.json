@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "alchemical_leather:leatherworker/master_timed_infusion",
+    "alchemical_leather:leatherworker/master_persistent_infusion"
+  ]
+}

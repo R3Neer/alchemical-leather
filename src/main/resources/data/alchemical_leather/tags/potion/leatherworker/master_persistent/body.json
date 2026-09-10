@@ -1,0 +1,16 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:night_vision",
+    "minecraft:water_breathing",
+    "minecraft:fire_resistance",
+    "minecraft:strength",
+    "minecraft:regeneration",
+    "minecraft:swiftness",
+    "minecraft:leaping",
+    "minecraft:slow_falling",
+    { "id": "scalebrews:growth", "required": false },
+    { "id": "scalebrews:shrinking", "required": false },
+    { "id": "alexsmobs:clinging", "required": false }
+  ]
+}

@@ -2,6 +2,7 @@ package io.github.r3neer.alchemicalleather;
 import io.github.r3neer.alchemicalleather.data.*;
 import io.github.r3neer.alchemicalleather.cauldron.*;
 import io.github.r3neer.alchemicalleather.effect.EquipmentInfusions;
+import io.github.r3neer.alchemicalleather.trade.LeatherworkerTrades;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
@@ -13,7 +14,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.world.entity.LivingEntity;
 public final class AlchemicalLeather implements ModInitializer {
     @Override public void onInitialize() {
-        Infusions.initialize();PotionCauldron.initialize();DyedWaterCauldron.initialize();
+        Infusions.initialize();LeatherworkerTrades.initialize();PotionCauldron.initialize();DyedWaterCauldron.initialize();
         var data=ResourceManagerHelper.get(PackType.SERVER_DATA);
         data.registerReloadListener(DyeableArmorRules.ID,DyeableArmorRules::new);
         data.registerReloadListener(new EffectSlotRules());
