@@ -12,6 +12,7 @@ import net.minecraft.resources.*;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.*;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.crafting.DyeRecipe;
 
 /** Caches standard evidence that an item can actually be recolored in place. */
 public final class DyeableArmorRules implements SimpleSynchronousResourceReloadListener {
@@ -21,8 +22,10 @@ public final class DyeableArmorRules implements SimpleSynchronousResourceReloadL
     private static volatile Set<Identifier> selfItems=Set.of();
     private static volatile Set<TaggedResult> taggedResults=Set.of();
     private final RegistryOps.RegistryInfoLookup registryInfo;
+    private final RegistryOps<JsonElement> jsonOps;
 
     public DyeableArmorRules(HolderLookup.Provider registries) {
+        this.jsonOps=registries.createSerializationContext(JsonOps.INSTANCE);
         this.registryInfo=new RegistryOps.RegistryInfoLookup(){
             @Override @SuppressWarnings({"rawtypes","unchecked"})
             public <T> Optional<RegistryOps.RegistryInfo<T>> lookup(ResourceKey<? extends Registry<? extends T>> key){
@@ -47,7 +50,10 @@ public final class DyeableArmorRules implements SimpleSynchronousResourceReloadL
             try(var reader=resource.openAsReader()) {
                 var json=JsonParser.parseReader(reader).getAsJsonObject();
                 if(!json.has("type")||!Identifier.parse(json.get("type").getAsString()).equals(DYE_RECIPE)||!conditionsAllow(json))return;
-                if(!json.has("target")||!json.has("result"))throw new IllegalArgumentException("Missing target/result");
+                // Validate the complete candidate through Minecraft's own recipe codec before using the
+                // small amount of JSON structure needed for self-recoloring classification. Invalid recipes
+                // are skipped by the recipe manager and must not become dyeability evidence here either.
+                if(DyeRecipe.MAP_CODEC.codec().parse(jsonOps,json).isError())return;
                 var result=resultId(json.get("result"));
                 collectSelfTarget(json.get("target"),result,nextItems,nextTagged);
             } catch(Exception e){throw new IllegalArgumentException("Invalid dye recipe "+path,e);}
