@@ -11,7 +11,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.*;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.DyedItemColor;
@@ -20,7 +19,9 @@ import net.minecraft.world.phys.*;
 
 public final class BedrockifyDyeTests {
     @GameTest public void coloredWaterRecolorsGeneralizedDyeableArmorWithoutRemovingInfusion(GameTestHelper h) throws Exception {
-        if(!FabricLoader.getInstance().isModLoaded("bedrockify")){h.succeed();return;}
+        boolean loaded=FabricLoader.getInstance().isModLoaded("bedrockify");
+        if(System.getProperty("alchemical.compatRequired","").equals("clinging"))h.assertTrue(loaded,"CI integration profile must load BedrockIfy");
+        if(!loaded){h.succeed();return;}
         var block=BuiltInRegistries.BLOCK.getValue(Identifier.parse("bedrockify:colored_water_cauldron"));var pos=h.absolutePos(new BlockPos(1,1,1));var p=h.makeMockPlayer(GameType.SURVIVAL);int color=0x345678;
         for(var item:List.of(Items.IRON_HELMET,Items.COPPER_HORSE_ARMOR)){
             var state=block.defaultBlockState();var property=BedrockifyBridge.property(state);state=state.setValue(property,3);h.getLevel().setBlockAndUpdate(pos,state);var be=h.getLevel().getBlockEntity(pos);be.getClass().getMethod("setDyeColor",int.class).invoke(be,color);
