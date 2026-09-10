@@ -118,7 +118,10 @@ public final class LeatherworkerTrades {
         return result;
     }
 
-    private static EquipmentSlot validSlot(Tier tier, ItemStack stack) {
+    static EquipmentSlot validSlot(Tier tier, ItemStack stack) {
+        // Trade generation must obey the same mutual exclusion as cauldron infusion, including
+        // custom armor whose default component patch already contains an enchantment.
+        if (Infusions.enchanted(stack)) return null;
         EquipmentSlot slot = Infusions.slot(stack);
         if (slot == null) return null;
         if (tier == Tier.EXPERT && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) return null;
@@ -139,6 +142,7 @@ public final class LeatherworkerTrades {
         // Absolute ceiling: villager trades never sell level III+ even if a future tier is added carelessly.
         if (effect.getAmplifier() > 1) return null;
         if (tier.persistent() && effect.getAmplifier() != 0) return null;
+        // Keep the Scale Brews invariant explicit even if the generic persistent cap changes later.
         if (effectId.getNamespace().equals("scalebrews") && tier.persistent() && effect.getAmplifier() != 0) return null;
         if (slot != EquipmentSlot.BODY && EffectSlotRules.slot(effectId) != slot) return null;
 
