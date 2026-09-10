@@ -11,7 +11,6 @@ permissions:
 
 jobs:
   publish:
-    if: github.event.head_commit.message == 'chore: trigger alpha.2 release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,21 +31,21 @@ jobs:
           JAR='build/libs/alchemical-leather-0.1.0-alpha.2.jar'
           test -f "$JAR"
           SHA=$(sha256sum "$JAR" | cut -d' ' -f1)
-          cat > release-notes.md <<EOF
-          Second public alpha for Minecraft 26.2 Fabric. Alchemical Leather now supports genuinely dyeable humanoid and animal armor, adds a native dyed-water cauldron, and keeps BedrockIfy optional. See the README and validation report for mechanics, compatibility, automated coverage, and remaining gameplay QA.
-
-          Highlights:
-          - Dyeable armor is discovered through standard wash/dye semantics plus a fallback tag; humanoid slot restrictions remain intact.
-          - BODY/animal armor stores one potion bundle and can retain multi-effect potions such as Turtle Master.
-          - Native six-level dyed water supports mixing, recoloring and washing without BedrockIfy.
-          - BedrockIfy ownership, pre-login player lifecycle and multithreaded cauldron tint rendering are hardened.
-          - Validation passed: 32/32 standalone server GameTests, client GameTest, and 32/32 with real Clinging Reoriented 0.1.0-alpha.6 + BedrockIfy 1.11.8+mc26.2.
-
-          This is an alpha; back up worlds before updating.
-
-          Target commit: `fd85ebd9b94e5a25b9349ad4530aab6fc98c633e`
-          SHA-256: `$SHA`
-          EOF
+          {
+            echo 'Second public alpha for Minecraft 26.2 Fabric. Alchemical Leather now supports genuinely dyeable humanoid and animal armor, adds a native dyed-water cauldron, and keeps BedrockIfy optional. See the README and validation report for mechanics, compatibility, automated coverage, and remaining gameplay QA.'
+            echo
+            echo 'Highlights:'
+            echo '- Dyeable armor is discovered through standard wash/dye semantics plus a fallback tag; humanoid slot restrictions remain intact.'
+            echo '- BODY/animal armor stores one potion bundle and can retain multi-effect potions such as Turtle Master.'
+            echo '- Native six-level dyed water supports mixing, recoloring and washing without BedrockIfy.'
+            echo '- BedrockIfy ownership, pre-login player lifecycle and multithreaded cauldron tint rendering are hardened.'
+            echo '- Validation passed: 32/32 standalone server GameTests, client GameTest, and 32/32 with real Clinging Reoriented 0.1.0-alpha.6 + BedrockIfy 1.11.8+mc26.2.'
+            echo
+            echo 'This is an alpha; back up worlds before updating.'
+            echo
+            echo 'Target commit: `fd85ebd9b94e5a25b9349ad4530aab6fc98c633e`'
+            echo "SHA-256: \`$SHA\`"
+          } > release-notes.md
           gh release create v0.1.0-alpha.2 "$JAR" \
             --repo "$GITHUB_REPOSITORY" \
             --target fd85ebd9b94e5a25b9349ad4530aab6fc98c633e \
