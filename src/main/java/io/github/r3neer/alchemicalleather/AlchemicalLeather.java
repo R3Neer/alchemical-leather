@@ -13,10 +13,12 @@ import net.minecraft.world.entity.LivingEntity;
 public final class AlchemicalLeather implements ModInitializer {
     @Override public void onInitialize() {
         Infusions.initialize();PotionCauldron.initialize();
-        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new EffectSlotRules());
+        var data=ResourceManagerHelper.get(PackType.SERVER_DATA);
+        data.registerReloadListener(new DyeableArmorRules());
+        data.registerReloadListener(new EffectSlotRules());
         UseBlockCallback.EVENT.register(CauldronService::interact);
         EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment,stack,context)->Infusions.blocked(stack)?TriState.FALSE:TriState.DEFAULT);
         ServerEntityEvents.EQUIPMENT_CHANGE.register((entity,slot,previous,next)->{if(Infusions.SLOTS.contains(slot))EquipmentInfusions.sync(entity);});
-        ServerEntityEvents.ENTITY_LOAD.register((entity,level)->{if(entity instanceof LivingEntity living)for(var slot:Infusions.SLOTS)if(living.getItemBySlot(slot).has(Infusions.TYPE)){EquipmentInfusions.sync(living);break;}});
+        ServerEntityEvents.ENTITY_LOAD.register((entity,level)->{if(entity instanceof LivingEntity living)for(var slot:Infusions.SLOTS)if(Infusions.blocked(living.getItemBySlot(slot))){EquipmentInfusions.sync(living);break;}});
     }
 }
