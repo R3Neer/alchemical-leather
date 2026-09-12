@@ -20,8 +20,9 @@ public final class DyedWaterCauldronEntity extends BlockEntity implements Render
 
     @Override protected void saveAdditional(ValueOutput output){super.saveAdditional(output);output.putInt("color",color);}
     @Override protected void loadAdditional(ValueInput input){
+        int previousColor=color;
         super.loadAdditional(input);color=input.getIntOr("color",0xffffff)&0xffffff;
-        CauldronRenderInvalidation.afterClientDataLoad(level,worldPosition);
+        if(color!=previousColor)CauldronRenderInvalidation.afterClientDataLoad(level,worldPosition);
     }
     @Override public Object getRenderData(){return color;}
     @Override public ClientboundBlockEntityDataPacket getUpdatePacket(){return ClientboundBlockEntityDataPacket.create(this);}
