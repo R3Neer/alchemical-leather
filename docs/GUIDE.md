@@ -29,7 +29,7 @@ This is the detailed reference. The README deliberately leaves some mechanics fo
 4. Unequip it to pause its own timed infusion clocks.
 5. Wash it in ordinary water when you want to remove both Alchemical Leather infusion data and dye color.
 
-Splash and lingering potions are poured with **sneak + right-click**, which prevents them from being thrown accidentally.
+Normal, splash and lingering potions are all poured with ordinary **right-click / Use**. When a splash or lingering potion is aimed at an Alchemical Leather cauldron, the cauldron interaction consumes it instead of throwing it.
 
 Reinfusing an item replaces its previous Alchemical Leather infusion. Infused armor cannot be enchanted, and enchanted armor cannot be infused. Custom names, durability, trims and unrelated item components are preserved by Alchemical Leather's cauldron transactions.
 
@@ -133,6 +133,8 @@ Trade-generated armor uses the potion's color and the same Alchemical Leather co
 Alchemical Leather includes its own colored-water cauldron mechanic; **BedrockIfy is not required**.
 
 Use any item carrying Minecraft's standard `DYE` component on a water cauldron. The water becomes dyed, and adding another dye blends colors using Minecraft-style brightness-preserving color mixing. Reapplying a dye that would not change the color consumes nothing.
+
+The same `DYE` items can tint an Alchemical Leather potion cauldron. The tint blends with the potion's current visible color while preserving potion identity, effects, custom name, bottle type and dose count. A no-op tint consumes no dye.
 
 Internally the colored cauldron uses six fluid units so armor recoloring can be finer-grained than ordinary three-level water:
 
