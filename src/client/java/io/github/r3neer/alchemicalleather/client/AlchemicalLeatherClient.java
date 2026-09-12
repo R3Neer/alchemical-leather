@@ -13,7 +13,10 @@ public final class AlchemicalLeatherClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         CauldronRenderInvalidation.registerClientInvalidator(pos->{
             var client=net.minecraft.client.Minecraft.getInstance();
-            if(client.level!=null)client.levelRenderer.setSectionDirty(pos.getX()>>4,pos.getY()>>4,pos.getZ()>>4);
+            if(client.level!=null){
+                int sectionX=pos.getX()>>4,sectionY=pos.getY()>>4,sectionZ=pos.getZ()>>4;
+                client.level.setSectionRangeDirty(sectionX,sectionY,sectionZ,sectionX,sectionY,sectionZ);
+            }
         });
         BlockColorRegistry.register((state,level,pos,colors)->{
             int color=0xffffffff;
