@@ -98,7 +98,9 @@ The block entity persists RGB independently of the six-level block state and syn
 
 Fabric 26.2's `BlockTintsFactory` can execute from chunk-meshing threads. It must not inspect mutable block entities directly.
 
-Both custom cauldron block entities implement Fabric's `RenderDataBlockEntity` contract and expose their current RGB as an immutable `Integer`. The tint factory reads only `FabricBlockGetter.getBlockEntityRenderData(pos)`, falling back to white if no valid snapshot exists. `setChanged()` plus `sendBlockUpdated(..., 3)` and the block entity update packet keep the client state and render snapshot invalidation on Minecraft's standard path.
+Both custom cauldron block entities implement Fabric's `RenderDataBlockEntity` contract and expose their current RGB as an immutable `Integer`. The tint factory reads only `FabricBlockGetter.getBlockEntityRenderData(pos)`, falling back to white if no valid snapshot exists. `setChanged()` plus `sendBlockUpdated(..., 3)` and the block entity update packet synchronize changed RGB to the client.
+
+A tint-only update does not change the cauldron `BlockState`, so packet synchronization alone is insufficient to guarantee that an already-built terrain mesh is rebuilt with the new RGB. After a client-side block entity load changes the exposed color, `CauldronRenderInvalidation` forwards the exact originating `Level` and block position to the client initializer. The client marks only that containing section dirty through Minecraft 26.2's `ClientLevel#setSectionRangeDirty(...)` path. The common bridge contains no client-only class reference and is a no-op on dedicated servers.
 
 ## BedrockIfy ownership
 
@@ -124,7 +126,7 @@ Administrative component editing and third-party code that directly mutates inte
 
 ## Validation boundaries
 
-Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, potion-cauldron tinting and bottle interaction modes, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Trade tests inspect actual registries/tags, TradeSet cardinality, generated offers, prices/use limits, Dragon's Breath gating, tier/slot boundaries, hard bans and optional-mod caps. The client suite covers synchronized cauldron state, render-data snapshots and equipment effect synchronization.
+Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, potion-cauldron tinting and bottle interaction modes, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Trade tests inspect actual registries/tags, TradeSet cardinality, generated offers, prices/use limits, Dragon's Breath gating, tier/slot boundaries, hard bans and optional-mod caps. The client suite covers synchronized cauldron state, render-data snapshots, repeated live recoloring of already-meshed potion/dyed-water cauldrons and equipment effect synchronization.
 
 The Gradle `verifyGameTestEntrypoints` task scans server GameTest source classes and compares them with the Fabric `fabric-gametest` entrypoint list. `check` fails on either an unregistered GameTest class or a stale descriptor entry, preventing silent test-discovery drift from producing misleadingly green CI.
 
