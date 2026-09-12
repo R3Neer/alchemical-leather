@@ -1,6 +1,6 @@
 # Validation of 0.1.0-alpha.4
 
-Release preparation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
+Release validation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
 This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
 
@@ -15,7 +15,16 @@ Alpha.4 consolidates the post-alpha.3 cauldron fixes and the corrected test harn
 - every current server `@GameTest` class is registered, and `verifyGameTestEntrypoints` prevents silent descriptor drift from recurring;
 - BedrockIfy's intentional crafting-dye revocation while its cauldron feature is active is treated as foreign ownership policy rather than patched around.
 
-The final alpha.4 release-candidate commit and merged-`main` CI run are recorded immediately before publishing the prerelease. The expected matrix is **69/69 required server GameTests** standalone, client GameTest under Xvfb / llvmpipe, registration consistency verification, and **69/69** with the real optional-mod fixture.
+## Alpha.4 release-candidate CI evidence
+
+The alpha.4 release-preparation PR merged as commit `dd3d26318b1810e59d261923bbcf1c661a718b3d` on `main`. Main run `34723466522` completed successfully after release-prep push run `34723206044` and independent pull-request run `34723320180` had already passed the same pipeline.
+
+| Alpha.4 release matrix | Result |
+|---|---|
+| Standalone build + server GameTests | **PASS — 69/69 required GameTests** |
+| GameTest registration consistency check | **PASS** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 69/69 required GameTests** |
 
 The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
@@ -93,7 +102,7 @@ Generalized humanoid armor keeps effect-to-slot restrictions and rejects multi-e
 
 The pre-login regression constructs a `ServerPlayer` whose `connection` is still null and verifies that equipment synchronization cannot project through that missing network channel. Persistence tests cover separation of external and armor-owned effects plus custom cauldron and dyed-water block-entity data.
 
-The client suite creates real custom cauldrons in an integrated world, verifies synchronized block-entity color, checks the immutable Fabric render-data snapshots used by the multithread-safe tint path, and now covers repeated live remeshing after synchronized RGB changes.
+The client suite creates real custom cauldrons in an integrated world, verifies synchronized block-entity color, checks the immutable Fabric render-data snapshots used by the multithread-safe tint path, and covers repeated live remeshing after synchronized RGB changes.
 
 ### Native dyed water and BedrockIfy ownership
 
