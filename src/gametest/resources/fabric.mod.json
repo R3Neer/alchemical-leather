@@ -9,7 +9,15 @@
       "io.github.r3neer.alchemicalleather.test.CoreTests",
       "io.github.r3neer.alchemicalleather.test.CompatibilityTests",
       "io.github.r3neer.alchemicalleather.test.PersistenceTests",
-      "io.github.r3neer.alchemicalleather.test.ConnectionLifecycleRegressionTests"
+      "io.github.r3neer.alchemicalleather.test.ConnectionLifecycleRegressionTests",
+      "io.github.r3neer.alchemicalleather.test.AnimalArmorTests",
+      "io.github.r3neer.alchemicalleather.test.BedrockifyDyeTests",
+      "io.github.r3neer.alchemicalleather.test.BedrockifyOwnershipTests",
+      "io.github.r3neer.alchemicalleather.test.DyeabilityConditionTests",
+      "io.github.r3neer.alchemicalleather.test.DyedWaterTests",
+      "io.github.r3neer.alchemicalleather.test.PotionCauldronInteractionTests",
+      "io.github.r3neer.alchemicalleather.trade.LeatherworkerTradeTests",
+      "io.github.r3neer.alchemicalleather.trade.TradeEnchantmentGuardTest"
     ],
     "fabric-client-gametest": [
       "io.github.r3neer.alchemicalleather.test.ClientChecks"
