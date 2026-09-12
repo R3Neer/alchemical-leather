@@ -18,7 +18,7 @@ Once that works:
 - Add dye to a water cauldron and see what compatible armor does with it.
 - See what an experienced **Leatherworker** is willing to sell.
 
-Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Use **Crouch + Use** to pour splash or lingering potions without throwing them. Water cauldrons wash compatible armor clean.
+Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Splash and lingering potions pour into cauldrons with ordinary Use when aimed at one, rather than being thrown. Alchemical Leather potion cauldrons can also be tinted with dyes without changing their potion or dose count. Water cauldrons wash compatible armor clean.
 
 Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, Leatherworker trades, dyed water and compatibility. It contains spoilers.
 

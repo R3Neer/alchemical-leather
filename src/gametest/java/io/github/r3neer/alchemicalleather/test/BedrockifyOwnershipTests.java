@@ -34,8 +34,15 @@ public final class BedrockifyOwnershipTests {
 
     @GameTest public void ordinaryPotionBottleIsLeftEntirelyToBedrockify(GameTestHelper h) throws Exception {
         if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
-        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,2);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var potion=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS);var beforeStack=potion.copy();p.setShiftKeyDown(true);
-        h.assertTrue(use(h,p,pos,potion)==InteractionResult.PASS,"Alchemical Leather yields BedrockIfy bottle lifecycle to BedrockIfy");
+        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,2);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var potion=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS);var beforeStack=potion.copy();
+        h.assertTrue(use(h,p,pos,potion)==InteractionResult.PASS,"Alchemical Leather yields BedrockIfy bottle lifecycle to BedrockIfy without requiring sneak");
         h.assertTrue(h.getLevel().getBlockState(pos).equals(beforeState),"Yielding does not replace or mutate BedrockIfy's block");h.assertTrue(ItemStack.matches(p.getMainHandItem(),beforeStack),"Yielding does not consume or replace the potion stack");h.succeed();
+    }
+
+    @GameTest public void ordinaryDyeOnBedrockifyPotionCauldronIsDelegated(GameTestHelper h) throws Exception {
+        if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
+        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,5);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var dye=new ItemStack(Items.DYE.blue());var beforeStack=dye.copy();
+        h.assertTrue(use(h,p,pos,dye)==InteractionResult.PASS,"Alchemical Leather does not claim dye interactions on BedrockIfy's potion cauldron");
+        h.assertTrue(h.getLevel().getBlockState(pos).equals(beforeState),"Delegated dye leaves BedrockIfy's state untouched");h.assertTrue(ItemStack.matches(p.getMainHandItem(),beforeStack),"Delegated dye is not consumed by Alchemical Leather");h.succeed();
     }
 }

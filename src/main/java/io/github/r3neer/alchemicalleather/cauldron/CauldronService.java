@@ -20,6 +20,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class CauldronService {
     private static InteractionResult error(Player player,String error){if(player instanceof net.minecraft.server.level.ServerPlayer server)server.sendSystemMessage(Component.translatable("message.alchemical_leather."+error),true);return InteractionResult.FAIL;}
     private static boolean bottle(ItemStack s){return s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION);}
+    private static boolean samePotion(PotionContents first,PotionContents second){return first.potion().equals(second.potion())&&first.customEffects().equals(second.customEffects())&&first.customName().equals(second.customName());}
     private static boolean allowed(Player player,Level level,BlockPos pos){return !player.isSpectator()&&player.getAbilities().mayBuild&&(!(level instanceof ServerLevel server)||server.mayInteract(player,pos));}
     private static boolean armorForSide(ItemStack stack,Level level){return level.isClientSide()?Infusions.armorCandidate(stack):Infusions.slot(stack)!=null;}
 
@@ -80,6 +81,18 @@ public final class CauldronService {
             }
         }
 
+        if(dye&&ownPotion) {
+            if(!allowed(player,level,pos))return InteractionResult.FAIL;
+            if(level.isClientSide())return InteractionResult.SUCCESS;
+            if(!(level.getBlockEntity(pos) instanceof PotionCauldronEntity be))return error(player,"invalid");
+            int current=be.contents.getColor()&0xffffff;int next=DyeColors.blend(current,stack.get(DataComponents.DYE).getTextureDiffuseColor());
+            if(next!=current){
+                var contents=be.contents;var recolored=new PotionContents(contents.potion(),java.util.Optional.of(next),contents.customEffects(),contents.customName());Item used=stack.getItem();
+                be.fill(recolored,be.bottle);consumeDye(stack,player,used);dyeFeedback(level,pos);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
         // BedrockIfy owns the ordinary bottle/fluid lifecycle of its own potion cauldron.
         // Alchemical Leather only reads that block to perform its armor-specific infusion action.
         if(bedPotion&&bottle(stack))return InteractionResult.PASS;
@@ -107,7 +120,6 @@ public final class CauldronService {
         boolean potionRelevant=bottle(stack)||armor&&(ownPotion||bedPotion)||ownPotion;
         if(!potionRelevant)return InteractionResult.PASS;
         if(!allowed(player,level,pos))return InteractionResult.FAIL;
-        if(bottle(stack)&&!stack.is(Items.POTION)&&!player.isShiftKeyDown())return error(player,"sneak");
         if(bottle(stack)&&incoming!=null&&incoming.is(Potions.WATER)&&!ownPotion&&!bedPotion)return InteractionResult.PASS;
         if(level.isClientSide())return InteractionResult.SUCCESS;
 
@@ -125,8 +137,8 @@ public final class CauldronService {
             var resolved=Infusions.resolveAll(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
             if(!state.is(Blocks.CAULDRON)&&!ownPotion)return error(player,"different");
             if(doses>=3)return error(player,"full");
-            if(doses>0&&(!contents.equals(incoming)||type!=stack.getItem()))return error(player,"different");
-            Item bottleType=stack.getItem();write(level,pos,incoming,bottleType,doses+1);
+            if(doses>0&&(!samePotion(contents,incoming)||type!=stack.getItem()))return error(player,"different");
+            Item bottleType=stack.getItem();write(level,pos,doses>0?contents:incoming,bottleType,doses+1);
             player.setItemInHand(hand,ItemUtils.createFilledResult(stack,player,new ItemStack(Items.GLASS_BOTTLE)));feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(armor&&(ownPotion||bedPotion)) {
