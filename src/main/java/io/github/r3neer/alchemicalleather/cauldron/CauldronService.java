@@ -80,6 +80,18 @@ public final class CauldronService {
             }
         }
 
+        if(dye&&ownPotion) {
+            if(!allowed(player,level,pos))return InteractionResult.FAIL;
+            if(level.isClientSide())return InteractionResult.SUCCESS;
+            if(!(level.getBlockEntity(pos) instanceof PotionCauldronEntity be))return error(player,"invalid");
+            int current=be.contents.getColor()&0xffffff;int next=DyeColors.blend(current,stack.get(DataComponents.DYE).getTextureDiffuseColor());
+            if(next!=current){
+                var contents=be.contents;var recolored=new PotionContents(contents.potion(),java.util.Optional.of(next),contents.customEffects(),contents.customName());Item used=stack.getItem();
+                be.fill(recolored,be.bottle);consumeDye(stack,player,used);dyeFeedback(level,pos);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
         // BedrockIfy owns the ordinary bottle/fluid lifecycle of its own potion cauldron.
         // Alchemical Leather only reads that block to perform its armor-specific infusion action.
         if(bedPotion&&bottle(stack))return InteractionResult.PASS;
@@ -107,7 +119,6 @@ public final class CauldronService {
         boolean potionRelevant=bottle(stack)||armor&&(ownPotion||bedPotion)||ownPotion;
         if(!potionRelevant)return InteractionResult.PASS;
         if(!allowed(player,level,pos))return InteractionResult.FAIL;
-        if(bottle(stack)&&!stack.is(Items.POTION)&&!player.isShiftKeyDown())return error(player,"sneak");
         if(bottle(stack)&&incoming!=null&&incoming.is(Potions.WATER)&&!ownPotion&&!bedPotion)return InteractionResult.PASS;
         if(level.isClientSide())return InteractionResult.SUCCESS;
 
