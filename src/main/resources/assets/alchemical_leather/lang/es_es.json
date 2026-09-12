@@ -7,7 +7,6 @@
   "message.alchemical_leather.no_effect": "Esta poción no tiene efecto.",
   "message.alchemical_leather.unsupported": "Este efecto no admite infusión.",
   "message.alchemical_leather.invalid": "Los datos de infusión no están disponibles o no son válidos.",
-  "message.alchemical_leather.sneak": "Agáchate para verter esta poción.",
   "message.alchemical_leather.different": "El caldero contiene otra poción o tipo de botella.",
   "message.alchemical_leather.full": "El caldero está lleno.",
   "message.alchemical_leather.enchanted": "La armadura encantada no puede infusionarse.",
