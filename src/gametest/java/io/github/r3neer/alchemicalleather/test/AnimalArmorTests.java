@@ -110,6 +110,9 @@ public final class AnimalArmorTests {
     @GameTest public void craftingDyePreservesInfusionOnGeneralizedArmor(GameTestHelper h){
         var helmet=new ItemStack(Items.IRON_HELMET);var infusion=timed(MobEffects.NIGHT_VISION,200,0);helmet.set(Infusions.TYPE,infusion);var manager=h.getLevel().getServer().getRecipeManager();
         var holder=manager.getRecipes().stream().filter(r->r.id().identifier().equals(Identifier.parse("alchemical_leather_test:iron_helmet_dyed"))).findFirst().orElseThrow();h.assertTrue(holder.value() instanceof DyeRecipe,"Synthetic standard dye recipe loaded");var recipe=(DyeRecipe)holder.value();var input=CraftingInput.of(2,1,List.of(helmet,new ItemStack(Items.DYE.red())));
+        if(BedrockifyBridge.cauldronsActive()){
+            h.assertFalse(recipe.matches(input,h.getLevel()),"Active BedrockIfy deliberately revokes crafting dye recipes in favor of cauldron dyeing");h.succeed();return;
+        }
         h.assertTrue(recipe.matches(input,h.getLevel()),"Infused generalized armor remains dyeable through ordinary recipe");var dyed=recipe.assemble(input);h.assertTrue(dyed.get(Infusions.TYPE).equals(infusion)&&dyed.has(DataComponents.DYED_COLOR),"Ordinary dyeing preserves Alchemical Leather infusion");h.succeed();
     }
 
