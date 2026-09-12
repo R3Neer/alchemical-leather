@@ -16,7 +16,6 @@
       "io.github.r3neer.alchemicalleather.test.DyeabilityConditionTests",
       "io.github.r3neer.alchemicalleather.test.DyedWaterTests",
       "io.github.r3neer.alchemicalleather.test.PotionCauldronInteractionTests",
-      "io.github.r3neer.alchemicalleather.test.DyeRecipeCompatibilityDiagnostics",
       "io.github.r3neer.alchemicalleather.trade.LeatherworkerTradeTests",
       "io.github.r3neer.alchemicalleather.trade.TradeEnchantmentGuardTest"
     ],
