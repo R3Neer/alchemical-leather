@@ -174,7 +174,7 @@ With Alex's Mobs and Clinging Reoriented, Clinging and Reorientation can both st
 
 With Scale Brews, Growth/Shrinking II may appear in Master timed armor. Persistent villager equipment is restricted to Growth/Shrinking I, and level III is never sold; brewing therefore remains necessary for the strongest scale effects.
 
-BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
+BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. BedrockIfy also deliberately disables ordinary `crafting_dye` matching while that feature is active, so armor recoloring follows its cauldron path instead of the crafting table. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
 
 Earlier alpha validation also exercised Friends&Foes, Wilder Wild, Deeper Dark, Additional Additions, Enchancement, Functional Armor Trims and Grind Enchantments. See [validation.md](validation.md) for current and historical fixture boundaries.
 
@@ -245,7 +245,7 @@ Additional test task:
 .\gradlew.bat runClientGameTest
 ```
 
-`build` runs the required server GameTests. Alpha.3 CI also runs the client GameTest under Xvfb and a real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs compatibility fixture. The alpha.3 candidate passes **41 required server GameTests** in both the standalone and real optional-mod runs; the client suite also passes synchronization, render-data and equip/unequip assertions. See [validation.md](validation.md) for coverage and remaining manual checks.
+`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The 12 September post-release audit passes **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture; the client suite also passes synchronization, render-data and equip/unequip assertions. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
 
 ## License
 
