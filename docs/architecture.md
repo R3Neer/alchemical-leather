@@ -1,6 +1,6 @@
 # Architecture and implementation notes
 
-This document describes the architecture of Alchemical Leather 0.1.0-alpha.3. Player-facing mechanics live in [GUIDE.md](GUIDE.md).
+This document describes the architecture of Alchemical Leather 0.1.0-alpha.4. Player-facing mechanics live in [GUIDE.md](GUIDE.md).
 
 ## Armor classification
 
