@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.20' }
 repositories { mavenCentral(); maven { url = 'https://api.modrinth.com/maven' } }
 configurations { clingingCompat }
@@ -34,6 +36,27 @@ tasks.withType(JavaExec).configureEach {
         systemProperty 'alchemical.compatRequired', providers.gradleProperty('compatProfile').orElse('full').get()
     }
 }
+tasks.register('verifyGameTestEntrypoints') {
+    inputs.dir('src/gametest/java')
+    inputs.file('src/gametest/resources/fabric.mod.json')
+    doLast {
+        def descriptor = new JsonSlurper().parse(file('src/gametest/resources/fabric.mod.json'))
+        def registered = ((descriptor.entrypoints['fabric-gametest'] ?: []) as Set)
+        def discovered = fileTree('src/gametest/java').matching { include '**/*.java' }.findAll { file ->
+            file.getText('UTF-8').contains('@GameTest')
+        }.collect { file ->
+            def text = file.getText('UTF-8')
+            def packageMatcher = text =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+            def classMatcher = text =~ /(?m)^\s*public\s+(?:final\s+)?class\s+(\w+)/
+            if(!packageMatcher.find() || !classMatcher.find())throw new GradleException("Cannot derive GameTest class name from ${file}")
+            "${packageMatcher.group(1)}.${classMatcher.group(1)}"
+        } as Set
+        def missing = discovered - registered
+        def stale = registered - discovered
+        if(!missing.isEmpty() || !stale.isEmpty())throw new GradleException("fabric-gametest entrypoints out of sync. Missing: ${missing}; stale: ${stale}")
+    }
+}
+tasks.named('check') { dependsOn tasks.named('verifyGameTestEntrypoints') }
 tasks.register('prepareClingingCompat', Sync) {
     from configurations.clingingCompat
     into layout.buildDirectory.dir('clingingCompat')
