@@ -25,26 +25,34 @@ The key mismatch is temporal: block-entity sync and terrain remeshing are separa
 
 ## Architectural plan
 
-Introduce a tiny environment-neutral render-invalidation bridge in common code. Client initialization registers an implementation that marks the containing render section dirty through `Minecraft.levelRenderer`. Both cauldron block entities call the bridge after loading synchronized data while on the client. Server behavior remains unchanged.
+Introduce a tiny environment-neutral render-invalidation bridge in common code. Client initialization registers an implementation that marks the containing render section dirty through `ClientLevel#setSectionRangeDirty(...)`, which is the public 26.2 forwarding path into the client render extractor. Both cauldron block entities call the bridge after loading synchronized data while on the client. Server behavior remains unchanged.
 
 The bridge must be a no-op until the client initializer registers it, so dedicated servers never load client classes.
 
 ## Implementation plan
 
-- [ ] Add a common `CauldronRenderInvalidation` bridge with a client registration hook.
-- [ ] Register the client implementation from `AlchemicalLeatherClient`, marking the containing section dirty.
-- [ ] Invoke invalidation after `PotionCauldronEntity.loadAdditional(...)` applies new contents.
-- [ ] Invoke invalidation after `DyedWaterCauldronEntity.loadAdditional(...)` applies new color.
-- [ ] Extend the client GameTest so a cauldron is rendered first, then recolored while the world remains loaded, and verify the new synchronized render-data value after the live update.
-- [ ] Exercise a second recolor and dyed-water live recolor to cover repeated invalidation and the shared path.
+- [x] Add a common `CauldronRenderInvalidation` bridge with a client registration hook.
+- [x] Register the client implementation from `AlchemicalLeatherClient`, marking the containing section dirty.
+- [x] Invoke invalidation after `PotionCauldronEntity.loadAdditional(...)` applies new contents.
+- [x] Invoke invalidation after `DyedWaterCauldronEntity.loadAdditional(...)` applies new color.
+- [x] Extend the client GameTest so a cauldron is rendered first, then recolored while the world remains loaded, and verify the new synchronized render-data value after the live update.
+- [x] Exercise a second recolor and dyed-water live recolor to cover repeated invalidation and the shared path.
 - [ ] Run standalone server tests, client GameTest and the real optional-mod fixture.
 - [ ] Perform adversarial review for client/server classloading, duplicate updates, no-op dye, chunk-load behavior and regression risk.
 - [ ] Delete this temporary document before merge.
 
 ## Review 1
 
-No architectural changes required. The fix should invalidate only on client-side data application, not from the server mutation method, so remeshing occurs after the new render data is actually present. The client implementation should use the public `LevelRenderer#setSectionDirty(sectionX, sectionY, sectionZ)` path rather than relying on an old/new block-state comparison with identical states.
+No architectural changes required. The fix should invalidate only on client-side data application, not from the server mutation method, so remeshing occurs after the new render data is actually present. The original implementation plan named `LevelRenderer#setSectionDirty(...)` as the expected public API.
 
 ## Review 2
 
 Stable relative to Review 1. Proceed with implementation.
+
+## Review 3 — implementation/API correction
+
+The first CI compile proved that `LevelRenderer#setSectionDirty(int,int,int)` no longer exists in Minecraft 26.2. This is an implementation-detail change, not an architectural change: 26.2 moved dirty-section handling out of `LevelRenderer` and `ClientLevel` now exposes the forwarding API into the render extractor.
+
+The client bridge therefore uses `ClientLevel#setSectionRangeDirty(sectionX, sectionY, sectionZ, sectionX, sectionY, sectionZ)` to dirty exactly one section after the synchronized block-entity data has been applied. The architectural plan remains unchanged.
+
+The client regression test also records before/after screenshots. Render-data assertions prove synchronization, while those screenshots are retained as evidence that the rebuilt terrain mesh visibly changes color.
