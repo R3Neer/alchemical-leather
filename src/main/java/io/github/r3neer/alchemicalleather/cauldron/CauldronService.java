@@ -20,6 +20,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class CauldronService {
     private static InteractionResult error(Player player,String error){if(player instanceof net.minecraft.server.level.ServerPlayer server)server.sendSystemMessage(Component.translatable("message.alchemical_leather."+error),true);return InteractionResult.FAIL;}
     private static boolean bottle(ItemStack s){return s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION);}
+    private static boolean samePotion(PotionContents first,PotionContents second){return first.potion().equals(second.potion())&&first.customEffects().equals(second.customEffects())&&first.customName().equals(second.customName());}
     private static boolean allowed(Player player,Level level,BlockPos pos){return !player.isSpectator()&&player.getAbilities().mayBuild&&(!(level instanceof ServerLevel server)||server.mayInteract(player,pos));}
     private static boolean armorForSide(ItemStack stack,Level level){return level.isClientSide()?Infusions.armorCandidate(stack):Infusions.slot(stack)!=null;}
 
@@ -136,8 +137,8 @@ public final class CauldronService {
             var resolved=Infusions.resolveAll(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
             if(!state.is(Blocks.CAULDRON)&&!ownPotion)return error(player,"different");
             if(doses>=3)return error(player,"full");
-            if(doses>0&&(!contents.equals(incoming)||type!=stack.getItem()))return error(player,"different");
-            Item bottleType=stack.getItem();write(level,pos,incoming,bottleType,doses+1);
+            if(doses>0&&(!samePotion(contents,incoming)||type!=stack.getItem()))return error(player,"different");
+            Item bottleType=stack.getItem();write(level,pos,doses>0?contents:incoming,bottleType,doses+1);
             player.setItemInHand(hand,ItemUtils.createFilledResult(stack,player,new ItemStack(Items.GLASS_BOTTLE)));feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(armor&&(ownPotion||bedPotion)) {
