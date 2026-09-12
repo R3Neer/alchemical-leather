@@ -1,26 +1,45 @@
-# Validation of 0.1.0-alpha.3
+# Validation of 0.1.0-alpha.3 and post-release audit
 
-Validation date: **11 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
+Release validation date: **11 September 2026**. Post-release audit: **12 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
 This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
 
-## Release-candidate CI evidence
+## Alpha.3 release-candidate CI evidence
 
 The final alpha.3 release candidate is merge commit `224aadc7c2cf06198e4afac496d2536711da4518` on `main`. Main run `34541183384` completed successfully after the pull-request candidate and its independent PR run had already passed the same pipeline.
 
-| Run | Result |
-|---|---|
-| Standalone build + server GameTests | **PASS — 41/41 required GameTests** |
-| Client GameTest under Xvfb / llvmpipe | **PASS** |
-| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 41/41 required GameTests** |
+A 12 September audit found that this document had incorrectly reported **41/41** server GameTests for those runs. The original `alchemical_leather-test` descriptor registered only five older server test classes, so newer GameTest classes compiled but were silently not discovered. The actual alpha.3 run logs show **32/32** required server GameTests in both server invocations.
 
-The earlier implementation-candidate run `34540349307` and pull-request run `34540989217` also completed successfully. The release record therefore reflects the same feature set passing on the implementation candidate, the PR path and the merged `main` commit.
+| Alpha.3 release run | Result actually executed |
+|---|---|
+| Standalone build + server GameTests | **PASS — 32/32 required GameTests** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 32/32 required GameTests** |
+
+The earlier implementation-candidate run `34540349307` and pull-request run `34540989217` used the same incomplete GameTest registration. They remain useful build/client evidence, but they must not be cited as proof that the later unregistered server suites ran.
 
 The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
+## Post-release GameTest registration audit — 12 September 2026
+
+PR `#4` repairs the test harness by registering every current server GameTest class and adds `verifyGameTestEntrypoints` to Gradle. `check` now fails whenever a Java class containing `@GameTest` is absent from the `fabric-gametest` entrypoint list or the descriptor contains a stale server GameTest entry.
+
+Audit run `34693184518` on commit `fa3519896b28c84c693f63a6c8b395f8deb1d7ea` completed successfully with the corrected registration:
+
+| Corrected audit run | Result |
+|---|---|
+| Standalone build + server GameTests | **PASS — 69/69 required GameTests** |
+| GameTest registration consistency check | **PASS** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 69/69 required GameTests** |
+
+The first full-fixture audit exposed one previously hidden expectation mismatch: BedrockIfy deliberately forces every `DyeRecipe.matches(...)` result to false while its `bedrockCauldron` feature is active, replacing crafting-table armor dyeing with its cauldron path. The Alchemical Leather test now checks that intentional revocation under active BedrockIfy while the dedicated BedrockIfy colored-water tests continue to verify recoloring and infusion preservation. No production compatibility workaround was added for behavior BedrockIfy intentionally owns.
+
+The corrected suite also means the potion-cauldron interaction regressions added after alpha.3 are now genuinely executed by CI: splash/lingering normal-use pouring, potion-cauldron tinting, no-op dye handling, tint-preserving matching refills and BedrockIfy ownership boundaries.
+
 ## Leatherworker economy coverage added in alpha.3
 
-Nine new server GameTests cover the villager-trade feature and its policy boundaries:
+Nine server GameTests cover the villager-trade feature and its policy boundaries:
 
 - the actual `VILLAGER_TRADE` registry contains the three Alchemical Leather trade resources;
 - the vanilla Leatherworker level-IV and level-V tags retain their vanilla entries and gain exactly the intended Alchemical categories;
@@ -61,11 +80,11 @@ The client suite creates real custom cauldrons in an integrated world, verifies 
 
 Tests cover the six-unit fluid model, color mixing, no-op dye application, blending with existing item color, infusion preservation, bottle/bucket extraction, water-potion tint removal, bucket delegation and atomic failures.
 
-With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff and rejection of fractional/noncanonical imported potion levels.
+With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff, dye delegation, crafting-dye revocation while BedrockIfy's cauldron feature is active and rejection of fractional/noncanonical imported potion levels.
 
 ### Real Clinging Reoriented integration
 
-The real fixture still verifies manual Clinging and Reorientation infusion into leather horse armor and wolf armor plus the humanoid boots mapping. Alpha.3 additionally verifies the intentional economy distinction: Clinging can participate in Master trades; Reorientation cannot.
+The real fixture verifies manual Clinging and Reorientation infusion into leather horse armor and wolf armor plus the humanoid boots mapping. The economy tests additionally verify the intentional distinction: Clinging can participate in Master trades; Reorientation cannot.
 
 ## Historical alpha.1 compatibility evidence
 
@@ -73,7 +92,7 @@ Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11,
 
 ## Remaining human/runtime checks
 
-- Physical right-click / crouch behavior in both hands, especially under latency or third-party claim protection.
+- Physical ordinary right-click / Use behavior in both hands for normal, splash and lingering potion pouring, especially under latency or third-party claim protection.
 - Real villager UI/restock behavior across repeated day cycles, reputation changes, demand changes, curing discounts and third-party villager-economy mods.
 - Gameplay feel and economy of the 2/3 Expert and default Master selection probabilities across naturally generated villagers rather than test-controlled registries.
 - Real gameplay feel of animal armor infusion on mounted/tamed entities rather than test-controlled entities.
@@ -92,6 +111,6 @@ With Java 25:
 ./gradlew runClientGameTest
 ```
 
-The GitHub Actions workflow runs both and also prepares the pinned real compatibility fixture before invoking `runGameTest` with Clinging Reoriented, Scale Brews, BedrockIfy, Alex's Mobs and their required dependencies.
+The GitHub Actions workflow runs both and also prepares the pinned real compatibility fixture before invoking `runGameTest` with Clinging Reoriented, Scale Brews, BedrockIfy, Alex's Mobs and their required dependencies. `build` also runs `verifyGameTestEntrypoints`, preventing server GameTest registration drift from silently reducing CI coverage again.
 
 Logs are written under `build/run/*/logs`; client captures are written under `build/run/clientGameTest/screenshots`. The production JAR excludes the gametest source set, synthetic test resources and all third-party fixture binaries.
