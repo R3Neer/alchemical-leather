@@ -22,6 +22,7 @@ public final class PotionCauldronEntity extends BlockEntity implements RenderDat
     @Override protected void loadAdditional(ValueInput input){
         super.loadAdditional(input);contents=input.read("contents",PotionContents.CODEC).orElse(PotionContents.EMPTY);
         bottle=input.read("bottle",Identifier.CODEC).map(BuiltInRegistries.ITEM::getValue).orElse(Items.POTION);
+        CauldronRenderInvalidation.afterClientDataLoad(level,worldPosition);
     }
     @Override public Object getRenderData(){return contents.getColor()&0xffffff;}
     @Override public ClientboundBlockEntityDataPacket getUpdatePacket(){return ClientboundBlockEntityDataPacket.create(this);}
