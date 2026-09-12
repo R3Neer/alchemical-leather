@@ -13,16 +13,20 @@ import net.minecraft.world.item.alchemy.PotionContents;
 public final class ClientChecks implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         try(var world=context.worldBuilder().create()) {
-            var potionPos=new BlockPos(0,-60,4);var dyedPos=new BlockPos(-2,-60,4);
+            var potionPos=new BlockPos(2,-60,4);var dyedPos=new BlockPos(-2,-60,4);var lowPotionPos=new BlockPos(0,-60,4);
             world.getServer().runCommand("fill -4 -61 -2 4 -61 7 minecraft:stone");
             world.getServer().runCommand("time set noon");
             world.getServer().runCommand("weather clear");
-            world.getServer().runCommand("setblock -2 -60 4 alchemical_leather:dyed_water_cauldron[level=4]{color:6636321}");
+            world.getServer().runCommand("setblock -2 -60 4 alchemical_leather:dyed_water_cauldron[level=6]{color:6636321}");
             world.getServer().runCommand("setblock 0 -60 4 alchemical_leather:potion_cauldron[level=1]{contents:{potion:\"minecraft:swiftness\",custom_color:1193046},bottle:\"minecraft:potion\"}");
             world.getServer().runCommand("setblock 2 -60 4 alchemical_leather:potion_cauldron[level=3]{contents:{potion:\"minecraft:strength\",custom_color:16733440},bottle:\"minecraft:lingering_potion\"}");
             world.getServer().runCommand("tp @a 0 -60 0 0 20");
             context.waitTicks(30);world.getConnection().waitForChunksRender();
-            assertCauldronColors(context,potionPos,1193046,dyedPos,6636321,"initial");
+            assertCauldronColors(context,potionPos,16733440,dyedPos,6636321,"initial visible cauldrons");
+            context.runOnClient(client->{
+                var be=client.level.getBlockEntity(lowPotionPos);
+                if(!(be instanceof PotionCauldronEntity cauldron)||cauldron.contents.getColor()!=1193046)throw new AssertionError("Low potion cauldron initial color not synchronized");
+            });
             context.takeScreenshot("alchemical-leather-cauldron-colors-before-live-tint");
 
             recolorOnServer(world,potionPos,0x22cc88,dyedPos,0xcc3344);
