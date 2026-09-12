@@ -1,14 +1,35 @@
-# Validation of 0.1.0-alpha.3 and post-release audit
+# Validation of 0.1.0-alpha.4
 
-Release validation date: **11 September 2026**. Post-release audit: **12 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
+Release preparation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
 This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
 
-## Alpha.3 release-candidate CI evidence
+## Alpha.4 release scope
 
-The final alpha.3 release candidate is merge commit `224aadc7c2cf06198e4afac496d2536711da4518` on `main`. Main run `34541183384` completed successfully after the pull-request candidate and its independent PR run had already passed the same pipeline.
+Alpha.4 consolidates the post-alpha.3 cauldron fixes and the corrected test harness:
 
-A 12 September audit found that this document had incorrectly reported **41/41** server GameTests for those runs. The original `alchemical_leather-test` descriptor registered only five older server test classes, so newer GameTest classes compiled but were silently not discovered. The actual alpha.3 run logs show **32/32** required server GameTests in both server invocations.
+- normal, splash and lingering potions all pour into Alchemical Leather cauldrons with ordinary Use;
+- potion cauldrons can be tinted with standard dye items without changing potion identity, effects, custom name, bottle type or dose count;
+- matching potion refills remain compatible after tinting and preserve the existing tint;
+- live potion/dyed-water RGB changes now remesh the already-rendered client section immediately instead of waiting for a later chunk rebuild;
+- every current server `@GameTest` class is registered, and `verifyGameTestEntrypoints` prevents silent descriptor drift from recurring;
+- BedrockIfy's intentional crafting-dye revocation while its cauldron feature is active is treated as foreign ownership policy rather than patched around.
+
+The final alpha.4 release-candidate commit and merged-`main` CI run are recorded immediately before publishing the prerelease. The expected matrix is **69/69 required server GameTests** standalone, client GameTest under Xvfb / llvmpipe, registration consistency verification, and **69/69** with the real optional-mod fixture.
+
+The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
+
+## Alpha.4 client rendering regression coverage
+
+The client suite starts with visible potion and dyed-water cauldrons after their terrain section has already been meshed. It then changes both RGB values twice while the world remains loaded and verifies the synchronized block-entity state and Fabric render-data snapshots after each update.
+
+CI screenshots for the final implementation were manually reviewed: the visible liquids change from their initial orange/brown appearance to green/red and then purple/blue without reloading the world. This specifically covers the live-render failure that ordinary state assertions missed.
+
+## Historical alpha.3 release evidence and correction
+
+The final alpha.3 release candidate was merge commit `224aadc7c2cf06198e4afac496d2536711da4518` on `main`. Main run `34541183384` completed successfully after the pull-request candidate and its independent PR run had already passed the same pipeline.
+
+A 12 September audit found that the original alpha.3 validation document had incorrectly reported **41/41** server GameTests for those runs. The original `alchemical_leather-test` descriptor registered only five older server test classes, so newer GameTest classes compiled but were silently not discovered. The actual alpha.3 run logs show **32/32** required server GameTests in both server invocations.
 
 | Alpha.3 release run | Result actually executed |
 |---|---|
@@ -18,11 +39,9 @@ A 12 September audit found that this document had incorrectly reported **41/41**
 
 The earlier implementation-candidate run `34540349307` and pull-request run `34540989217` used the same incomplete GameTest registration. They remain useful build/client evidence, but they must not be cited as proof that the later unregistered server suites ran.
 
-The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
+## Post-alpha.3 GameTest registration audit — 12 September 2026
 
-## Post-release GameTest registration audit — 12 September 2026
-
-PR `#4` repairs the test harness by registering every current server GameTest class and adds `verifyGameTestEntrypoints` to Gradle. `check` now fails whenever a Java class containing `@GameTest` is absent from the `fabric-gametest` entrypoint list or the descriptor contains a stale server GameTest entry.
+PR `#4` repaired the test harness by registering every current server GameTest class and adding `verifyGameTestEntrypoints` to Gradle. `check` now fails whenever a Java class containing `@GameTest` is absent from the `fabric-gametest` entrypoint list or the descriptor contains a stale server GameTest entry.
 
 Audit run `34693184518` on commit `fa3519896b28c84c693f63a6c8b395f8deb1d7ea` completed successfully with the corrected registration:
 
@@ -35,9 +54,9 @@ Audit run `34693184518` on commit `fa3519896b28c84c693f63a6c8b395f8deb1d7ea` com
 
 The first full-fixture audit exposed one previously hidden expectation mismatch: BedrockIfy deliberately forces every `DyeRecipe.matches(...)` result to false while its `bedrockCauldron` feature is active, replacing crafting-table armor dyeing with its cauldron path. The Alchemical Leather test now checks that intentional revocation under active BedrockIfy while the dedicated BedrockIfy colored-water tests continue to verify recoloring and infusion preservation. No production compatibility workaround was added for behavior BedrockIfy intentionally owns.
 
-The corrected suite also means the potion-cauldron interaction regressions added after alpha.3 are now genuinely executed by CI: splash/lingering normal-use pouring, potion-cauldron tinting, no-op dye handling, tint-preserving matching refills and BedrockIfy ownership boundaries.
+The corrected suite also means the potion-cauldron interaction regressions added after alpha.3 are genuinely executed by CI: splash/lingering normal-use pouring, potion-cauldron tinting, no-op dye handling, tint-preserving matching refills and BedrockIfy ownership boundaries.
 
-## Leatherworker economy coverage added in alpha.3
+## Leatherworker economy coverage retained
 
 Nine server GameTests cover the villager-trade feature and its policy boundaries:
 
@@ -74,7 +93,7 @@ Generalized humanoid armor keeps effect-to-slot restrictions and rejects multi-e
 
 The pre-login regression constructs a `ServerPlayer` whose `connection` is still null and verifies that equipment synchronization cannot project through that missing network channel. Persistence tests cover separation of external and armor-owned effects plus custom cauldron and dyed-water block-entity data.
 
-The client suite creates real custom cauldrons in an integrated world, verifies synchronized block-entity color and checks the immutable Fabric render-data snapshots used by the multithread-safe tint path.
+The client suite creates real custom cauldrons in an integrated world, verifies synchronized block-entity color, checks the immutable Fabric render-data snapshots used by the multithread-safe tint path, and now covers repeated live remeshing after synchronized RGB changes.
 
 ### Native dyed water and BedrockIfy ownership
 
@@ -88,7 +107,7 @@ The real fixture verifies manual Clinging and Reorientation infusion into leathe
 
 ## Historical alpha.1 compatibility evidence
 
-Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in alpha.3.
+Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in alpha.4.
 
 ## Remaining human/runtime checks
 

@@ -134,7 +134,7 @@ Alchemical Leather includes its own colored-water cauldron mechanic; **BedrockIf
 
 Use any item carrying Minecraft's standard `DYE` component on a water cauldron. The water becomes dyed, and adding another dye blends colors using Minecraft-style brightness-preserving color mixing. Reapplying a dye that would not change the color consumes nothing.
 
-The same `DYE` items can tint an Alchemical Leather potion cauldron. The tint blends with the potion's current visible color while preserving potion identity, effects, custom name, bottle type and dose count. A no-op tint consumes no dye.
+The same `DYE` items can tint an Alchemical Leather potion cauldron. The tint blends with the potion's current visible color while preserving potion identity, effects, custom name, bottle type and dose count. A no-op tint consumes no dye. Live tint changes now remesh the already-rendered cauldron section immediately on the client, so the liquid updates visually without requiring a reload.
 
 Internally the colored cauldron uses six fluid units so armor recoloring can be finer-grained than ordinary three-level water:
 
@@ -162,7 +162,7 @@ Download the regular JAR from [releases](https://github.com/R3Neer/alchemical-le
 
 Alchemical Leather works without optional content mods. Standard modded dyeable armor can be discovered automatically through the rules above; that is a compatibility mechanism, not a promise that every mod combination has been playtested.
 
-The alpha.3 CI integration fixture specifically exercises:
+The alpha.4 CI integration fixture specifically exercises:
 
 - **Clinging Reoriented 0.1.0-alpha.6**;
 - **Scale Brews 0.1.0-beta.5**;
@@ -245,7 +245,7 @@ Additional test task:
 .\gradlew.bat runClientGameTest
 ```
 
-`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The 12 September post-release audit passes **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture; the client suite also passes synchronization, render-data and equip/unequip assertions. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
+`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The alpha.4 release candidate passes **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture; the client suite also passes synchronized cauldron state, repeated live tint remeshing and equip/unequip assertions. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
 
 ## License
 
