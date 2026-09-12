@@ -80,7 +80,9 @@ A `ServerPlayer` can have NBT/equipment loaded before its play connection exists
 
 `UseBlockCallback` is the common transaction boundary. Eligibility, potion policy, enchantment state and source contents are validated before item/fluid mutation.
 
-Potion cauldrons retain full `PotionContents` plus the original bottle type. Armor infusion copies the target stack, changes only Alchemical Leather components and `DYED_COLOR`, and consumes the fluid dose only after validation.
+Potion cauldrons retain full `PotionContents` plus the original bottle type. Armor infusion copies the target stack, changes only Alchemical Leather components and `DYED_COLOR`, and consumes the fluid dose only after validation. Normal, splash and lingering bottles all use the same ordinary block-use path; a successful cauldron interaction consumes the gesture before splash/lingering item use can throw the bottle.
+
+Dye items can tint an Alchemical Leather potion cauldron. Tinting rebuilds `PotionContents` with only its custom color changed; potion holder, custom effects, custom name, bottle type and dose count stay intact. Potion identity comparisons deliberately ignore custom color, so a matching refill remains compatible with a tinted cauldron and preserves the existing tint. A no-op blend consumes no dye.
 
 Vanilla water washing removes `DYED_COLOR`, `infusion` and `animal_infusion` from exact qualifying armor and lowers the vanilla water level once.
 
@@ -109,18 +111,21 @@ Ownership is deliberately per interaction:
 - Alchemical Leather intercepts only compatible armor actions on BedrockIfy blocks.
 - BedrockIfy potion import accepts only canonical complete-bottle levels 2/5/8; one armor infusion consumes one canonical dose without replacing the foreign block unless it becomes empty.
 - BedrockIfy colored water recolors compatible armor and consumes exactly one of its six units.
+- BedrockIfy's active cauldron feature deliberately revokes ordinary `DyeRecipe.matches(...)`; Alchemical Leather treats that as foreign recipe policy rather than attempting to restore crafting-table dyeing.
 - If the BedrockIfy setting cannot be positively verified because it is absent, disabled, reflectively incompatible or otherwise fails at runtime, Alchemical Leather treats it as inactive and keeps its native vanilla-water dye entry point.
 
 There is no registry replacement, handler clearing, mixin-priority contest or production mutation of BedrockIfy settings.
 
 ## Enchanting and item transforms
 
-`Infusions.blocked` covers both humanoid and BODY components. Fabric enchanting hooks plus the existing vanilla/anvil/crafting/grindstone guards maintain the mutual exclusion between enchantments and Alchemical Leather infusions. Standard component-preserving transforms such as armor trims and self-recoloring dye recipes retain infusion data.
+`Infusions.blocked` covers both humanoid and BODY components. Fabric enchanting hooks plus the existing vanilla/anvil/crafting/grindstone guards maintain the mutual exclusion between enchantments and Alchemical Leather infusions. Standard component-preserving transforms such as armor trims and self-recoloring dye recipes retain infusion data when those transforms remain enabled by the active mod set.
 
 Administrative component editing and third-party code that directly mutates internal effect maps remain outside the balancing contract.
 
 ## Validation boundaries
 
-Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Trade tests inspect actual registries/tags, TradeSet cardinality, generated offers, prices/use limits, Dragon's Breath gating, tier/slot boundaries, hard bans and optional-mod caps. The client suite covers synchronized cauldron state, render-data snapshots and equipment effect synchronization.
+Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, potion-cauldron tinting and bottle interaction modes, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Trade tests inspect actual registries/tags, TradeSet cardinality, generated offers, prices/use limits, Dragon's Breath gating, tier/slot boundaries, hard bans and optional-mod caps. The client suite covers synchronized cauldron state, render-data snapshots and equipment effect synchronization.
 
-See [validation.md](validation.md) for the exact release-candidate evidence and remaining human/runtime checks.
+The Gradle `verifyGameTestEntrypoints` task scans server GameTest source classes and compares them with the Fabric `fabric-gametest` entrypoint list. `check` fails on either an unregistered GameTest class or a stale descriptor entry, preventing silent test-discovery drift from producing misleadingly green CI.
+
+See [validation.md](validation.md) for the exact release-candidate evidence, the post-release registration audit and remaining human/runtime checks.
