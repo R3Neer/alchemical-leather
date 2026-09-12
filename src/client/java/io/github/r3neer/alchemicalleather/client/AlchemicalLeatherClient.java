@@ -11,6 +11,10 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 public final class AlchemicalLeatherClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
+        CauldronRenderInvalidation.registerClientInvalidator(pos->{
+            var client=net.minecraft.client.Minecraft.getInstance();
+            if(client.level!=null)client.levelRenderer.setSectionDirty(pos.getX()>>4,pos.getY()>>4,pos.getZ()>>4);
+        });
         BlockColorRegistry.register((state,level,pos,colors)->{
             int color=0xffffffff;
             if(level instanceof FabricBlockGetter getter&&getter.getBlockEntityRenderData(pos) instanceof Integer rgb)color=rgb|0xff000000;
