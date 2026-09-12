@@ -41,7 +41,9 @@ public final class PotionCauldronInteractionTests {
         var state=h.getLevel().getBlockState(pos);var be=(PotionCauldronEntity)h.getLevel().getBlockEntity(pos);var recolored=be.contents;
         h.assertTrue(state.getValue(PotionCauldron.LEVEL)==2,"Dyeing changes no dose count");h.assertTrue(be.bottle==Items.LINGERING_POTION,"Dyeing preserves bottle type");
         h.assertTrue(recolored.potion().equals(original.potion())&&recolored.customEffects().equals(original.customEffects())&&recolored.customName().equals(original.customName()),"Dyeing preserves potion identity effects and name");
-        h.assertTrue((recolored.getColor()&0xffffff)==expected,"Dye blends with the current potion color");h.assertTrue(red.isEmpty(),"Changed potion color consumes one dye");h.succeed();
+        h.assertTrue((recolored.getColor()&0xffffff)==expected,"Dye blends with the current potion color");h.assertTrue(red.isEmpty(),"Changed potion color consumes one dye");
+        var refill=new ItemStack(Items.LINGERING_POTION);refill.set(DataComponents.POTION_CONTENTS,original);h.assertTrue(use(h,p,pos,refill)==InteractionResult.SUCCESS,"Tint does not make a matching potion count as different");
+        h.assertTrue(h.getLevel().getBlockState(pos).getValue(PotionCauldron.LEVEL)==3&&((PotionCauldronEntity)h.getLevel().getBlockEntity(pos)).contents.getColor()==expected,"Matching refill preserves the cauldron tint");h.succeed();
     }
 
     @GameTest public void noOpPotionDyeDoesNotConsumeDye(GameTestHelper h){
