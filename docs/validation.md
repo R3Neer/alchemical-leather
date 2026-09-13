@@ -19,7 +19,7 @@ Alpha.5 packages the effectless-potion storage and dye-bath correction on top of
 
 ## Alpha.5 release-candidate CI evidence
 
-The functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. The alpha.5 release-preparation head `71e00b9eed616978fd440bd1d703987449c376e4` then passed both push run `34750487121` and independent pull-request run `34750496727`. The final tag is intentionally withheld until a documentation-complete commit on `main` passes this same pipeline; that exact target and run are recorded below before publication.
+The functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. Release-preparation PR `#8` then updated the project version plus README, player guide, architecture and validation documentation. Its documentation-complete head `ba2fdec76e3bc0fca04e41d1f3a3831f6e3afa08` passed push run `34751065423` and independent pull-request run `34751066795`; PR `#8` merged to `main` as `a4719d97633a42d928e41322e0885a8036132367`, whose post-merge run `34751277422` also passed the full pipeline. The final release-documentation merge is validated on `main` before tagging, and the published release notes identify the exact tagged commit and JAR checksum.
 
 | Alpha.5 release matrix | Result |
 |---|---|
