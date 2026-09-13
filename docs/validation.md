@@ -1,40 +1,36 @@
-# Validation of 0.1.0-alpha.4
+# Validation of 0.1.0-alpha.5
 
 Release validation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
 This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
 
-## Alpha.4 release scope
+## Alpha.5 release scope
 
-Alpha.4 consolidates the post-alpha.3 cauldron fixes and the corrected test harness:
+Alpha.5 packages the effectless-potion storage and dye-bath correction on top of the alpha.4 cauldron/rendering fixes:
 
-- normal, splash and lingering potions all pour into Alchemical Leather cauldrons with ordinary Use;
-- potion cauldrons can be tinted with standard dye items without changing potion identity, effects, custom name, bottle type or dose count;
-- matching potion refills remain compatible after tinting and preserve the existing tint;
-- live potion/dyed-water RGB changes now remesh the already-rendered client section immediately instead of waiting for a later chunk rebuild;
-- every current server `@GameTest` class is registered, and `verifyGameTestEntrypoints` prevents silent descriptor drift from recurring;
-- BedrockIfy's intentional crafting-dye revocation while its cauldron feature is active is treated as foreign ownership policy rather than patched around.
+- valid non-water potion contents are stored independently of whether they can create an infusion;
+- Awkward, Mundane and Thick potions round-trip through Alchemical Leather cauldrons with normal, splash and lingering bottle types;
+- effectless potion contents act as dye-only baths for compatible dyeable armor, consuming one dose without creating or replacing an infusion;
+- dye-only application preserves enchantments, existing humanoid/BODY infusions and unrelated item components, and BODY armor never receives an empty `AnimalInfusion`;
+- tinted effectless cauldrons accept matching refills while preserving their decorative tint;
+- water potions remain delegated to Minecraft's water-cauldron path, malformed contents and non-dyeable targets fail atomically, and effectful target eligibility is checked only when armor is actually applied;
+- BedrockIfy retains ownership of its potion block/fluid lifecycle while canonical imported effectless doses use the same dye-only armor semantics;
+- alpha.4's ordinary-use splash/lingering pouring, live tint remeshing and GameTest-entrypoint consistency guard remain part of the release.
 
-## Alpha.4 release-candidate CI evidence
+## Alpha.5 release-candidate CI evidence
 
-The alpha.4 release-preparation PR merged as commit `dd3d26318b1810e59d261923bbcf1c661a718b3d` on `main`. Main run `34723466522` completed successfully after release-prep push run `34723206044` and independent pull-request run `34723320180` had already passed the same pipeline.
+The functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. The alpha.5 release-preparation head `71e00b9eed616978fd440bd1d703987449c376e4` then passed both push run `34750487121` and independent pull-request run `34750496727`. The final tag is intentionally withheld until a documentation-complete commit on `main` passes this same pipeline; that exact target and run are recorded below before publication.
 
-| Alpha.4 release matrix | Result |
+| Alpha.5 release matrix | Result |
 |---|---|
-| Standalone build + server GameTests | **PASS — 69/69 required GameTests** |
+| Standalone build + server GameTests | **PASS — 79/79 required GameTests** |
 | GameTest registration consistency check | **PASS** |
 | Client GameTest under Xvfb / llvmpipe | **PASS** |
-| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 69/69 required GameTests** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 79/79 required GameTests** |
 
 The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
-## Alpha.4 client rendering regression coverage
-
-The client suite starts with visible potion and dyed-water cauldrons after their terrain section has already been meshed. It then changes both RGB values twice while the world remains loaded and verifies the synchronized block-entity state and Fabric render-data snapshots after each update.
-
-CI screenshots for the final implementation were manually reviewed: the visible liquids change from their initial orange/brown appearance to green/red and then purple/blue without reloading the world. This specifically covers the live-render failure that ordinary state assertions missed.
-
-## Post-alpha.4 effectless-potion regression — 13 September 2026
+## Alpha.5 effectless-potion development evidence
 
 A post-release gameplay report exposed a conceptual coupling in `CauldronService`: bottle insertion called `Infusions.resolveAll(...)` before storage, so valid potion contents with zero effects were rejected as `no_effect`. That resolution function was correct for creating an infusion, but storage had accidentally inherited the stricter infusion requirement.
 
@@ -66,6 +62,36 @@ The ten additional server regressions cover:
 - imported canonical BedrockIfy effectless potion contents acting as a dye bath while preserving BedrockIfy's block ownership and consuming exactly one foreign dose.
 
 This intentionally leaves `Infusions.resolve` and `resolveAll` strict: zero effects are still invalid **as an infusion**. No empty infusion representation was added to either humanoid or BODY data.
+
+## Historical alpha.4 release scope
+
+Alpha.4 consolidates the post-alpha.3 cauldron fixes and the corrected test harness:
+
+- normal, splash and lingering potions all pour into Alchemical Leather cauldrons with ordinary Use;
+- potion cauldrons can be tinted with standard dye items without changing potion identity, effects, custom name, bottle type or dose count;
+- matching potion refills remain compatible after tinting and preserve the existing tint;
+- live potion/dyed-water RGB changes now remesh the already-rendered client section immediately instead of waiting for a later chunk rebuild;
+- every current server `@GameTest` class is registered, and `verifyGameTestEntrypoints` prevents silent descriptor drift from recurring;
+- BedrockIfy's intentional crafting-dye revocation while its cauldron feature is active is treated as foreign ownership policy rather than patched around.
+
+## Historical alpha.4 release-candidate CI evidence
+
+The alpha.4 release-preparation PR merged as commit `dd3d26318b1810e59d261923bbcf1c661a718b3d` on `main`. Main run `34723466522` completed successfully after release-prep push run `34723206044` and independent pull-request run `34723320180` had already passed the same pipeline.
+
+| Alpha.4 release matrix | Result |
+|---|---|
+| Standalone build + server GameTests | **PASS — 69/69 required GameTests** |
+| GameTest registration consistency check | **PASS** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 69/69 required GameTests** |
+
+The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
+
+## Historical alpha.4 client rendering regression coverage
+
+The client suite starts with visible potion and dyed-water cauldrons after their terrain section has already been meshed. It then changes both RGB values twice while the world remains loaded and verifies the synchronized block-entity state and Fabric render-data snapshots after each update.
+
+CI screenshots for the final implementation were manually reviewed: the visible liquids change from their initial orange/brown appearance to green/red and then purple/blue without reloading the world. This specifically covers the live-render failure that ordinary state assertions missed.
 
 ## Historical alpha.3 release evidence and correction
 
@@ -149,7 +175,7 @@ The real fixture verifies manual Clinging and Reorientation infusion into leathe
 
 ## Historical alpha.1 compatibility evidence
 
-Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in alpha.4.
+Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in alpha.5.
 
 ## Remaining human/runtime checks
 
