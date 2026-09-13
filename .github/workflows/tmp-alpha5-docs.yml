@@ -1,0 +1,80 @@
+name: Refresh alpha.5 docs
+
+on:
+  push:
+    branches:
+      - chatgpt/release-0.1.0-alpha.5
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/release-0.1.0-alpha.5
+          fetch-depth: 0
+      - name: Refresh release documentation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          version = "0.1.0-alpha.5"
+
+          readme = Path("README.md")
+          text = readme.read_text()
+          marker = "A **Fabric mod for Minecraft 26.2** that turns familiar armor into alchemical equipment. Pour a potion into a cauldron, infuse a compatible piece, equip it, and take the effect with you."
+          replacement = marker + f"\n\nCurrent public prerelease: **{version}**."
+          if f"Current public prerelease: **{version}**." not in text:
+              if marker not in text:
+                  raise SystemExit("README insertion marker not found")
+              text = text.replace(marker, replacement, 1)
+          readme.write_text(text)
+
+          guide = Path("docs/GUIDE.md")
+          text = guide.read_text()
+          marker = "This is the detailed reference. The README deliberately leaves some mechanics for discovery; this page does not."
+          replacement = marker + f"\n\nThis guide describes **Alchemical Leather {version}**."
+          if f"This guide describes **Alchemical Leather {version}**." not in text:
+              if marker not in text:
+                  raise SystemExit("GUIDE version marker not found")
+              text = text.replace(marker, replacement, 1)
+          text = text.replace("The alpha.4 CI integration fixture specifically exercises:", "The alpha.5 CI integration fixture specifically exercises:")
+          guide.write_text(text)
+
+          architecture = Path("docs/architecture.md")
+          text = architecture.read_text()
+          first = "This document describes the architecture of Alchemical Leather 0.1.0-alpha.5. Player-facing mechanics live in [GUIDE.md](GUIDE.md)."
+          import re
+          text = re.sub(r"This document describes the architecture of Alchemical Leather [^.]*(?:\. plus subsequent fixes on `main`)?\. Player-facing mechanics live in \[GUIDE\.md\]\(GUIDE\.md\)\.", first, text, count=1)
+          architecture.write_text(text)
+
+          validation = Path("docs/validation.md")
+          text = validation.read_text()
+          alpha4_start = text.index("## Alpha.4 release scope")
+          effectless_start = text.index("## Post-alpha.4 effectless-potion regression")
+          alpha3_start = text.index("## Historical alpha.3 release evidence")
+          alpha4 = text[alpha4_start:effectless_start]
+          effectless = text[effectless_start:alpha3_start]
+          rest = text[alpha3_start:]
+          alpha4 = alpha4.replace("## Alpha.4 release scope", "## Historical alpha.4 release scope", 1)
+          alpha4 = alpha4.replace("## Alpha.4 release-candidate CI evidence", "## Historical alpha.4 release-candidate CI evidence", 1)
+          alpha4 = alpha4.replace("## Alpha.4 client rendering regression coverage", "## Historical alpha.4 client rendering regression coverage", 1)
+          effectless = effectless.replace("## Post-alpha.4 effectless-potion regression — 13 September 2026", "## Alpha.5 effectless-potion development evidence", 1)
+          rest = rest.replace("not presented as if every provider were rerun in alpha.4", "not presented as if every provider were rerun in alpha.5")
+
+          intro = f'''# Validation of {version}\n\nRelease validation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.\n\nThis is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.\n\n## Alpha.5 release scope\n\nAlpha.5 packages the effectless-potion storage and dye-bath correction on top of the alpha.4 cauldron/rendering fixes:\n\n- valid non-water potion contents are stored independently of whether they can create an infusion;\n- Awkward, Mundane and Thick potions round-trip through Alchemical Leather cauldrons with normal, splash and lingering bottle types;\n- effectless potion contents act as dye-only baths for compatible dyeable armor, consuming one dose without creating or replacing an infusion;\n- dye-only application preserves enchantments, existing humanoid/BODY infusions and unrelated item components, and BODY armor never receives an empty `AnimalInfusion`;\n- tinted effectless cauldrons accept matching refills while preserving their decorative tint;\n- water potions remain delegated to Minecraft's water-cauldron path, malformed contents and non-dyeable targets fail atomically, and effectful target eligibility is checked only when armor is actually applied;\n- BedrockIfy retains ownership of its potion block/fluid lifecycle while canonical imported effectless doses use the same dye-only armor semantics;\n- alpha.4's ordinary-use splash/lingering pouring, live tint remeshing and GameTest-entrypoint consistency guard remain part of the release.\n\n## Alpha.5 release-candidate CI evidence\n\nThe functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. The alpha.5 release-preparation head `71e00b9eed616978fd440bd1d703987449c376e4` then passed both push run `34750487121` and independent pull-request run `34750496727`. The final tag is intentionally withheld until a documentation-complete commit on `main` passes this same pipeline; that exact target and run are recorded below before publication.\n\n| Alpha.5 release matrix | Result |\n|---|---|\n| Standalone build + server GameTests | **PASS — 79/79 required GameTests** |\n| GameTest registration consistency check | **PASS** |\n| Client GameTest under Xvfb / llvmpipe | **PASS** |\n| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 79/79 required GameTests** |\n\nThe compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.\n\n'''
+          validation.write_text(intro + effectless + alpha4 + rest)
+
+          # This workflow is scaffolding only; the resulting commit must contain no temporary release machinery.
+          Path(".github/workflows/tmp-alpha5-docs.yml").unlink()
+      - name: Commit refreshed docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/GUIDE.md docs/architecture.md docs/validation.md .github/workflows/tmp-alpha5-docs.yml
+          git commit -m "docs: refresh all documentation for alpha.5"
+          git push origin HEAD:chatgpt/release-0.1.0-alpha.5
