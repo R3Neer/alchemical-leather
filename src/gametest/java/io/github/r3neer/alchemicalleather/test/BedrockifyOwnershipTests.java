@@ -4,6 +4,7 @@ import io.github.r3neer.alchemicalleather.cauldron.*;
 import io.github.r3neer.alchemicalleather.data.Infusions;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.*;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -18,10 +19,11 @@ public final class BedrockifyOwnershipTests {
         p.setItemInHand(InteractionHand.MAIN_HAND,stack);
         return CauldronService.interact(p,h.getLevel(),InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.UP,pos,false));
     }
-    private void fillBedrockPotion(GameTestHelper h,BlockPos pos,int level) throws Exception {
+    private void fillBedrockPotion(GameTestHelper h,BlockPos pos,int level) throws Exception {fillBedrockPotion(h,pos,level,PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS));}
+    private void fillBedrockPotion(GameTestHelper h,BlockPos pos,int level,ItemStack potion) throws Exception {
         var block=BuiltInRegistries.BLOCK.getValue(Identifier.parse("bedrockify:potion_cauldron"));var state=block.defaultBlockState();var property=BedrockifyBridge.property(state);
         state=state.setValue(property,level);h.getLevel().setBlockAndUpdate(pos,state);var be=h.getLevel().getBlockEntity(pos);
-        be.getClass().getMethod("setPotion",ItemStack.class).invoke(be,PotionContents.createItemStack(Items.LINGERING_POTION,Potions.SWIFTNESS));
+        be.getClass().getMethod("setPotion",ItemStack.class).invoke(be,potion);
     }
 
     @GameTest public void armorConsumesDoseWithoutReplacingBedrockifyPotionBlock(GameTestHelper h) throws Exception {
@@ -30,6 +32,16 @@ public final class BedrockifyOwnershipTests {
         h.assertTrue(use(h,p,pos,new ItemStack(Items.LEATHER_LEGGINGS))==InteractionResult.SUCCESS,"Alchemical armor can consume from BedrockIfy potion cauldron");
         var state=h.getLevel().getBlockState(pos);h.assertTrue(BedrockifyBridge.potion(state),"Armor infusion preserves BedrockIfy's own potion-cauldron block");h.assertTrue(state.getValue(BedrockifyBridge.property(state))==2,"Exactly one canonical BedrockIfy potion dose is consumed");
         h.assertTrue(p.getMainHandItem().has(Infusions.TYPE),"Armor receives the imported infusion");h.succeed();
+    }
+
+    @GameTest public void effectlessImportedPotionDyesArmorWithoutCreatingInfusion(GameTestHelper h) throws Exception {
+        if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
+        var pos=h.absolutePos(new BlockPos(1,1,1));var potion=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.AWKWARD);fillBedrockPotion(h,pos,5,potion);var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var before=BedrockifyBridge.read(h.getLevel(),pos,h.getLevel().getBlockState(pos));int expected=before.contents().getColor()&0xffffff;
+        h.assertTrue(use(h,p,pos,new ItemStack(Items.LEATHER_LEGGINGS))==InteractionResult.SUCCESS,"Imported effectless BedrockIfy potion acts as a dye bath");var armor=p.getMainHandItem();
+        h.assertTrue(armor.has(DataComponents.DYED_COLOR)&&armor.get(DataComponents.DYED_COLOR).rgb()==expected,"BedrockIfy effectless potion transfers its visible color");
+        h.assertFalse(Infusions.blocked(armor),"BedrockIfy effectless potion creates no infusion");var state=h.getLevel().getBlockState(pos);
+        h.assertTrue(BedrockifyBridge.potion(state)&&state.getValue(BedrockifyBridge.property(state))==2,"Dye-only use preserves BedrockIfy block ownership and consumes one canonical dose");h.succeed();
     }
 
     @GameTest public void ordinaryPotionBottleIsLeftEntirelyToBedrockify(GameTestHelper h) throws Exception {

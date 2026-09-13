@@ -21,6 +21,7 @@ public final class CauldronService {
     private static InteractionResult error(Player player,String error){if(player instanceof net.minecraft.server.level.ServerPlayer server)server.sendSystemMessage(Component.translatable("message.alchemical_leather."+error),true);return InteractionResult.FAIL;}
     private static boolean bottle(ItemStack s){return s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION);}
     private static boolean samePotion(PotionContents first,PotionContents second){return first.potion().equals(second.potion())&&first.customEffects().equals(second.customEffects())&&first.customName().equals(second.customName());}
+    private static boolean hasEffects(PotionContents contents){return contents!=null&&contents.getAllEffects().iterator().hasNext();}
     private static boolean allowed(Player player,Level level,BlockPos pos){return !player.isSpectator()&&player.getAbilities().mayBuild&&(!(level instanceof ServerLevel server)||server.mayInteract(player,pos));}
     private static boolean armorForSide(ItemStack stack,Level level){return level.isClientSide()?Infusions.armorCandidate(stack):Infusions.slot(stack)!=null;}
 
@@ -94,7 +95,7 @@ public final class CauldronService {
         }
 
         // BedrockIfy owns the ordinary bottle/fluid lifecycle of its own potion cauldron.
-        // Alchemical Leather only reads that block to perform its armor-specific infusion action.
+        // Alchemical Leather only reads that block to perform its armor-specific infusion/dye action.
         if(bedPotion&&bottle(stack))return InteractionResult.PASS;
 
         if(armor&&state.is(Blocks.WATER_CAULDRON)) {
@@ -134,7 +135,7 @@ public final class CauldronService {
             catch(ReflectiveOperationException|RuntimeException e){return error(player,"invalid");}
         }
         if(bottle(stack)) {
-            var resolved=Infusions.resolveAll(incoming,stack.getItem());if(!resolved.ok())return error(player,resolved.error());
+            if(incoming==null)return error(player,"invalid");
             if(!state.is(Blocks.CAULDRON)&&!ownPotion)return error(player,"different");
             if(doses>=3)return error(player,"full");
             if(doses>0&&(!samePotion(contents,incoming)||type!=stack.getItem()))return error(player,"different");
@@ -143,17 +144,24 @@ public final class CauldronService {
         }
         if(armor&&(ownPotion||bedPotion)) {
             if(Infusions.slot(stack)==null)return InteractionResult.PASS;
-            if(Infusions.enchanted(stack))return error(player,"enchanted");
+            if(contents==null)return error(player,"invalid");
             var target=Infusions.slot(stack);var result=stack.copy();
-            if(target==EquipmentSlot.BODY) {
-                var resolved=Infusions.resolveAll(contents,type);if(!resolved.ok())return error(player,resolved.error());
-                result.remove(Infusions.TYPE);result.set(Infusions.ANIMAL_TYPE,resolved.infusion());
+            if(!hasEffects(contents)) {
+                // Effectless potion contents are still a valid colored liquid. They act as a dye bath only:
+                // no infusion is created or replaced, so enchantments and existing infusion components survive.
+                result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
             } else {
-                var resolved=Infusions.resolve(contents,type);if(!resolved.ok())return error(player,resolved.error());
-                if(!Infusions.accepts(stack,target,resolved.infusion().effect()))return error(player,"slot");
-                result.remove(Infusions.ANIMAL_TYPE);result.set(Infusions.TYPE,resolved.infusion());
+                if(Infusions.enchanted(stack))return error(player,"enchanted");
+                if(target==EquipmentSlot.BODY) {
+                    var resolved=Infusions.resolveAll(contents,type);if(!resolved.ok())return error(player,resolved.error());
+                    result.remove(Infusions.TYPE);result.set(Infusions.ANIMAL_TYPE,resolved.infusion());
+                } else {
+                    var resolved=Infusions.resolve(contents,type);if(!resolved.ok())return error(player,resolved.error());
+                    if(!Infusions.accepts(stack,target,resolved.infusion().effect()))return error(player,"slot");
+                    result.remove(Infusions.ANIMAL_TYPE);result.set(Infusions.TYPE,resolved.infusion());
+                }
+                result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
             }
-            result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
             if(ownPotion)write(level,pos,contents,type,doses-1);
             else consumeBedrockPotionDose(level,pos,state,doses);
             player.setItemInHand(hand,result);feedback(level,pos);return InteractionResult.SUCCESS;

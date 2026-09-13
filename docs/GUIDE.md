@@ -23,15 +23,17 @@ This is the detailed reference. The README deliberately leaves some mechanics fo
 
 ## How it works
 
-1. Pour an effectful potion into a normal cauldron. An Alchemical Leather potion cauldron holds up to three identical bottles.
-2. Use an **unenchanted compatible dyeable armor item** on it. One dose is consumed, the armor stores the infusion and takes on the potion color.
-3. Equip the armor to receive its effect or effects.
-4. Unequip it to pause its own timed infusion clocks.
-5. Wash it in ordinary water when you want to remove both Alchemical Leather infusion data and dye color.
+1. Pour a non-water potion into a normal cauldron. An Alchemical Leather potion cauldron holds up to three identical bottles, even when the potion has no effects.
+2. With an effectful potion, use an **unenchanted compatible dyeable armor item** on it. One dose is consumed, the armor stores the infusion and takes on the potion color.
+3. With an effectless potion such as Awkward, Mundane or Thick, use any **compatible dyeable armor item** on it. One dose is consumed and the armor takes on the liquid color, but no infusion is created or replaced.
+4. Equip infused armor to receive its effect or effects. Unequip it to pause its own timed infusion clocks.
+5. Wash compatible armor in ordinary water when you want to remove both Alchemical Leather infusion data and dye color.
 
-Normal, splash and lingering potions are all poured with ordinary **right-click / Use**. When a splash or lingering potion is aimed at an Alchemical Leather cauldron, the cauldron interaction consumes it instead of throwing it.
+Normal, splash and lingering potions are all poured with ordinary **right-click / Use**. When a splash or lingering potion is aimed at an Alchemical Leather cauldron, the cauldron interaction consumes it instead of throwing it. Valid potion contents are stored independently of whether a particular armor piece can later accept their effects; infusion eligibility is checked only when effectful liquid is actually applied to armor.
 
-Reinfusing an item replaces its previous Alchemical Leather infusion. Infused armor cannot be enchanted, and enchanted armor cannot be infused. Custom names, durability, trims and unrelated item components are preserved by Alchemical Leather's cauldron transactions.
+Effectless potion cauldrons are deliberately **dye-only**. They can recolor compatible armor that is already enchanted or already infused, preserving those enchantments/infusions plus names, durability, trims and unrelated components. They do not create an empty infusion. Ordinary water potions keep Minecraft's water-cauldron semantics instead of becoming Alchemical Leather potion cauldrons.
+
+Reinfusing an item with an effectful potion replaces its previous Alchemical Leather infusion. Infused armor cannot be enchanted, and enchanted armor cannot receive an effectful infusion.
 
 ## Which armor is compatible?
 
@@ -43,7 +45,7 @@ An item must first be equippable in an armor slot. Alchemical Leather then recog
 2. a loaded `minecraft:crafting_dye` recipe that recolors the result item **in place**; or
 3. the fallback tag `#alchemical_leather:dyeable_armor` for custom dye systems that cannot be inferred automatically.
 
-This covers vanilla leather player armor, leather horse armor and wolf armor, and lets standard modded dyeable armor work without per-item integration code. A recipe that converts item A into a different dyed item B does **not** make A compatible merely because B is dyed.
+This covers vanilla leather player armor, leather horse armor and wolf armor, and lets standard modded dyeable armor work without per-item integration code. A recipe that converts item A into a different dyed item B does **not** make A compatible merely because B is dyed. Effectless potion dye baths use this same compatibility boundary; they do not attach an invisible `DYED_COLOR` component to arbitrary armor whose renderer does not support dyeing.
 
 The server is authoritative for this classification. Multiplayer clients use a broader armor-only prediction check so datapack or server-side dyeability rules do not have to be duplicated on the client.
 
@@ -58,7 +60,7 @@ HEAD, CHEST, LEGS and FEET keep Alchemical Leather's original body-part rules. A
 | Leggings | Speed, Slowness, Jump Boost, Weaving |
 | Boots | Slow Falling, Knockback Resistance, Clinging, Reorientation (Clinging Reoriented) |
 
-The table is slot-based, not item-based: a compatible modded dyeable helmet follows the same helmet rules as a leather cap.
+The table is slot-based, not item-based: a compatible modded dyeable helmet follows the same helmet rules as a leather cap. Effectless dye-only liquid has no effect to map, so it can recolor any compatible humanoid slot without creating an infusion.
 
 ## Animal / BODY armor
 
@@ -70,7 +72,7 @@ Dyeable armor equipped in Minecraft's **BODY / animal-armor slot** follows a del
 - repeated entries of the same effect keep independent timers, while only the strongest currently applicable source is projected;
 - reinfusion replaces the previous potion bundle rather than accumulating another potion.
 
-Vanilla leather horse armor and wolf armor are supported. A multi-effect potion such as Turtle Master is valid on compatible BODY armor even though it is rejected on humanoid armor.
+Vanilla leather horse armor and wolf armor are supported. A multi-effect potion such as Turtle Master is valid on compatible BODY armor even though it is rejected on humanoid armor. An effectless potion only recolors BODY armor and never creates an empty `animal_infusion`; an existing BODY infusion is preserved unchanged.
 
 Instant effects are consumed before firing so they cannot replay. If a potion contains both an instant effect and timed siblings, only the instant entry is removed; the remaining effects stay on the armor.
 
@@ -82,6 +84,7 @@ Instant effects are consumed before firing so they cannot replay. If a potion co
 | Splash | Uses the same timed armor behavior as a normal potion after being poured. |
 | Lingering | Each non-instant effect remains stable indefinitely while the armor is equipped. |
 | Instant effect | Activates once when the armor is equipped, then that instant entry is consumed. |
+| No effects (for example Awkward, Mundane or Thick) | Stored normally but acts only as a dye bath. Transfers the cauldron's visible color to compatible armor without creating, replacing or removing an infusion. |
 
 Armor-owned effects and ordinary external Minecraft effects keep separate clocks. If both provide the same effect, Alchemical Leather projects the currently appropriate visible winner without deleting the external source. Removing the armor reveals any surviving external effect again.
 
@@ -134,7 +137,7 @@ Alchemical Leather includes its own colored-water cauldron mechanic; **BedrockIf
 
 Use any item carrying Minecraft's standard `DYE` component on a water cauldron. The water becomes dyed, and adding another dye blends colors using Minecraft-style brightness-preserving color mixing. Reapplying a dye that would not change the color consumes nothing.
 
-The same `DYE` items can tint an Alchemical Leather potion cauldron. The tint blends with the potion's current visible color while preserving potion identity, effects, custom name, bottle type and dose count. A no-op tint consumes no dye. Live tint changes now remesh the already-rendered cauldron section immediately on the client, so the liquid updates visually without requiring a reload.
+The same `DYE` items can tint an Alchemical Leather potion cauldron. The tint blends with the potion's current visible color while preserving potion identity, effects, custom name, bottle type and dose count. A no-op tint consumes no dye. This works equally for effectful and effectless stored potions, so an Awkward/Mundane/Thick cauldron can be recolored into a deliberately chosen dye bath. Matching refills ignore the decorative custom color and preserve it. Live tint changes remesh the already-rendered cauldron section immediately on the client, so the liquid updates visually without requiring a reload.
 
 Internally the colored cauldron uses six fluid units so armor recoloring can be finer-grained than ordinary three-level water:
 
@@ -145,7 +148,7 @@ Internally the colored cauldron uses six fluid units so armor recoloring can be 
 - adding a water potion below level 6 removes the tint and converts the remaining amount back to ordinary water; a full level-6 dyed cauldron accepts the gesture without consuming the potion;
 - pouring a water bucket in clears the tint and produces a full ordinary water cauldron through Minecraft's normal bucket interaction.
 
-Colored water blends with an armor item's existing `DYED_COLOR`; it does not remove its infusion. Ordinary water does the opposite job: washing compatible armor removes `DYED_COLOR`, `alchemical_leather:infusion` and `alchemical_leather:animal_infusion`, consuming one vanilla water level. Merely dyed compatible armor can be washed too.
+Colored water blends with an armor item's existing `DYED_COLOR`; it does not remove its infusion. Effectless potion dye baths instead set the armor to the potion cauldron's visible RGB while preserving any existing infusion or enchantment. Ordinary water does the opposite job: washing compatible armor removes `DYED_COLOR`, `alchemical_leather:infusion` and `alchemical_leather:animal_infusion`, consuming one vanilla water level. Merely dyed compatible armor can be washed too.
 
 ## Installation
 
@@ -174,7 +177,7 @@ With Alex's Mobs and Clinging Reoriented, Clinging and Reorientation can both st
 
 With Scale Brews, Growth/Shrinking II may appear in Master timed armor. Persistent villager equipment is restricted to Growth/Shrinking I, and level III is never sold; brewing therefore remains necessary for the strongest scale effects.
 
-BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. BedrockIfy also deliberately disables ordinary `crafting_dye` matching while that feature is active, so armor recoloring follows its cauldron path instead of the crafting table. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
+BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. If BedrockIfy exposes a canonical effectless potion dose, that armor-specific action is dye-only under the same rules as a native Alchemical Leather potion cauldron. BedrockIfy also deliberately disables ordinary `crafting_dye` matching while that feature is active, so armor recoloring follows its cauldron path instead of the crafting table. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
 
 Earlier alpha validation also exercised Friends&Foes, Wilder Wild, Deeper Dark, Additional Additions, Enchancement, Functional Armor Trims and Grind Enchantments. See [validation.md](validation.md) for current and historical fixture boundaries.
 
@@ -245,7 +248,7 @@ Additional test task:
 .\gradlew.bat runClientGameTest
 ```
 
-`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The alpha.4 release candidate passes **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture; the client suite also passes synchronized cauldron state, repeated live tint remeshing and equip/unequip assertions. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
+`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The alpha.4 release candidate passed **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture. The post-alpha.4 effectless-potion regression suite extends this to **79/79** on both server runs while retaining the passing client suite. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
 
 ## License
 

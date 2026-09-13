@@ -34,6 +34,39 @@ The client suite starts with visible potion and dyed-water cauldrons after their
 
 CI screenshots for the final implementation were manually reviewed: the visible liquids change from their initial orange/brown appearance to green/red and then purple/blue without reloading the world. This specifically covers the live-render failure that ordinary state assertions missed.
 
+## Post-alpha.4 effectless-potion regression — 13 September 2026
+
+A post-release gameplay report exposed a conceptual coupling in `CauldronService`: bottle insertion called `Infusions.resolveAll(...)` before storage, so valid potion contents with zero effects were rejected as `no_effect`. That resolution function was correct for creating an infusion, but storage had accidentally inherited the stricter infusion requirement.
+
+The correction separates those responsibilities. Valid non-water potion contents can be stored independently of whether they are infusible. When compatible armor is later used on the cauldron, effectful contents follow the existing infusion rules; effectless contents take the dye-only path and update only `DYED_COLOR`, preserving enchantments and any existing humanoid/BODY infusion.
+
+The tests-first baseline run `34749420765` compiled successfully and ran **76** server GameTests, with exactly five new required regressions failing for the intended old behavior: effectless vanilla potion pouring, enchanted dye-only armor, preservation of an existing humanoid infusion, BODY dye-only behavior and tint-preserving effectless refill. Water delegation and malformed-potion atomic rejection already passed on that baseline.
+
+After implementation and adversarial expansion, run `34749615391` on commit `43c79c047d768cdddc1f964eae6ef2d82f12caf8` completed successfully:
+
+| Effectless-potion regression matrix | Result |
+|---|---|
+| Standalone build + server GameTests | **PASS — 79/79 required GameTests** |
+| GameTest registration consistency check | **PASS** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 79/79 required GameTests** |
+
+The ten additional server regressions cover:
+
+- Awkward, Mundane and Thick potion contents across normal, splash and lingering bottle storage plus glass-bottle round trips;
+- effectless potion color transfer to compatible humanoid armor without creating an infusion;
+- recoloring already-enchanted compatible armor while preserving its enchantments and unrelated components;
+- recoloring already-infused humanoid armor without replacing its infusion;
+- BODY armor dye-only behavior without constructing an empty `AnimalInfusion`, including preservation of an existing BODY infusion;
+- tinting an effectless potion cauldron and refilling it with matching untinted contents while preserving the decorative tint;
+- water-potion delegation to Minecraft's water-cauldron path;
+- atomic rejection of malformed potion items with no `POTION_CONTENTS`;
+- storage of valid effectful potion contents before a particular armor target's infusion eligibility is checked, while failed armor application still consumes no dose;
+- atomic rejection of non-dyeable armor from the dye-only path;
+- imported canonical BedrockIfy effectless potion contents acting as a dye bath while preserving BedrockIfy's block ownership and consuming exactly one foreign dose.
+
+This intentionally leaves `Infusions.resolve` and `resolveAll` strict: zero effects are still invalid **as an infusion**. No empty infusion representation was added to either humanoid or BODY data.
+
 ## Historical alpha.3 release evidence and correction
 
 The final alpha.3 release candidate was merge commit `224aadc7c2cf06198e4afac496d2536711da4518` on `main`. Main run `34541183384` completed successfully after the pull-request candidate and its independent PR run had already passed the same pipeline.
@@ -108,7 +141,7 @@ The client suite creates real custom cauldrons in an integrated world, verifies 
 
 Tests cover the six-unit fluid model, color mixing, no-op dye application, blending with existing item color, infusion preservation, bottle/bucket extraction, water-potion tint removal, bucket delegation and atomic failures.
 
-With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff, dye delegation, crafting-dye revocation while BedrockIfy's cauldron feature is active and rejection of fractional/noncanonical imported potion levels.
+With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff, dye delegation, effectless imported dye-only ownership, crafting-dye revocation while BedrockIfy's cauldron feature is active and rejection of fractional/noncanonical imported potion levels.
 
 ### Real Clinging Reoriented integration
 
@@ -120,7 +153,7 @@ Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11,
 
 ## Remaining human/runtime checks
 
-- Physical ordinary right-click / Use behavior in both hands for normal, splash and lingering potion pouring, especially under latency or third-party claim protection.
+- Physical ordinary right-click / Use behavior in both hands for normal, splash and lingering potion pouring, including effectless dye baths, especially under latency or third-party claim protection.
 - Real villager UI/restock behavior across repeated day cycles, reputation changes, demand changes, curing discounts and third-party villager-economy mods.
 - Gameplay feel and economy of the 2/3 Expert and default Master selection probabilities across naturally generated villagers rather than test-controlled registries.
 - Real gameplay feel of animal armor infusion on mounted/tamed entities rather than test-controlled entities.
