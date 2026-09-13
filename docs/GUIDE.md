@@ -4,6 +4,8 @@
 
 This is the detailed reference. The README deliberately leaves some mechanics for discovery; this page does not.
 
+This guide describes **Alchemical Leather 0.1.0-alpha.5**.
+
 ## Contents
 
 - [How it works](#how-it-works)
@@ -165,7 +167,7 @@ Download the regular JAR from [releases](https://github.com/R3Neer/alchemical-le
 
 Alchemical Leather works without optional content mods. Standard modded dyeable armor can be discovered automatically through the rules above; that is a compatibility mechanism, not a promise that every mod combination has been playtested.
 
-The alpha.4 CI integration fixture specifically exercises:
+The alpha.5 CI integration fixture specifically exercises:
 
 - **Clinging Reoriented 0.1.0-alpha.6**;
 - **Scale Brews 0.1.0-beta.5**;

@@ -4,6 +4,8 @@ What if **dyeable armor** could carry your potions?
 
 A **Fabric mod for Minecraft 26.2** that turns familiar armor into alchemical equipment. Pour a potion into a cauldron, infuse a compatible piece, equip it, and take the effect with you.
 
+Current public prerelease: **0.1.0-alpha.5**.
+
 ![Potion-filled cauldrons in game](docs/images/vanilla-cauldron.png)
 
 ## Start experimenting
