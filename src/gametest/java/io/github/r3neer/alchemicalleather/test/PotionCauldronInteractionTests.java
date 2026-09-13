@@ -92,6 +92,18 @@ public final class PotionCauldronInteractionTests {
         h.assertTrue(h.getLevel().getBlockState(pos).getValue(PotionCauldron.LEVEL)==2&&(be.contents.getColor()&0xffffff)==expected,"Matching effectless refill preserves tint and adds one dose");h.succeed();
     }
 
+    @GameTest public void validUnsupportedPotionCanBeStoredBeforeArmorValidation(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));h.getLevel().setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());var luck=PotionContents.createItemStack(Items.POTION,Potions.LUCK);
+        h.assertTrue(use(h,p,pos,luck)==InteractionResult.SUCCESS,"Valid potion storage does not depend on humanoid infusion eligibility");var state=h.getLevel().getBlockState(pos);h.assertTrue(state.is(PotionCauldron.BLOCK)&&state.getValue(PotionCauldron.LEVEL)==1,"Unsupported-for-humanoid potion is stored normally");
+        var leggings=new ItemStack(Items.LEATHER_LEGGINGS);h.assertTrue(use(h,p,pos,leggings)==InteractionResult.FAIL,"Effectful potion still validates infusion eligibility when armor is used");h.assertTrue(h.getLevel().getBlockState(pos).getValue(PotionCauldron.LEVEL)==1&&!Infusions.blocked(leggings),"Failed armor infusion consumes no stored dose and mutates no infusion state");h.succeed();
+    }
+
+    @GameTest public void effectlessPotionRejectsNonDyeableArmorAtomically(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));var contents=new PotionContents(Optional.of(Potions.AWKWARD),Optional.of(0xabcdef),List.of(),Optional.empty());CauldronService.write(h.getLevel(),pos,contents,Items.POTION,2);
+        var armor=new ItemStack(Items.IRON_HORSE_ARMOR);var before=armor.copy();h.assertTrue(Infusions.slot(armor)==null,"Fixture armor is intentionally not dyeable by Alchemical Leather rules");
+        h.assertTrue(use(h,p,pos,armor)==InteractionResult.FAIL,"Effectless dye bath does not pretend arbitrary non-dyeable armor supports DYED_COLOR");h.assertTrue(ItemStack.matches(before,armor)&&h.getLevel().getBlockState(pos).getValue(PotionCauldron.LEVEL)==2,"Rejected non-dyeable armor consumes no dose and is unchanged");h.succeed();
+    }
+
     @GameTest public void waterPotionStillDelegatesToWaterCauldronSemantics(GameTestHelper h){
         var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));h.getLevel().setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());var water=PotionContents.createItemStack(Items.POTION,Potions.WATER);
         h.assertTrue(use(h,p,pos,water)==InteractionResult.PASS,"Water potion remains delegated to Minecraft water-cauldron handling");h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.CAULDRON)&&water.getCount()==1,"Alchemical Leather does not consume or convert delegated water potion");h.succeed();
