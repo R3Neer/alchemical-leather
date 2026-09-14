@@ -44,8 +44,9 @@ public abstract class WearDamageMixin {
         InfusionWear.emitBuiltin(self,resistance.getEffect(),DAMAGE_PREVENTED,damage);
     }
 
+    /* 26.2 funnels contextual knockback through this overload. The simple helper delegates here. */
     @Inject(method="knockback",at=@At("HEAD"))
-    private void alchemical$knockback(double power,double xd,double zd,CallbackInfo ci){
+    private void alchemical$knockback(double power,double xd,double zd,DamageSource source,float damage,boolean blocked,CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
         if(holder.isEmpty()||power<=0)return;
