@@ -1,0 +1,84 @@
+name: Publish validated release
+
+on:
+  workflow_run:
+    workflows: ["Build and test"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version=//p' gradle.properties)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip already published versions
+        id: existing
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ steps.version.outputs.tag }}'
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download validated build artifact
+        if: steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .release-artifact
+          gh run download '${{ github.event.workflow_run.id }}' \
+            --repo '${{ github.repository }}' \
+            --name alchemical-leather-build \
+            --dir .release-artifact
+
+      - name: Publish GitHub release
+        if: steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ steps.version.outputs.version }}'
+          tag='${{ steps.version.outputs.tag }}'
+          target='${{ github.event.workflow_run.head_sha }}'
+          jar="$(find .release-artifact -type f -name "alchemical-leather-${version}.jar" -print -quit)"
+          test -n "$jar" && test -f "$jar"
+          digest="$(sha256sum "$jar" | awk '{print $1}')"
+          notes="$(mktemp)"
+          cat docs/RELEASE_NOTES.md > "$notes"
+          printf '\n\nTarget commit: `%s`\n\nJAR SHA-256: `%s`\n' "$target" "$digest" >> "$notes"
+          flags=()
+          if [[ "$version" =~ -(alpha|beta|rc)(\.|$) ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$tag" "$jar" \
+            --repo '${{ github.repository }}' \
+            --target "$target" \
+            --title "Alchemical Leather $version" \
+            --notes-file "$notes" \
+            "${flags[@]}"
