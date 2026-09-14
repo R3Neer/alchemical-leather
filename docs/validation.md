@@ -54,7 +54,9 @@ After the production fix, the adversarial matrix was rerun from the beginning an
 
 ## Beta.1 release-candidate gate
 
-The release branch is versioned `0.1.0-beta.1`, and README, player guide, architecture, validation, TM evidence and release notes are updated before merge. The documentation-complete pull-request candidate must pass the same complete CI pipeline again. After merge, `main` must also pass that pipeline; only then does `.github/workflows/release.yml` create `v0.1.0-beta.1` and attach the exact JAR artifact from that successful `main` run. The publication workflow appends the tagged commit and JAR SHA-256 to the release notes automatically.
+The documentation-complete beta candidate at head `26e280cbc99ea08ee944f0740ebb3d93c90d7921` passed push run `34865578006` with the full release matrix: **88/88 standalone server GameTests, registration consistency, client GameTest, 88/88 with the real compatibility fixture, and artifact upload**. This independently reconfirmed the functional run after the version bump, README/player-guide/architecture/validation updates, TM record, release notes and publication workflow were present.
+
+The final evidence-only commit changes no production behavior and is run through the same pipeline before merge. After merge, `main` must also pass that pipeline; only then does `.github/workflows/release.yml` create `v0.1.0-beta.1` and attach the exact JAR artifact from that successful `main` run. The publication workflow appends the tagged commit and JAR SHA-256 to the release notes automatically.
 
 ---
 
