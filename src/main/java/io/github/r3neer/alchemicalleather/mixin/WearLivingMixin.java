@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -22,17 +23,26 @@ public abstract class WearLivingMixin {
     private static final Identifier JUMP=Identifier.fromNamespaceAndPath("alchemical_leather","jump_boost_jump");
     private static final Identifier WATER_BREATHING=Identifier.fromNamespaceAndPath("alchemical_leather","water_breathing_tick");
     private static final Identifier SLOW_FALLING=Identifier.fromNamespaceAndPath("alchemical_leather","slow_falling_tick");
+    @Unique private Vec3 alchemical$travelOrigin;
+    @Unique private boolean alchemical$meterTravel;
+
+    @Inject(method="travel",at=@At("HEAD"))
+    private void alchemical$beforeSelfMovement(Vec3 input,CallbackInfo ci){
+        var self=(LivingEntity)(Object)this;
+        alchemical$meterTravel=!self.level().isClientSide()&&!self.isPassenger()&&!self.isFallFlying()&&!self.isInWater()&&!self.isInLava()
+            &&input!=null&&input.horizontalDistanceSqr()>1.0E-8;
+        alchemical$travelOrigin=alchemical$meterTravel?self.position():null;
+    }
 
     @Inject(method="travel",at=@At("RETURN"))
     private void alchemical$selfMovement(Vec3 input,CallbackInfo ci){
+        if(!alchemical$meterTravel||alchemical$travelOrigin==null)return;
         var self=(LivingEntity)(Object)this;
-        if(self.level().isClientSide()||self.isPassenger()||self.isFallFlying()||self.isInWater()||self.isInLava())return;
-        // travel() is the wearer's own locomotion path. Platform/piston/vehicle transport happens elsewhere.
-        // We intentionally meter active self-locomotion ticks rather than world displacement so external
-        // momentum cannot be charged merely because the wearer was also moving this tick.
-        if(input==null||input.horizontalDistanceSqr()<=1.0E-8)return;
-        emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT);
-        emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT);
+        Vec3 delta=self.position().subtract(alchemical$travelOrigin);double distance=Math.sqrt(delta.x*delta.x+delta.z*delta.z);
+        alchemical$meterTravel=false;alchemical$travelOrigin=null;
+        if(!Double.isFinite(distance)||distance<=1.0E-8)return;
+        emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT,distance);
+        emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT,distance);
     }
 
     @Inject(method="jumpFromGround",at=@At("RETURN"))
@@ -57,8 +67,8 @@ public abstract class WearLivingMixin {
             InfusionWear.emitBuiltin(self,falling.getEffect(),SLOW_FALLING,1.0);
     }
 
-    private static void emit(LivingEntity self,MobEffectInstance effect,Identifier detector){
-        if(effect!=null)InfusionWear.emitBuiltin(self,effect.getEffect(),detector,effect.getAmplifier()+1.0);
+    private static void emit(LivingEntity self,MobEffectInstance effect,Identifier detector,double amount){
+        if(effect!=null)InfusionWear.emitBuiltin(self,effect.getEffect(),detector,amount*(effect.getAmplifier()+1.0));
     }
 
     private static boolean wouldNeedWaterBreathing(LivingEntity self){
