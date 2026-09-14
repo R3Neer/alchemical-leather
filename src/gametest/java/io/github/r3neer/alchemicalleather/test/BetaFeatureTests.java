@@ -72,7 +72,7 @@ public final class BetaFeatureTests {
     }
 
     @GameTest public void creativeArrowTippingConsumesNothingAndDoesNotRepeatIdenticalStack(GameTestHelper h){
-        var p=h.makeMockPlayer(GameType.CREATIVE);var pos=h.absolutePos(new BlockPos(1,1,1));var contents=new PotionContents(Potions.SWIFTNESS);CauldronService.write(h.getLevel(),pos,contents,Items.POTION,3);var arrows=new ItemStack(Items.ARROW,64);
+        var p=h.makeMockPlayer(GameType.CREATIVE);p.getAbilities().instabuild=true;var pos=h.absolutePos(new BlockPos(1,1,1));var contents=new PotionContents(Potions.SWIFTNESS);CauldronService.write(h.getLevel(),pos,contents,Items.POTION,3);var arrows=new ItemStack(Items.ARROW,64);
         h.assertTrue(use(h,p,pos,arrows)==InteractionResult.SUCCESS,"Creative arrow tipping succeeds");h.assertTrue(arrows.getCount()==64,"Creative keeps source arrows");
         h.assertTrue(h.getLevel().getBlockState(pos).getValue(PotionCauldron.LEVEL)==3,"Creative keeps all cauldron doses");int first=p.getInventory().countItem(Items.TIPPED_ARROW);h.assertTrue(first==64,"Creative receives one tipped stack");
         h.assertTrue(use(h,p,pos,arrows)==InteractionResult.SUCCESS,"Repeated creative tipping remains a valid gesture");h.assertTrue(p.getInventory().countItem(Items.TIPPED_ARROW)==first,"Repeated identical creative tipping does not duplicate the stack");h.succeed();
@@ -103,6 +103,9 @@ public final class BetaFeatureTests {
         h.assertFalse(recipe.matches(CraftingInput.of(2,1,List.of(new ItemStack(Items.LEATHER_LEGGINGS),PotionContents.createItemStack(Items.POTION,Potions.AWKWARD))),h.getLevel()),"Effectless potion cannot create crafting infusion");
         var enchanted=new ItemStack(Items.LEATHER_LEGGINGS);enchanted.enchant(h.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION),1);
         h.assertFalse(recipe.matches(CraftingInput.of(2,1,List.of(enchanted,speed)),h.getLevel()),"Enchanted armor is rejected like the cauldron path");
+        h.assertFalse(recipe.matches(CraftingInput.of(2,1,List.of(new ItemStack(Items.IRON_HORSE_ARMOR),speed)),h.getLevel()),"Non-dyeable armor is rejected");
+        var malformed=new ItemStack(Items.POTION);malformed.remove(DataComponents.POTION_CONTENTS);
+        h.assertFalse(recipe.matches(CraftingInput.of(2,1,List.of(new ItemStack(Items.LEATHER_LEGGINGS),malformed)),h.getLevel()),"Potion item without PotionContents is rejected");
         h.assertFalse(recipe.matches(CraftingInput.of(3,1,List.of(new ItemStack(Items.LEATHER_LEGGINGS),speed,new ItemStack(Items.DIRT))),h.getLevel()),"Unrelated extra ingredient rejects recipe");
         h.assertFalse(recipe.matches(CraftingInput.of(3,1,List.of(new ItemStack(Items.LEATHER_LEGGINGS),speed,PotionContents.createItemStack(Items.SPLASH_POTION,Potions.SWIFTNESS))),h.getLevel()),"Two potion bottles reject recipe");h.succeed();
     }
