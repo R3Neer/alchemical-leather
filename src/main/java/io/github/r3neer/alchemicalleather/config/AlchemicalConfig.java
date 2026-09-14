@@ -49,7 +49,7 @@ public final class AlchemicalConfig {
         try{
             Files.createDirectories(PATH.getParent());
             var root=new JsonObject();root.addProperty("cauldronTippedArrows",DEFAULTS.cauldronTippedArrows());
-            try(var writer=Files.newBufferedWriter(PATH,StandardCharsets.UTF_8,StandardOpenOption.CREATE_NEW)){
+            try(var writer=Files.newBufferedWriter(PATH,StandardCharsets.UTF_8,StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE)){
                 GSON.toJson(root,writer);
             }
         }catch(FileAlreadyExistsException ignored){
