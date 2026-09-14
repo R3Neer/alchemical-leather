@@ -1,12 +1,68 @@
-# Validation of 0.1.0-alpha.5
+# Validation of 0.1.0-beta.1
 
-Release validation date: **13 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
+Beta validation date: **14 September 2026**. Target: Minecraft 26.2, Java 25, Fabric Loader 0.19.5, Fabric API 0.159.0+26.2 and Loom 1.17.20.
 
-This is alpha validation: automated coverage is broad and the client path is exercised in an integrated world, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
+This is beta validation: automated coverage includes standalone server behavior, an integrated client run and a pinned real compatibility fixture, but it is not a claim that every third-party mod combination, datapack extension or physical gameplay path has been manually tested.
 
-## Alpha.5 release scope
+## Beta.1 scope
 
-Alpha.5 packages the effectless-potion storage and dye-bath correction on top of the alpha.4 cauldron/rendering fixes:
+Beta.1 closes two remaining core interaction routes and promotes the project out of alpha:
+
+- Alchemical Leather potion cauldrons create tipped arrows natively without requiring BedrockIfy;
+- one/two/three native stored doses provide capacity for up to 16/32/64 arrows, while 1–16 / 17–32 / 33–64 arrows consume 1 / 2 / 3 whole native doses;
+- tipped arrows receive the exact stored `PotionContents`, including custom effects, custom tint and custom name data carried by the component;
+- `config/alchemical-leather.json` exposes `cauldronTippedArrows`, default `true`; disabling it yields the gesture with `PASS` without consuming arrows or potion;
+- compatible armor can be infused by a shapeless crafting recipe using one normal, splash or lingering potion;
+- cauldron and crafting effectful transformation share `ArmorInfusionService`, retaining humanoid slot policy, BODY bundles, bottle timing modes, enchantment exclusion, color transfer and atomic reinfusion;
+- effectless potions remain valid cauldron dye baths but deliberately do not match the crafting infusion recipe;
+- crafting preserves unrelated armor components, returns a glass bottle and produces exactly one armor item even for synthetic/modded stackable armor;
+- BedrockIfy remains sole owner of arrow tipping and ordinary interactions on its own potion cauldron, and its deliberate ordinary `DyeRecipe` revocation remains untouched.
+
+## Beta.1 TM functional evidence
+
+The frozen requirements and iterative execution record live in [`TM_ARROW_CRAFTING_BETA.md`](TM_ARROW_CRAFTING_BETA.md). The converged functional candidate was PR `#10` head `8b8223c3ec309dee4b0271d777df9adf9fac8ca7`; pull-request run `34864583775` completed successfully.
+
+| Beta.1 functional matrix | Result |
+|---|---|
+| Standalone build + server GameTests | **PASS — 88/88 required GameTests** |
+| GameTest registration consistency check | **PASS** |
+| Client GameTest under Xvfb / llvmpipe | **PASS** |
+| Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 88/88 required GameTests** |
+
+The real fixture loaded **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9**, together with Gravity Changer, CodxLib and Cloth Config required by that fixture. Third-party JARs are testing inputs and are not bundled in Alchemical Leather.
+
+The beta additions specifically exercise:
+
+- standalone arrow counts and whole-dose boundaries around 1/16/17/32/33/64 arrows, including partial residual doses;
+- exact custom `PotionContents` transfer to tipped arrows;
+- creative arrow behavior without source/dose consumption or repeated identical-result duplication;
+- JSON config default/explicit-false/malformed-field parsing;
+- normal, splash and lingering crafting modes with timed/timed/stable semantics;
+- glass-bottle crafting remainder, potion color transfer and preservation of name/durability components;
+- BODY multi-effect crafting and atomic reinfusion;
+- enchanted, wrong-slot, effectless, malformed-potion, non-dyeable and ambiguous-extra-input rejection;
+- exactly-one-output behavior for synthetic stackable armor;
+- explicit `PASS` ownership on BedrockIfy's potion cauldron with the foreign block and arrow stack unchanged by Alchemical Leather.
+
+### TM failure classification
+
+The first implementation run compiled and passed 86 of 87 server GameTests. Its only red test was the creative-arrow fixture: `makeMockPlayer(GameType.CREATIVE)` did not guarantee the `abilities.instabuild` property actually used by production. The failure was classified as a **test-fixture defect** and the fixture was corrected to set that ability explicitly.
+
+A later independent adversarial pass found a genuine **production defect** not exposed by vanilla armor: copying a hypothetical modded compatible armor stack with count greater than one could return the whole stack infused for one potion. The special recipe now forces result count to exactly one and a holdout test preserves that invariant.
+
+After the production fix, the adversarial matrix was rerun from the beginning and passed all three automated gates above.
+
+## Beta.1 release-candidate gate
+
+The documentation-complete beta candidate at head `26e280cbc99ea08ee944f0740ebb3d93c90d7921` passed push run `34865578006` with the full release matrix: **88/88 standalone server GameTests, registration consistency, client GameTest, 88/88 with the real compatibility fixture, and artifact upload**. This independently reconfirmed the functional run after the version bump, README/player-guide/architecture/validation updates, TM record, release notes and publication workflow were present.
+
+The final evidence-only commit changes no production behavior and is run through the same pipeline before merge. After merge, `main` must also pass that pipeline; only then does `.github/workflows/release.yml` create `v0.1.0-beta.1` and attach the exact JAR artifact from that successful `main` run. The publication workflow appends the tagged commit and JAR SHA-256 to the release notes automatically.
+
+---
+
+## Historical alpha.5 release scope
+
+Alpha.5 packaged the effectless-potion storage and dye-bath correction on top of the alpha.4 cauldron/rendering fixes:
 
 - valid non-water potion contents are stored independently of whether they can create an infusion;
 - Awkward, Mundane and Thick potions round-trip through Alchemical Leather cauldrons with normal, splash and lingering bottle types;
@@ -17,9 +73,9 @@ Alpha.5 packages the effectless-potion storage and dye-bath correction on top of
 - BedrockIfy retains ownership of its potion block/fluid lifecycle while canonical imported effectless doses use the same dye-only armor semantics;
 - alpha.4's ordinary-use splash/lingering pouring, live tint remeshing and GameTest-entrypoint consistency guard remain part of the release.
 
-## Alpha.5 release-candidate CI evidence
+## Historical alpha.5 release-candidate CI evidence
 
-The functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. Release-preparation PR `#8` then updated the project version plus README, player guide, architecture and validation documentation. Its documentation-complete head `ba2fdec76e3bc0fca04e41d1f3a3831f6e3afa08` passed push run `34751065423` and independent pull-request run `34751066795`; PR `#8` merged to `main` as `a4719d97633a42d928e41322e0885a8036132367`, whose post-merge run `34751277422` also passed the full pipeline. The final release-documentation merge is validated on `main` before tagging, and the published release notes identify the exact tagged commit and JAR checksum.
+The functional change merged through PR `#7` as main commit `ef89645fd394911eafb6553f82debf1c1e677190`; post-merge run `34750022598` completed successfully. Release-preparation PR `#8` then updated the project version plus README, player guide, architecture and validation documentation. Its documentation-complete head `ba2fdec76e3bc0fca04e41d1f3a3831f6e3afa08` passed push run `34751065423` and independent pull-request run `34751066795`; PR `#8` merged to `main` as `a4719d97633a42d928e41322e0885a8036132367`, whose post-merge run `34751277422` also passed the full pipeline. The final release-documentation merge was validated on `main` before tagging, and the published release notes identify the exact tagged commit and JAR checksum.
 
 | Alpha.5 release matrix | Result |
 |---|---|
@@ -30,7 +86,7 @@ The functional change merged through PR `#7` as main commit `ef89645fd394911eafb
 
 The compatibility fixture uses the real **Clinging Reoriented 0.1.0-alpha.6**, **Scale Brews 0.1.0-beta.5**, **BedrockIfy 1.11.8+mc26.2** and **Alex's Mobs Continued 2.1.9** releases together with Gravity Changer, CodxLib and Cloth Config dependencies required by Clinging. Third-party JARs are resolved/downloaded for CI and are not bundled in Alchemical Leather.
 
-## Alpha.5 effectless-potion development evidence
+## Historical alpha.5 effectless-potion development evidence
 
 A post-release gameplay report exposed a conceptual coupling in `CauldronService`: bottle insertion called `Infusions.resolveAll(...)` before storage, so valid potion contents with zero effects were rejected as `no_effect`. That resolution function was correct for creating an infusion, but storage had accidentally inherited the stricter infusion requirement.
 
@@ -167,7 +223,7 @@ The client suite creates real custom cauldrons in an integrated world, verifies 
 
 Tests cover the six-unit fluid model, color mixing, no-op dye application, blending with existing item color, infusion preservation, bottle/bucket extraction, water-potion tint removal, bucket delegation and atomic failures.
 
-With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff, dye delegation, effectless imported dye-only ownership, crafting-dye revocation while BedrockIfy's cauldron feature is active and rejection of fractional/noncanonical imported potion levels.
+With real BedrockIfy loaded, tests also verify vanilla-water+dye ownership, disabled-setting fallback, colored-water armor recoloring, canonical potion dose consumption, ordinary bottle handoff, **arrow handoff on BedrockIfy's potion cauldron**, dye delegation, effectless imported dye-only ownership, crafting-dye revocation while BedrockIfy's cauldron feature is active and rejection of fractional/noncanonical imported potion levels.
 
 ### Real Clinging Reoriented integration
 
@@ -175,11 +231,13 @@ The real fixture verifies manual Clinging and Reorientation infusion into leathe
 
 ## Historical alpha.1 compatibility evidence
 
-Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in alpha.5.
+Alpha.1 validation previously exercised Friends&Foes 4.0.27, Wilder Wild 4.2.11, Deeper Dark 4.4.1, Additional Additions 10.0.12, Enchancement 26.2-r4, Functional Armor Trims 2.2.1 and Grind Enchantments 4.2.1+26.1.2 in larger local compatibility fixtures. Those results remain useful historical evidence, but are not presented as if every provider were rerun in beta.1.
 
 ## Remaining human/runtime checks
 
 - Physical ordinary right-click / Use behavior in both hands for normal, splash and lingering potion pouring, including effectless dye baths, especially under latency or third-party claim protection.
+- Physical arrow dipping with partially filled native cauldrons, inventory-near-full/drop fallback and the `cauldronTippedArrows=false` setting in a normal player session.
+- Recipe-book/third-party recipe-viewer presentation of the special armor-infusion recipe, plus drag/shift-click crafting behavior with normal, splash and lingering bottles.
 - Real villager UI/restock behavior across repeated day cycles, reputation changes, demand changes, curing discounts and third-party villager-economy mods.
 - Gameplay feel and economy of the 2/3 Expert and default Master selection probabilities across naturally generated villagers rather than test-controlled registries.
 - Real gameplay feel of animal armor infusion on mounted/tamed entities rather than test-controlled entities.

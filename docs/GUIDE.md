@@ -4,7 +4,7 @@
 
 This is the detailed reference. The README deliberately leaves some mechanics for discovery; this page does not.
 
-This guide describes **Alchemical Leather 0.1.0-alpha.5**.
+This guide describes **Alchemical Leather 0.1.0-beta.1**.
 
 ## Contents
 
@@ -13,10 +13,13 @@ This guide describes **Alchemical Leather 0.1.0-alpha.5**.
 - [Humanoid armor](#humanoid-armor)
 - [Animal / BODY armor](#animal--body-armor)
 - [Potion types and timing](#potion-types-and-timing)
+- [Tipped arrows](#tipped-arrows)
+- [Crafting-table infusion](#crafting-table-infusion)
 - [Leatherworker trades](#leatherworker-trades)
 - [Dyed water and washing](#dyed-water-and-washing)
 - [Installation](#installation)
 - [Mod compatibility](#mod-compatibility)
+- [Configuration](#configuration)
 - [Datapack support](#datapack-support)
 - [Building](#building)
 - [License](#license)
@@ -26,10 +29,11 @@ This guide describes **Alchemical Leather 0.1.0-alpha.5**.
 ## How it works
 
 1. Pour a non-water potion into a normal cauldron. An Alchemical Leather potion cauldron holds up to three identical bottles, even when the potion has no effects.
-2. With an effectful potion, use an **unenchanted compatible dyeable armor item** on it. One dose is consumed, the armor stores the infusion and takes on the potion color.
-3. With an effectless potion such as Awkward, Mundane or Thick, use any **compatible dyeable armor item** on it. One dose is consumed and the armor takes on the liquid color, but no infusion is created or replaced.
-4. Equip infused armor to receive its effect or effects. Unequip it to pause its own timed infusion clocks.
-5. Wash compatible armor in ordinary water when you want to remove both Alchemical Leather infusion data and dye color.
+2. With an effectful potion, use an **unenchanted compatible dyeable armor item** on it. One dose is consumed, the armor stores the infusion and takes on the potion color. As an alternative, combine the armor with one normal, splash or lingering potion in a crafting grid.
+3. With an effectless potion such as Awkward, Mundane or Thick, use any **compatible dyeable armor item** on the cauldron. One dose is consumed and the armor takes on the liquid color, but no infusion is created or replaced. Effectless potions do not match the crafting infusion recipe.
+4. Plain arrows can be dipped into an Alchemical Leather potion cauldron to create tipped arrows directly; BedrockIfy is not required.
+5. Equip infused armor to receive its effect or effects. Unequip it to pause its own timed infusion clocks.
+6. Wash compatible armor in ordinary water when you want to remove both Alchemical Leather infusion data and dye color.
 
 Normal, splash and lingering potions are all poured with ordinary **right-click / Use**. When a splash or lingering potion is aimed at an Alchemical Leather cauldron, the cauldron interaction consumes it instead of throwing it. Valid potion contents are stored independently of whether a particular armor piece can later accept their effects; infusion eligibility is checked only when effectful liquid is actually applied to armor.
 
@@ -83,12 +87,45 @@ Instant effects are consumed before firing so they cannot replay. If a potion co
 | Potion | Infusion behavior |
 |---|---|
 | Normal | Keeps each effect's original level and duration. Time passes only while the armor is equipped. |
-| Splash | Uses the same timed armor behavior as a normal potion after being poured. |
-| Lingering | Each non-instant effect remains stable indefinitely while the armor is equipped. |
+| Splash | Uses the same timed armor behavior as a normal potion after being poured or crafted. |
+| Lingering | Each non-instant effect remains stable indefinitely while the armor is equipped, whether infused by cauldron or crafting. |
 | Instant effect | Activates once when the armor is equipped, then that instant entry is consumed. |
-| No effects (for example Awkward, Mundane or Thick) | Stored normally but acts only as a dye bath. Transfers the cauldron's visible color to compatible armor without creating, replacing or removing an infusion. |
+| No effects (for example Awkward, Mundane or Thick) | Stored normally in a cauldron but acts only as a dye bath. It does not match the crafting infusion recipe. |
 
 Armor-owned effects and ordinary external Minecraft effects keep separate clocks. If both provide the same effect, Alchemical Leather projects the currently appropriate visible winner without deleting the external source. Removing the armor reveals any surviving external effect again.
+
+## Tipped arrows
+
+Alchemical Leather potion cauldrons can create tipped arrows **without BedrockIfy or any other optional mod**. Use a stack of plain arrows on the cauldron; the produced tipped arrows receive the cauldron's complete `POTION_CONTENTS`, including custom effects, custom visible tint and custom potion-name data carried by that component.
+
+Alchemical Leather stores only three whole bottle doses rather than BedrockIfy's finer internal fluid levels, so arrow capacity is deliberately discrete:
+
+| Stored doses | Maximum arrows tipped in one interaction |
+|---:|---:|
+| 1 | 16 |
+| 2 | 32 |
+| 3 | 64 |
+
+The interaction consumes whole Alchemical Leather doses according to the number actually tipped: 1–16 arrows consume one dose, 17–32 consume two, and 33–64 consume three. If the player supplies more arrows than the available capacity, only the supported amount is tipped and the rest stay plain. Creative mode consumes neither source arrows nor potion doses and does not repeatedly add an identical tipped-arrow stack that is already present.
+
+This behavior can be disabled with `cauldronTippedArrows` in the JSON configuration below. Disabled arrow handling returns `PASS` instead of claiming the gesture.
+
+When BedrockIfy's cauldron feature is active, **BedrockIfy remains the sole owner of arrows used on `bedrockify:potion_cauldron`**. Alchemical Leather's arrow path is restricted to its own potion-cauldron block, so the mods do not double-consume arrows or fluid.
+
+## Crafting-table infusion
+
+An effectful potion can also be transferred to armor without a cauldron. The special recipe is shapeless and requires exactly:
+
+- one Alchemical Leather-compatible armor item; and
+- one **normal, splash or lingering potion**.
+
+The result uses the same infusion kernel as the cauldron path. Humanoid armor still accepts only one effect and still enforces its body-part mapping; BODY armor keeps the complete effect bundle from one potion. Normal and splash potions create timed non-instant infusions, lingering potions create stable non-instant infusions, and instant effects remain instant.
+
+The recipe copies the armor before transforming it, preserves unrelated item components such as name and durability, applies the potion's visible color, returns a glass bottle and always outputs exactly one armor item. A valid new infusion atomically replaces an existing Alchemical Leather infusion.
+
+The recipe does **not** match enchanted armor, incompatible armor, effectless potions, malformed potion items, wrong humanoid slots, humanoid multi-effect potions, multiple potion/armor candidates or unrelated extra ingredients. Effectless potions deliberately remain a cauldron-only dye-bath mechanic.
+
+This is a dedicated Alchemical Leather recipe, not a `minecraft:crafting_dye` recipe. Consequently it does not restore or bypass BedrockIfy's deliberate disabling of ordinary crafting-table armor dye recipes when Bedrock cauldrons are enabled.
 
 ## Leatherworker trades
 
@@ -167,7 +204,7 @@ Download the regular JAR from [releases](https://github.com/R3Neer/alchemical-le
 
 Alchemical Leather works without optional content mods. Standard modded dyeable armor can be discovered automatically through the rules above; that is a compatibility mechanism, not a promise that every mod combination has been playtested.
 
-The alpha.5 CI integration fixture specifically exercises:
+The beta.1 CI integration fixture specifically exercises:
 
 - **Clinging Reoriented 0.1.0-alpha.6**;
 - **Scale Brews 0.1.0-beta.5**;
@@ -179,9 +216,27 @@ With Alex's Mobs and Clinging Reoriented, Clinging and Reorientation can both st
 
 With Scale Brews, Growth/Shrinking II may appear in Master timed armor. Persistent villager equipment is restricted to Growth/Shrinking I, and level III is never sold; brewing therefore remains necessary for the strongest scale effects.
 
-BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. If BedrockIfy exposes a canonical effectless potion dose, that armor-specific action is dye-only under the same rules as a native Alchemical Leather potion cauldron. BedrockIfy also deliberately disables ordinary `crafting_dye` matching while that feature is active, so armor recoloring follows its cauldron path instead of the crafting table. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water path remains available.
+BedrockIfy remains optional. When its cauldron feature is active, BedrockIfy owns its own potion/colored-water blocks, its own arrow tipping on `bedrockify:potion_cauldron`, and the vanilla-water-plus-dye entry point. Alchemical Leather only intercepts its own armor-specific actions there, preserving BedrockIfy's block and consuming exactly one compatible dose/unit. If BedrockIfy exposes a canonical effectless potion dose, that armor-specific action is dye-only under the same rules as a native Alchemical Leather potion cauldron. BedrockIfy also deliberately disables ordinary `crafting_dye` matching while that feature is active, so armor recoloring follows its cauldron path instead of the crafting table. Alchemical Leather's dedicated armor-infusion recipe is not a dye recipe and does not alter that policy. If BedrockIfy's cauldron feature is absent, disabled or cannot be positively verified, Alchemical Leather's native dyed-water and tipped-arrow paths remain available.
 
 Earlier alpha validation also exercised Friends&Foes, Wilder Wild, Deeper Dark, Additional Additions, Enchancement, Functional Armor Trims and Grind Enchantments. See [validation.md](validation.md) for current and historical fixture boundaries.
+
+## Configuration
+
+On first run Alchemical Leather creates:
+
+```text
+config/alchemical-leather.json
+```
+
+Current beta.1 setting:
+
+```json
+{
+  "cauldronTippedArrows": true
+}
+```
+
+Set it to `false` to disable only Alchemical Leather's own arrow-on-own-potion-cauldron behavior. The mod then returns `PASS` for that gesture and consumes neither arrows nor potion. Missing or malformed fields fall back to the documented default; an unreadable/malformed whole file is ignored with a warning and defaults are used for that launch.
 
 ## Datapack support
 
@@ -250,7 +305,7 @@ Additional test task:
 .\gradlew.bat runClientGameTest
 ```
 
-`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The alpha.4 release candidate passed **69/69 required server GameTests** both standalone and with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture. The post-alpha.4 effectless-potion regression suite extends this to **79/79** on both server runs while retaining the passing client suite. The original alpha.3 release runs executed only 32 registered server tests despite older documentation claiming 41; [validation.md](validation.md) records that correction and the current evidence.
+`build` runs the required server GameTests and verifies that every server `@GameTest` class is registered in the Fabric test descriptor. The converged beta.1 functional candidate passed **88/88 required server GameTests** standalone and **88/88** with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture, while retaining the passing client GameTest under Xvfb / llvmpipe. The earlier alpha.5 regression suite passed 79/79. [validation.md](validation.md) records the current and historical evidence.
 
 ## License
 

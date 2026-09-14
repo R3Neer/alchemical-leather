@@ -4,7 +4,7 @@ What if **dyeable armor** could carry your potions?
 
 A **Fabric mod for Minecraft 26.2** that turns familiar armor into alchemical equipment. Pour a potion into a cauldron, infuse a compatible piece, equip it, and take the effect with you.
 
-Current prerelease: **0.1.0-alpha.5**.
+Current prerelease: **0.1.0-beta.1**.
 
 ![Potion-filled cauldrons in game](docs/images/vanilla-cauldron.png)
 
@@ -16,14 +16,18 @@ Once that works:
 
 - Put the armor away for a while, then return to it.
 - Try a different kind of potion bottle.
+- Put plain arrows into an Alchemical Leather potion cauldron and make tipped arrows without needing BedrockIfy.
+- Combine compatible armor with a normal, splash or lingering potion in a crafting grid as an alternative infusion route.
 - Try an **Awkward, Mundane or Thick potion** and use its cauldron as a pure color bath.
 - Try armor that is dyeable but is not ordinary player leather armor.
 - Add dye to a water cauldron and see what compatible armor does with it.
 - See what an experienced **Leatherworker** is willing to sell.
 
-Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Splash and lingering potions pour into cauldrons with ordinary Use when aimed at one, rather than being thrown. Potions without effects can also be stored: they dye compatible armor without creating, replacing or removing an infusion, so they can recolor already-infused or enchanted dyeable armor. Alchemical Leather potion cauldrons can themselves be tinted with dyes without changing their potion or dose count. Water cauldrons wash compatible armor clean.
+Humanoid armor still cares about which effect belongs on which body part, while animal/BODY armor follows a different potion rule. **Infusions and enchantments are mutually exclusive.** Splash and lingering potions pour into cauldrons with ordinary Use when aimed at one, rather than being thrown. Normal, splash and lingering potions can also infuse compatible armor through a shapeless crafting recipe; their duration semantics are the same as the cauldron route. Potions without effects can be stored in cauldrons as dye baths, but they do not create crafting-table infusions. Alchemical Leather potion cauldrons can tip plain arrows directly, using up to 16 arrows per stored dose and preserving the complete potion contents. Water cauldrons wash compatible armor clean.
 
-Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, Leatherworker trades, dyed water and compatibility. It contains spoilers.
+Arrow tipping is enabled by default and is independent of BedrockIfy. To disable only Alchemical Leather's own arrow-on-cauldron interaction, set `"cauldronTippedArrows": false` in `config/alchemical-leather.json`. When BedrockIfy is installed and its cauldrons are active, BedrockIfy remains the sole owner of interactions on its own potion cauldron blocks.
+
+Want the answers rather than the experiment? The **[player guide](docs/GUIDE.md)** explains armor eligibility, BODY armor, duration rules, tipped arrows, crafting infusion, Leatherworker trades, dyed water and compatibility. It contains spoilers.
 
 ## Install
 
@@ -31,7 +35,7 @@ Requires **Minecraft 26.2, Java 25, Fabric Loader 0.19.5+ and Fabric API 0.159.0
 
 Download a regular JAR from [releases](https://github.com/R3Neer/alchemical-leather/releases) and put it in `mods`. Install the mod and Fabric API on **both client and server**. No optional content mod is required.
 
-This is an **alpha**. Back up worlds before updating and check [validation and remaining manual checks](docs/validation.md); tested integrations are not a blanket modpack guarantee.
+This is a **beta**. Back up worlds before updating and check [validation and remaining manual checks](docs/validation.md); tested integrations are not a blanket modpack guarantee.
 
 ## Go further
 

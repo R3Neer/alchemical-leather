@@ -51,6 +51,13 @@ public final class BedrockifyOwnershipTests {
         h.assertTrue(h.getLevel().getBlockState(pos).equals(beforeState),"Yielding does not replace or mutate BedrockIfy's block");h.assertTrue(ItemStack.matches(p.getMainHandItem(),beforeStack),"Yielding does not consume or replace the potion stack");h.succeed();
     }
 
+    @GameTest public void arrowTippingIsLeftEntirelyToBedrockify(GameTestHelper h) throws Exception {
+        if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
+        var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,5);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var arrows=new ItemStack(Items.ARROW,32);var beforeStack=arrows.copy();
+        h.assertTrue(use(h,p,pos,arrows)==InteractionResult.PASS,"Alchemical Leather yields arrow tipping on BedrockIfy's potion cauldron");
+        h.assertTrue(h.getLevel().getBlockState(pos).equals(beforeState),"Yielding arrows does not mutate BedrockIfy's potion state");h.assertTrue(ItemStack.matches(p.getMainHandItem(),beforeStack),"Yielding arrows does not consume or replace BedrockIfy's input stack");h.succeed();
+    }
+
     @GameTest public void ordinaryDyeOnBedrockifyPotionCauldronIsDelegated(GameTestHelper h) throws Exception {
         if(!BedrockifyBridge.cauldronsActive()){h.succeed();return;}
         var pos=h.absolutePos(new BlockPos(1,1,1));fillBedrockPotion(h,pos,5);var beforeState=h.getLevel().getBlockState(pos);var p=h.makeMockPlayer(GameType.SURVIVAL);var dye=new ItemStack(Items.DYE.blue());var beforeStack=dye.copy();
