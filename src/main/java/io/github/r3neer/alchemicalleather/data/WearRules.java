@@ -18,7 +18,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     }
     public record Rule(boolean none,double workPerDamage,List<Source> sources) {
         public Rule { sources=List.copyOf(sources); }
-        public static Rule none(){return new Rule(true,0,List.of());}
+        public static Rule noWear(){return new Rule(true,0,List.of());}
         public double work(String type,Identifier source,double amount){
             if(none||!Double.isFinite(amount)||amount<=0)return 0;
             double result=0;
@@ -61,7 +61,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     public static Rule parse(JsonObject json){
         if(json.has("wear")){
             if(!json.get("wear").isJsonPrimitive()||!json.get("wear").getAsString().equals("none"))throw new IllegalArgumentException("Only wear=none is supported as a symbolic wear mode");
-            return Rule.none();
+            return Rule.noWear();
         }
         if(!json.has("work_per_damage"))throw new IllegalArgumentException("Missing work_per_damage");
         double threshold=json.get("work_per_damage").getAsDouble();
