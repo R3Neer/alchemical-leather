@@ -16,7 +16,9 @@
     "WearAttackMixin",
     "WearEffectProcMixin",
     "WearBlockReachMixin",
-    "WearEntityReachMixin"
+    "WearEntityReachMixin",
+    "WearWebMixin",
+    "AlexSoulstealWearMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
