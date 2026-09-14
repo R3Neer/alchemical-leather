@@ -14,7 +14,9 @@
     "WearEffectTickMixin",
     "WearDamageMixin",
     "WearAttackMixin",
-    "WearEffectProcMixin"
+    "WearEffectProcMixin",
+    "WearBlockReachMixin",
+    "WearEntityReachMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
