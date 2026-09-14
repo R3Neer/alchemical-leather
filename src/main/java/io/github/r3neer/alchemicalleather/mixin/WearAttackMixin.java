@@ -3,12 +3,14 @@ package io.github.r3neer.alchemicalleather.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
+import io.github.r3neer.alchemicalleather.effect.ReachWear;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,6 +34,7 @@ public abstract class WearAttackMixin {
 
         emit(self,self.getEffect(MobEffects.STRENGTH),3.0D,scale,totalDamage);
         emit(self,self.getEffect(MobEffects.WEAKNESS),4.0D,scale,Double.POSITIVE_INFINITY);
+        ReachWear.emit(self,Attributes.ENTITY_INTERACTION_RANGE,target.getBoundingBox().distanceToSqr(self.getEyePosition()));
         return accepted;
     }
 
