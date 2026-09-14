@@ -9,9 +9,9 @@
     "EnchantableStackMixin",
     "AnvilMixin",
     "RepairMixin",
-    "GrindstoneMixin"
+    "GrindstoneMixin",
+    "WearLivingMixin",
+    "WearEffectTickMixin"
   ],
-  "injectors": {
-    "defaultRequire": 1
-  }
+  "injectors": {"defaultRequire": 1}
 }
