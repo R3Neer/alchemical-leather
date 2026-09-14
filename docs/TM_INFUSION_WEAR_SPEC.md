@@ -1,200 +1,192 @@
-# TM: causal infusion wear and optional compatibility API
+# TM: causal infusion wear, optional effect ownership and compatibility API
 
-Status: **temporary pre-implementation specification**. No production behavior is changed by this document.
+Status: **temporary pre-implementation specification**. Production implementation follows this document on branch `chatgpt/infusion-wear-spec`.
 
-Working branch: `chatgpt/infusion-wear-spec`.
+Method: iterative TM. Every implementation phase is followed by an adversarial review with reserved holdouts. Production changes are revised until a complete review produces no further changes.
 
-This document freezes the current design discussion before implementation. The implementation must use the iterative TM workflow already established in this repository: IMPLEMENTER -> adversarial review -> holdouts -> repeat until a complete pass produces no changes.
+## 1. Frozen goals
 
-## 1. Goal
+Alchemical Leather must remain a standalone Fabric mod while providing a generic protocol that lets armor infusions wear their carrier item only when the infusion performs attributable mechanical work.
 
-Add optional durability wear to potion-infused armor when, and only when, the infusion performs attributable mechanical work.
+Required behavior:
 
-The system must satisfy all of the following at once:
+- normal/splash potion infusions retain their current timed semantics;
+- lingering potion infusions retain stable/non-expiring semantics;
+- positive and negative effects follow the same causal wear rules;
+- wear is not inferred merely from an effect being active or from coincident entity state changes;
+- wear damages the actual infused armor item and **may break it normally at zero durability**;
+- there is no one-durability floor, dormant-infused state or special reactivation behavior;
+- ordinary vanilla repair behavior is not replaced or gated by Alchemical Leather;
+- third-party mods may define slot ownership and wear behavior without Alchemical Leather knowing their internals;
+- optional built-in compatibility may be shipped for common third-party effects when that is materially more convenient for users and requires no hard runtime dependency;
+- Alchemical Leather's own vanilla and selected external defaults remain data-driven and optional where possible;
+- the full VanillaPlus compatibility fixture must have explicit coverage for every potion effect that can be infused.
 
-- lingering/stable infusion remains permanently bound to the item instead of expiring by time;
-- stable infusion is not necessarily free to operate forever: effects that perform measurable work may slowly wear the carrier item;
-- timed infusion keeps its existing time semantics and may also accumulate wear while it performs work;
-- persistent state effects may explicitly declare zero wear;
-- positive and negative effects follow the same causal rule;
-- an item is never charged merely because its wearer happened to move, heal, take damage, deal damage or experience another relevant state change while the effect was present;
-- external transport, external healing/damage and foreign effect sources must not be misattributed to the armor;
-- third-party mods can integrate without Alchemical Leather attempting to understand every possible future effect;
-- Alchemical Leather remains fully functional as a standalone mod with no hard runtime dependency on any VanillaPlus compatibility mod.
+## 2. Ownership model
 
-## 2. Non-goals
+### 2.1 Alchemical Leather owns the protocol
 
-- Do not reimplement vanilla anvil repair. Compatible leather armor already uses its normal repair material behavior; no Alchemical Leather config toggle is required for this.
-- Do not make JSON a scripting language.
-- Do not infer arbitrary third-party semantics from an effect name, category, particle color or registry namespace.
-- Do not charge durability merely because an effect is active.
-- Do not make all effects wear at the same rate or use the same unit of work.
-- Do not require VanillaPlus, Scale Brews, Clinging Reoriented, Alex's Mobs Continued, Friends&Foes, Wilder Wild, Deeper Dark or BedrockIfy for standalone operation.
+Alchemical Leather owns:
+
+- infusion storage/components;
+- effect/source arbitration through the existing armor/external ledger;
+- resource loading for effect-slot rules and wear rules;
+- builtin causal detectors for generic Minecraft mechanics;
+- a small public compatibility API for semantic events only the owning mod can know;
+- attribution of API events back to the equipped infused item;
+- fractional work accumulation and armor durability damage;
+- validation, malformed-resource fallback/failure policy and test coverage.
+
+### 2.2 A mod should own semantics of its own effects
+
+For first-party companion mods maintained alongside Alchemical Leather:
+
+- **Clinging Reoriented** owns the armor slot declarations for `clinging_reoriented:*` effects and publishes semantic wear events such as successful gravity turns / controlled Reorientation flight;
+- **Scale Brews** owns the armor slot declarations for `scalebrews:*` effects and explicitly declares its stable body-state effects' wear policy;
+- Alchemical Leather removes duplicate bundled slot declarations for those first-party effects after migration.
+
+The companion mods must still work normally when Alchemical Leather is absent. Their compatibility resources/API adapter must therefore be optional and have no hard runtime dependency.
+
+### 2.3 Optional bundled compatibility for third-party mods
+
+Alchemical Leather may bundle optional data-only compatibility for third-party mods when doing so substantially improves the end-user experience and does not link their production classes. Current intended examples include the Alex's Mobs Continued effects used by VanillaPlus, plus existing optional data rules for other pack effects where appropriate.
 
 ## 3. Core invariant: causal attribution
 
 An infused item may accumulate wear only when all of these are true:
 
-1. infusion wear is globally enabled;
+1. global infusion wear is enabled;
 2. the item is currently equipped in the slot that owns the infusion;
-3. the reported effect exists on that item;
-4. Alchemical Leather's armor copy of that effect is the effective source at the moment of use, rather than a stronger/equal winning external source;
-5. a configured wear rule exists for that effect and is not `none`;
-6. the configured detector or API event reports work caused by that effect;
+3. the reported effect exists on that specific item;
+4. the armor infusion is the effective source at the moment of use, rather than a stronger/equal winning external source;
+5. the effect has an explicit wear policy and that policy is not `none`;
+6. the configured builtin detector or semantic API event reports work caused by the effect;
 7. the reported work is finite, positive and server-authoritative.
 
-Observation of a coincident outcome is not enough. Prefer instrumentation at the point where the effect changes the mechanic.
+Observation of a coincident outcome is never sufficient when a causal hook exists.
 
 Examples:
 
-- Regeneration: charge only health restored by Regeneration's own effect tick, never health restored by food, Instant Health, a beacon or another mod.
-- Poison: charge only health removed by Poison's own effect tick, never damage from a zombie that happened on the same tick.
-- Fire Resistance: charge only fire/lava damage actually prevented by this effect.
-- Strength/Weakness: charge only successful attack outcome attributable to their attack-damage contribution; a missed, cancelled, fully blocked or invulnerable hit is not a use.
-- Reach: charge only an interaction that succeeds outside the range the wearer would have had without the effect.
-- Speed/Slowness: charge only locomotion that the affected entity itself generates and that the movement-speed effect actually modifies.
+- Regeneration charges only health restored by Regeneration's own tick, never food, Instant Health, beacon healing or another mod.
+- Poison charges only health removed by Poison's own tick, never unrelated damage in the same tick and never attempted poison damage that was prevented.
+- Strength/Weakness charge only the portion of a successful attack result attributable to their attack-damage modification.
+- Fire Resistance/Resistance charge only damage actually prevented by that effect.
+- Soulsteal charges only health actually restored by a successful Soulsteal proc.
+- Reach charges only a successful interaction/attack that was outside the range available without the effect.
 
 ## 4. Movement attribution
 
-World-space displacement is not a valid wear meter by itself.
+World-space displacement alone is not a valid wear meter.
 
-A movement detector must distinguish self-propelled locomotion from transport and external impulses. At minimum, no movement wear may be charged for displacement produced only by:
+Movement wear must distinguish **self-propelled locomotion modified by the effect** from transport or external impulses. No movement wear is charged for displacement caused only by:
 
-- a ridden vehicle or mount;
+- mounts or ridden vehicles;
 - another entity carrying the wearer;
-- a Living Platform / Scale Brews anatomical support;
+- Living Platforms / Scale Brews anatomical support;
 - Clinging Reoriented moving-surface transport;
-- a piston or flying machine carrying the wearer;
-- knockback or another external impulse;
-- water/current/conveyor-style external transport where the effect is not modifying the wearer's own locomotion;
+- pistons or flying machines carrying the wearer;
+- knockback or external impulses;
+- currents/conveyors where the movement-speed effect does not modify the wearer's own locomotion;
 - teleportation;
-- Elytra fall-flying when the effect does not participate in Elytra physics.
+- Elytra fall-flying when that effect does not participate in Elytra physics.
 
-If a support moves 200 blocks while the player walks 12 blocks relative to that support, a compatible movement detector may charge for the player's 12 blocks, not 212 blocks.
+If a moving support travels 200 blocks while the wearer walks 12 blocks relative to it, only the attributable 12 blocks may count.
 
-Movement attribution should be implemented from movement causes / travel paths where practical, not by subtracting positions after the fact. Existing Clinging Reoriented `MovingSurface` transport accounting and Scale Brews anatomy support APIs are useful compatibility signals but must not become required dependencies.
+Movement detectors should hook causes/travel mechanics where practical rather than infer by subtracting absolute positions after the fact.
 
 ### 4.1 Speed and Slowness
 
-Verified design fact for Minecraft Java 26.2: vanilla Speed/Slowness change movement speed but do not change Elytra fall-flying speed. Rocket propulsion while fall-flying therefore does not constitute Speed/Slowness work either.
+Speed/Slowness wear applies only to locomotion modes whose movement-speed mechanics they actually modify. In particular:
 
-Consequences:
+- riding/vehicle transport does not count;
+- passive platform/flying-machine transport does not count;
+- Elytra fall-flying does not count;
+- firework propulsion while fall-flying does not count;
+- external knockback/impulses do not count.
 
-- normal Elytra glide: zero Speed/Slowness wear;
-- firework-boosted Elytra flight: zero Speed/Slowness wear;
-- passenger movement: zero rider Speed/Slowness wear;
-- moving-platform transport: zero transport wear;
-- walking/running/sneaking/crawling or another movement mode only counts if 26.2's actual travel path is affected by the movement-speed modifier.
+Positive and negative movement-speed effects use the same attribution model.
 
-Swimming behavior must be proven against 26.2 in GameTests before the detector declares it chargeable; the detector must follow actual game behavior rather than a historical assumption.
+### 4.2 Jump Boost
 
-### 4.2 Slow Falling
+Only an actual jump performed by the affected wearer, where Jump Boost contributes additional jump power, counts. Vehicle/mount jumps, swimming ascent, piston launch, knockback and other external launch sources do not count.
 
-Verified design fact: Slow Falling does affect Elytra flight. Vanilla treats the interaction as intended behavior. Unboosted gliding becomes much slower and more efficient; firework boosts still work, while the Slow Falling physics continues to affect the resulting glide/momentum.
+### 4.3 Slow Falling
 
-Therefore Slow Falling must not globally exclude `isFallFlying()`.
+Slow Falling may affect fall-flying/Elytra physics and therefore cannot simply exclude Elytra. It should charge only while its own physics branch is materially modifying the entity's fall/fall-flying behavior. Firework propulsion itself is not Slow Falling work, but Slow Falling may continue contributing while a rocket-boosted Elytra flight is in progress.
 
-The preferred detector is not raw distance. It should report only ticks / gravity contribution for which Slow Falling's actual physics branch modified descent or fall-flying behavior. It should report zero when another state already makes that branch irrelevant.
-
-## 5. Clinging versus Reorientation
-
-These effects deliberately have different wear semantics.
+## 5. Clinging and Reorientation economy
 
 ### 5.1 Clinging
 
-Clinging is a discrete capability: one successful voluntary airborne gravity decision before real support resets the charge.
+Clinging is a discrete one-decision aerial ability.
 
-Wear is charged only when a request successfully establishes a new gravity direction.
-
-No wear for:
-
-- failed or ambiguous requests;
-- requesting the current direction;
-- subsequent fall time or distance;
-- remaining attached to the resulting surface;
-- passive support/platform transport;
-- unrelated external gravity changes.
-
-Provisional balance: a successful Clinging turn contributes **4 work units**. With a 30-unit durability budget this is approximately 7.5 successful turns per durability point, about 480 successful turns over the 64 usable points of vanilla leather boots if ordinary damage is ignored.
+- only a successful voluntary gravity-direction change counts;
+- same-direction attempts, blocked attempts, no-space, ambiguous input and foreign gravity do not count;
+- no wear is charged merely for remaining in the resulting gravity, falling afterwards, travelling distance, landing or being carried by a support;
+- provisional work: **4 units per successful gravity link/turn**.
 
 ### 5.2 Reorientation
 
-Reorientation is sustained gravity-flight control and may therefore charge both sustained controlled flight and successful manoeuvres.
+Reorientation is sustained gravity locomotion.
 
-Provisional balance:
+- **30 work units = 1 durability**;
+- **+1 work unit per second** of Reorientation-controlled self locomotion;
+- **+2 work units per successful voluntary gravity turn**;
+- passive vehicle/platform/flying-machine transport contributes no continuous work;
+- ordinary riding contributes no continuous work;
+- a successful rider-requested Reorientation turn of a compatible airborne mount does count as the discrete gravity-turn event;
+- failed/blocked/same-direction requests do not count.
 
-- durability budget: **30 work units per 1 durability**;
-- controlled Reorientation flight: **1 work unit per second**;
-- successful gravity turn: **+2 work units**.
+With leather boots this is intentionally a slow maintenance cost, not a short fuel tank. The piece still breaks normally if wear reaches zero.
 
-A fresh vanilla leather boot item therefore provides approximately 32 minutes of straight controlled Reorientation flight before alchemical exhaustion if ordinary armor damage is ignored; manoeuvres reduce this gradually.
+## 6. Stable/Lingering semantics
 
-Continuous work is charged only while Reorientation actually owns relevant airborne gravity locomotion. It is not charged while the wearer is merely being transported.
+Lingering/stable means the **infusion itself does not expire with time**. It does not imply zero operating wear.
 
-Mounted Reorientation is special:
+Effects that are persistent states rather than measurable work may explicitly declare `wear: none`. Initial intended examples:
 
-- normal mount travel: zero continuous rider wear;
-- a successful rider-requested Reorientation gravity turn of a compatible mount: charge the manoeuvre event to the rider's infused item;
-- subsequent movement of the mount: zero continuous rider wear.
+- Scale Brews Growth;
+- Scale Brews Shrinking;
+- Night Vision;
+- Blindness;
+- Lava Vision;
+- likely Invisibility and Bug Pheromones unless a robust causal detector is later justified.
 
-## 6. Alchemical exhaustion
+This keeps lingering meaningful without turning every permanent state into a disguised durability timer.
 
-Provisional desired behavior:
+## 7. Resource formats
 
-- alchemical wear can reduce an item only to **1 durability remaining**;
-- at 1 durability the infusion remains stored but is inactive until the item is repaired;
-- ordinary armor damage remains ordinary and may still break the item;
-- stable infusion resumes after repair and is never consumed merely by wear;
-- timed infusion should not burn its timer while the infusion is disabled by alchemical exhaustion, because no effect is being delivered during that period;
-- partial wear progress must survive unequip/re-equip and save/load, otherwise players can reset it trivially.
+### 7.1 Effect-slot ownership
 
-Implementation should use a small persistent item data component for fractional/partial wear progress. A single normalized per-item progress value is preferable to one counter per effect: each rule converts natural work to durability fraction before contributing to the item accumulator. This also handles BODY armor with several active effects cleanly.
+Existing slot resources remain conceptually:
 
-Open implementation detail for TM review: decide whether a successful material repair clears fractional wear progress. The intuitive default is yes, because repair refreshes the physical carrier, but this must not change vanilla repair amounts/costs.
+`data/<effect-namespace>/alchemical_leather/effect_slots/<effect-path>.json`
 
-## 7. Global configuration
-
-`config/alchemical-leather.json` should contain one global opt-out for the mechanic:
-
-```json
-{
-  "cauldronTippedArrows": true,
-  "infusionWear": true
-}
-```
-
-This is a server-authoritative behavior toggle. It does not define individual effect semantics.
-
-Per-effect semantics belong to reloadable server-data JSON resources.
-
-## 8. Per-effect wear JSON
-
-Create a new resource family separate from `effect_slots`:
-
-`data/<effect_namespace>/alchemical_leather/wear_rules/<effect_path>.json`
-
-Wear rules are intentionally separate from slot rules because BODY/animal armor may contain effects that have no humanoid slot mapping, and a mod may want to define wear semantics without making an effect valid on a new humanoid slot.
-
-The effect ID is derived from the resource namespace/path, matching the existing slot-rule convention.
-
-Common optional gates should mirror `EffectSlotRules` where useful:
+Supported fields remain at least:
 
 ```json
 {
-  "enabled": true,
+  "slot": "boots",
   "requires_mod": "example_mod",
   "requires_effect": "example_mod:example_effect",
   "requires_resource": "example_mod:some/resource.json",
-  "work_per_damage": 30.0,
-  "sources": []
+  "enabled": true
 }
 ```
 
-Unknown detector/source IDs or malformed numeric values must fail the data reload clearly rather than silently creating free or destructive wear.
+Slots: `helmet`, `chestplate`, `leggings`, `boots`.
 
-### 8.1 Explicit no-wear rule
+Companion first-party mods should ship their own namespaced slot resources. Alchemical Leather may bundle optional resources for third-party mods when practical.
 
-Every supported effect should be able to make zero wear an explicit policy:
+### 7.2 Wear rules
+
+Wear rules are independent of effect-slot rules:
+
+`data/<effect-namespace>/alchemical_leather/wear_rules/<effect-path>.json`
+
+Absence of a rule means **unclassified/unsupported for wear**, not implicitly `none`.
+
+Explicit no-wear example:
 
 ```json
 {
@@ -202,13 +194,7 @@ Every supported effect should be able to make zero wear an explicit policy:
 }
 ```
 
-This is different from having no rule. `none` means the integration consciously decided that the effect is a persistent state or otherwise should not wear the item. Missing rule means unsupported/unclassified for the wear system.
-
-Automated compatibility audits may therefore distinguish deliberate zero wear from forgotten integration.
-
-### 8.2 Built-in detector rule
-
-Example shape for a simple generic effect:
+Builtin detector example:
 
 ```json
 {
@@ -222,13 +208,7 @@ Example shape for a simple generic effect:
 }
 ```
 
-Built-in detectors own their causal semantics. JSON may tune balance but must not contain arbitrary boolean expressions such as `if_flying && !vehicle && ...`.
-
-This avoids turning data packs into an untestable scripting engine.
-
-### 8.3 API-event rule
-
-Complex effects can publish semantic events and let JSON own balance:
+Semantic event example:
 
 ```json
 {
@@ -249,215 +229,213 @@ Complex effects can publish semantic events and let JSON own balance:
 }
 ```
 
-At 20 ticks/s, `0.05` work per controlled-flight tick produces 1 work unit/s. The same gravity-turn event can have a different weight in the Clinging rule.
+The final parser may normalize details, but the semantic separation is frozen: JSON selects a known builtin detector or event and configures work amounts; it does not implement arbitrary logic.
 
-The API producer reports semantic occurrences; the wear JSON controls balance. This lets pack authors tune durability without recompiling the source mod.
+### 7.3 JSON limitations
 
-## 9. Built-in detector policy
+JSON must **not** become a scripting language. It may not express arbitrary entity predicates, Java calls, effect-specific state machines or free-form boolean expressions such as `moving && !elytra && !horse`.
 
-Alchemical Leather may provide a deliberately small set of generic causal detectors. Initial candidates:
+Use a builtin detector when Minecraft exposes a stable generic causal hook. Use the API when only the owning mod knows whether its semantic action succeeded.
 
-- `self_propelled_movement_speed`: movement attributable to the wearer and actually affected by movement-speed semantics; excludes transport, fall-flying and external impulses;
-- `jump_boost`: successful wearer jump for which Jump Boost contributes additional jump impulse;
-- `effect_tick_healing`: HP actually restored inside the armor-owned effect's tick;
-- `effect_tick_damage`: HP actually removed inside the armor-owned effect's tick;
-- `attack_damage_added`: successful final attack contribution from a positive attack-damage modifier;
-- `attack_damage_removed`: successful final attack contribution removed by a negative attack-damage modifier;
-- `damage_prevented`: damage specifically prevented by the configured defensive effect;
-- `oxygen_preserved`: air/oxygen loss actually prevented by the effect;
-- `slow_falling_physics`: ticks / gravity contribution where Slow Falling modifies normal fall or Elytra physics;
-- `reach_extension_used`: successful interaction outside the no-effect range but inside the effect range;
-- `knockback_prevented`: impulse actually removed by knockback resistance.
+## 8. Public compatibility API
 
-A detector must have one stable natural work unit (blocks, HP, seconds/ticks, impulse, occurrences, etc.). `work_per_damage` converts that natural work into one durability point.
-
-The actual initial detector set should remain minimal. If a detector cannot be defined without effect-specific assumptions, use an API event instead.
-
-## 10. Public compatibility API
-
-The core API should be small and should never let a caller directly damage an armor stack.
-
-Conceptual surface:
+The public API should be minimal and dependency-light. Provisional semantic shape:
 
 ```java
-public final class InfusionWearApi {
-    public static boolean emit(
-        LivingEntity wearer,
-        Holder<MobEffect> effect,
-        Identifier event,
-        double amount
-    );
-}
+InfusionWearApi.emit(
+    LivingEntity wearer,
+    Holder<MobEffect> effect,
+    Identifier event,
+    double amount
+);
 ```
 
-Semantics:
+The emitting mod reports a semantic event only. It does **not** choose an armor item, mutate durability, inspect lingering/timed mode or know Alchemical Leather's partial accumulator.
 
-- `wearer` is the entity whose equipped infusion is being used, even if another entity is the object being moved/affected (for example a rider turns a mount with Reorientation);
-- `effect` identifies the semantic capability used;
-- `event` is namespaced and owned by the producer mod;
-- `amount` is a natural event quantity and must be finite and positive;
-- the call is only a candidate usage report;
-- Alchemical Leather rechecks equipped item ownership, effect winner/source, rule presence, exhaustion and global config before accepting work;
-- the API returns whether any armor-owned work was accepted, useful for tests/debugging but not for gameplay branching.
+Alchemical Leather validates the event, source ownership and configured rule, then converts event amount to work and work to durability damage.
 
-The producer should not know the armor slot, item durability, lingering/timed mode, current accumulator or balance threshold.
+Companion mods should isolate optional calls behind a compatibility adapter loaded only when `alchemical_leather` is present (or use an equivalent linkage-safe strategy).
 
-### 10.1 Optional dependency pattern
+## 9. Durability application
 
-Third-party mods should be able to support Alchemical Leather without requiring it.
+- fractional work is accumulated per infused item/effect as needed;
+- once accumulated work reaches `work_per_damage`, ordinary item durability damage is applied;
+- durability damage caused by infusion wear follows ordinary break semantics and **can destroy the armor item**;
+- no one-durability floor exists;
+- no separate dormant state exists;
+- normal armor damage and alchemical wear share the same durability pool;
+- vanilla repair mechanics remain vanilla.
 
-Recommended pattern:
+## 10. Multi-effect humanoid armor / Turtle Master
 
-- compile against the small API as an optional/compile-only dependency;
-- isolate direct API references in a dedicated compatibility class;
-- initialize that class only when `alchemical_leather` is present;
-- keep the producer's normal gameplay path identical when Alchemical Leather is absent;
-- optionally ship `wear_rules` JSON in the producer mod itself; the files are inert when Alchemical Leather is absent.
+The current humanoid resolver rejects multi-effect potions while BODY armor can store bundles. Full potion support requires a deliberate humanoid multi-effect design.
 
-If direct optional linkage proves fragile under Fabric class loading, an Alchemical Leather-specific entrypoint/bridge can be added during implementation. The important contract is that the source mod remains independently usable.
+For a multi-effect potion such as Turtle Master:
 
-### 10.2 API limitations by design
+- compatible effects on the same armor item must retain independent causal wear accounting;
+- Slowness contributes only when self-propelled locomotion is actually slowed;
+- Resistance contributes only damage actually prevented;
+- either/both may contribute in the same interval;
+- no charge occurs merely because the effects are active.
 
-The API does not attempt to:
+The representation must remain atomic under infusion/reinfusion and must not leave both incompatible single/bundle components behind.
 
-- discover whether a custom action was meaningful;
-- infer which event a third-party effect should publish;
-- run arbitrary predicates supplied by JSON;
-- resolve another mod's internal ownership rules;
-- make client-only events authoritative;
-- make a reported event count if the armor infusion is not the effective source.
+## 11. VanillaPlus coverage and optional integrations
 
-The mod that owns the mechanic is the best authority on whether its custom action succeeded.
+The compatibility fixture must enumerate the actual loaded potion registry and verify that every infusion-capable effect is explicitly classified as:
 
-## 11. VanillaPlus default integration policy
+- a concrete wear rule;
+- `wear: none`; or
+- instantaneous/self-consuming semantics where additional durability wear is intentionally unnecessary.
 
-Alchemical Leather should remain general-purpose, but the VanillaPlus ecosystem is a useful first-party compatibility target because the repository already ships optional effect-slot resources for several of these mods.
+### 11.1 Alex's Mobs Continued
 
-Recommended ownership order:
+Alchemical Leather will provide optional built-in support for every brewable Alex's Mobs Continued potion used by the VanillaPlus version, with an explicit humanoid armor slot for each effect.
 
-1. **Vanilla effects:** Alchemical Leather owns and tests default wear rules.
-2. **Data-only third-party effects:** preferably ship optional JSON either in the source mod or, as a convenience fallback, bundled in Alchemical Leather behind `requires_mod` / `requires_effect` guards.
-3. **Complex custom mechanics:** preferably the owning mod emits semantic API events. Alchemical Leather may bundle the matching JSON balance rule.
-4. **Uncooperative external mods:** an isolated optional Alchemical Leather adapter is acceptable for VanillaPlus convenience if there is no safe generic detector and no upstream integration. It must never become a hard dependency and must be covered by a real compatibility fixture.
+Known potion families to verify against the exact loaded 26.2 build include:
 
-Bundled optional integration is valuable when it gives users correct behavior simply by installing Alchemical Leather, but logic should live as close as possible to the mechanic that can authoritatively say "this action succeeded".
+- Knockback Resistance;
+- Lava Vision;
+- Speed III (vanilla Speed effect, therefore reuses vanilla policy/slot);
+- Poison Resistance;
+- Bug Pheromones;
+- Soulsteal;
+- Clinging.
 
-## 12. Provisional VanillaPlus wear matrix
+Do not infer support from the historical upstream list alone; validation uses the exact compatibility fixture.
 
-This table covers effects currently admitted by Alchemical Leather's VanillaPlus-oriented resources plus the known Turtle Master gap. Balance values remain provisional until playtesting; the attribution semantics are the important frozen part.
+### 11.2 Scale Brews
 
-| Effect | Causal use | Must not charge for | Preferred integration |
-|---|---|---|---|
-| Speed | self-propelled movement actually modified by Speed | Elytra, rockets, passengers, supports/platforms, impulses, teleport | builtin movement detector |
-| Slowness | same as Speed, but negative contribution | same exclusions as Speed | builtin movement detector |
-| Jump Boost | own successful jump with additional jump impulse | mount jump, external launch, swimming input | builtin jump detector |
-| Strength | successful damage contribution from Strength | miss, cancelled hit, invulnerability, fully blocked result | builtin attack contribution |
-| Weakness | successful damage removed by Weakness | same non-results as Strength | builtin attack contribution |
-| Regeneration | HP actually healed by Regen tick | food, Instant Health, beacon, foreign heal | builtin effect-tick healing |
-| Poison | HP actually removed by Poison tick | other damage; no charge when Poison cannot reduce health | builtin effect-tick damage |
-| Fire Resistance | fire/lava damage actually prevented by this effect | pre-existing immunity / foreign cancellation | builtin damage prevention |
-| Water Breathing | oxygen loss actually prevented | breathable context, aquatic immunity, foreign winning source | builtin oxygen preservation |
-| Night Vision | persistent perception state | n/a | explicit `none` |
-| Blindness (Deeper Dark potion) | persistent perception state | n/a | explicit `none` |
-| Invisibility | persistent stealth state | n/a | explicit `none` initially; future AI-event integration may refine |
-| Slow Falling | ticks where Slow Falling actually modifies fall/Elytra physics | transport/downward platform movement, irrelevant states | builtin slow-falling detector |
-| Instant Health | infusion consumes itself when applied | n/a | no additional wear |
-| Instant Damage | infusion consumes itself when applied | n/a | no additional wear |
-| Infested | successful infestation proc | failed/no-spawn outcome | vanilla-specific detector/event |
-| Oozing | successful slime-spawn death proc | failed/no-spawn outcome | vanilla-specific detector/event |
-| Wind Charged | successful wind-burst death proc | failed/cancelled outcome | vanilla-specific detector/event |
-| Weaving | actual cobweb-related benefit and/or successful death web proc, depending final vanilla semantics | passive unrelated movement / failed placement | vanilla-specific detector(s) |
-| Resistance (Turtle Master) | damage actually prevented by Resistance | damage already cancelled by another cause | builtin damage prevention |
-| Turtle Master Slowness component | self-propelled movement actually slowed | all Speed/Slowness transport exclusions | builtin movement detector |
-| Clinging | successful new gravity direction | fall time/distance, support transport, failed request | API gravity-turn event |
-| Reorientation | owned controlled-flight time + successful turn | passive transport; ordinary mount travel; Elytra ownership | API controlled-flight + turn events |
-| Growth (Scale Brews) | persistent body state | n/a | explicit `none` |
-| Shrinking (Scale Brews) | persistent body state | n/a | explicit `none` |
-| Reach (Friends&Foes) | successful action that requires extra reach | action already inside no-effect reach | builtin reach detector if compatible; otherwise adapter/API |
-| Reach Boost (Wilder Wild) | successful action that requires extra reach | action already inside no-effect reach | builtin reach detector if compatible; otherwise adapter/API |
-| Scorching (Wilder Wild) | successful effect-caused ignition / added burn work | failed proc, immunity, no effective burn change | adapter/API unless generic hook is exact |
-| Knockback Resistance (Alex's Mobs Continued) | knockback impulse actually removed by effect | no incoming knockback / foreign cancellation | builtin generic knockback detector if exact |
-| Poison Resistance (Alex's Mobs Continued) | poison application actually rejected because of this effect | poison already invalid/immune for another reason | adapter/API unless generic hook can identify cause |
-| Soulsteal (Alex's Mobs Continued) | HP actually restored by the life-steal result | full-health/no-heal outcome, cancelled/blocked hit | adapter/API |
-| Bug Pheromones (Alex's Mobs Continued) | persistent AI relationship state | n/a | explicit `none` initially |
-| Lava Vision (Alex's Mobs Continued) | persistent perception state | n/a | explicit `none` |
+Scale Brews owns its Alchemical Leather compatibility resources after migration:
 
-### 12.1 Turtle Master prerequisite
+- Growth slot declaration;
+- Shrinking slot declaration;
+- explicit wear classification (`none` initially for both unless later evidence changes it);
+- docs explaining optional Alchemical Leather interoperability.
 
-Current humanoid infusion resolution rejects multi-effect potions, while BODY armor can store a bundle. Turtle Master therefore remains a pre-existing coverage gap for humanoid armor.
+### 11.3 Clinging Reoriented
 
-The wear engine must be capable of accounting for both Slowness and Resistance on one item, but the project must not claim complete VanillaPlus potion coverage until humanoid Turtle Master infusion semantics are intentionally resolved.
+Clinging Reoriented owns its Alchemical Leather compatibility resources after migration:
 
-## 13. Effect ownership and external sources
+- Reorientation slot declaration;
+- Clinging semantic event publication where appropriate without stealing Alex's Mobs' effect ownership;
+- Reorientation semantic event publication;
+- optional dependency/linkage-safe adapter;
+- docs explaining wear semantics and optional integration.
 
-The existing `EffectLedger` already separates armor and external copies of a MobEffect and projects a winner. Wear attribution should build on that distinction.
+## 12. Initial causal detector policy
 
-Rules:
+The implementation/review must explicitly classify at least these current VanillaPlus-relevant effects:
 
-- if an external stronger effect wins, the armor does not wear for that effect;
-- if the armor effect is the effective source, candidate work may count;
-- when two sources are mechanically indistinguishable but only one is projected, only the projected armor source may be charged;
-- removing/replacing/reinfusing the item must not leave a stale effect -> item ownership pointer;
-- BODY multi-effect items must attribute all accepted work to that one equipped item without double-damaging the item for one normalized durability threshold crossing.
+| Effect | Initial causal work policy |
+|---|---|
+| Speed / Slowness | self-propelled locomotion actually modified by movement speed; no Elytra/rocket/transport |
+| Jump Boost | successful wearer jump whose jump power was increased |
+| Strength / Weakness | effective successful attack damage contribution/suppression |
+| Regeneration / Poison | HP actually healed/damaged by that effect's own tick |
+| Fire Resistance | fire/lava damage actually prevented |
+| Resistance | damage actually prevented |
+| Water Breathing | breath loss/drowning progression actually prevented |
+| Slow Falling | ticks/physics where Slow Falling changes fall/fall-flying behavior, including applicable Elytra cases |
+| Night Vision / Blindness | `none` initially |
+| Invisibility | `none` initially |
+| Instant Health / Instant Damage | self-consuming instant infusion; no additional wear |
+| Infested | successful silverfish proc |
+| Oozing | successful slime death proc |
+| Wind Charged | successful wind burst death proc |
+| Weaving | attributable cobweb movement benefit and/or successful death web proc, to be verified against 26.2 mechanics |
+| Clinging | successful gravity link only; provisional 4 units |
+| Reorientation | controlled self-flight time + successful turns; 30 units/damage, 1 unit/s + 2/turn |
+| Growth / Shrinking | `none` |
+| Reach / Reach Boost | successful interaction/attack possible only because of extra reach |
+| Knockback Resistance | knockback impulse actually prevented/reduced |
+| Poison Resistance | poison actually removed/rejected because of the effect |
+| Soulsteal | HP actually restored by successful Soulsteal proc |
+| Bug Pheromones | `none` initially |
+| Lava Vision | `none` |
+| Scorching | successful attributable ignition/fire contribution |
 
-## 14. Data/API audit requirement
+Exact balance constants other than the frozen Clinging/Reorientation provisional values remain subject to TM playability review.
 
-The validation profile should enumerate every loaded potion/effect that Alchemical Leather can infuse in the full VanillaPlus fixture.
+## 13. Adversarial model and reserved holdouts
 
-For each admitted effect it must find exactly one explicit wear classification:
+Implementation must be attacked for at least:
 
-- a valid wear rule with one or more sources; or
-- explicit `wear: none`; or
-- instantaneous self-consumption semantics.
+- charging Speed/Slowness while riding, fall-flying, using rockets, on moving Living Platforms, flying machines or under knockback;
+- charging support displacement rather than only relative self locomotion;
+- charging Jump Boost for vehicle jumps or external launches;
+- charging Regeneration for coincident food/beacon/foreign healing;
+- charging Poison for unrelated simultaneous damage;
+- charging Fire Resistance/Resistance where another immunity/cancellation already prevented the damage;
+- charging Reach for interactions already inside baseline range;
+- charging Clinging/Reorientation for failed, blocked or unchanged requests;
+- charging continuous Reorientation for passive mount/platform transport;
+- failing to charge a successful Reorientation mount turn;
+- Slow Falling incorrectly excluding Elytra or charging rocket impulse itself;
+- external stronger/equal effects eclipsing the armor while the armor still pays;
+- malformed/unknown JSON rules causing crashes or silent unsafe behavior;
+- duplicate slot/wear ownership after first-party compatibility migration;
+- optional first-party mods failing to launch without Alchemical Leather;
+- Alchemical Leather failing standalone without compatibility mods;
+- armor wear stopping at one durability instead of breaking normally;
+- multi-effect reinfusion leaving stale components or double-charging incorrectly;
+- VanillaPlus fixture discovering an unclassified potion effect.
 
-Missing classification is a validation failure, not implicit free wear.
+## 14. TM implementation phases
 
-This prevents a newly added VanillaPlus potion from silently bypassing the system.
+### S00 — specification / ownership migration
 
-The standalone profile must run the same core engine with no optional mods installed.
+- freeze this document;
+- audit exact potion/effect registries used by VanillaPlus;
+- create coordinated first-party working branches;
+- migrate first-party slot ownership resources to their owning mods;
+- complete Alex's Mobs slot coverage in Alchemical Leather.
 
-## 15. Adversarial cases reserved for implementation
+### S01 — wear data model / API
 
-The implementation/review cycle must attack at least these failure modes:
+- wear-rule resource loader;
+- public semantic event API;
+- source/equipped-item validation;
+- fractional accumulation and ordinary durability break behavior;
+- config flag and parser tests.
 
-- Speed boots wearing while riding a horse, minecart, boat or Elytra;
-- Speed/Slowness wearing from firework-boosted Elytra flight;
-- movement wear while standing still on a moving Living Platform or flying machine;
-- relative walking on a moving support charging total world displacement instead of own movement;
-- Slow Falling failing to wear during Elytra flight even though it changes Elytra physics;
-- Slow Falling wearing merely because a descending platform carries the player downward;
-- Regeneration charging for food/beacon/heal effects;
-- Poison charging for unrelated incoming damage;
-- Strength/Weakness charging for misses, cancelled hits or fully ineffective attacks;
-- Fire Resistance charging while already immune for another reason;
-- Water Breathing charging an entity that can already breathe underwater;
-- Reach charging ordinary in-range interactions;
-- Clinging charging failed turns or time after a turn;
-- Reorientation charging ordinary mount travel;
-- Reorientation failing to charge a successful rider-requested gravity turn of a mount;
-- external stronger potion source winning while the armor still wears;
-- wear progress resetting on unequip/relog;
-- alchemical wear destroying the item instead of stopping at one durability;
-- exhausted stable infusion being deleted instead of merely disabled;
-- duplicate counting when both a bundled fallback adapter and an upstream API integration are present;
-- optional compatibility classes linking/crashing when the target mod is absent.
+### S02 — builtin causal detectors
 
-## 16. Open balance values
+- movement attribution;
+- jump/fall/Slow Falling;
+- healing/damage/protection;
+- combat attribute effects;
+- breath/reach/other generic mechanics.
 
-The following are design placeholders, not final acceptance constants unless later frozen by playtesting:
+### S03 — companion adapters
 
-- Speed/Slowness: approximately 512 blocks of eligible self-propelled movement per durability at base level;
-- Jump Boost: approximately 16 eligible jumps per durability at level I, preferably scaling from actual additional impulse rather than a crude amplifier multiplier;
-- Regeneration/Poison: approximately 8 HP of attributable health delta per durability;
-- defensive damage prevention: tune in HP prevented rather than time active;
-- Slow Falling: prefer effective-physics time/gravity work over raw descent distance so Elytra interaction is represented correctly;
-- Clinging: 4 work per successful turn, 30 work/durability;
-- Reorientation: 1 work/s controlled flight +2/turn, 30 work/durability.
+- Clinging/Reorientation semantic events and resources;
+- Scale Brews resources;
+- optional compatibility linkage validation.
 
-Where possible, stronger effects should naturally produce more work because the detector measures the actual contribution (extra damage, extra impulse, health delta, etc.), rather than multiplying wear blindly by amplifier.
+### S04 — multi-effect humanoid support
 
-## 17. Release discipline
+- atomic multi-effect storage/projection for compatible humanoid armor;
+- Turtle Master and equivalent coverage;
+- independent wear attribution per effect.
 
-This document is temporary and should be removed or folded into permanent architecture/guide/validation documentation once implementation converges.
+### S05 — exhaustive compatibility / adversarial gate
 
-No production implementation, version bump or release should occur from this branch until the user explicitly moves the task beyond analysis/specification.
+- standalone Alchemical Leather matrix;
+- real VanillaPlus compatibility profile;
+- automatic potion/effect classification audit;
+- reserved causal holdouts;
+- client/server regression matrix;
+- documentation update only after behavior converges.
+
+## 15. Acceptance condition
+
+This sprint is not complete until:
+
+- every required standalone test passes;
+- compatibility fixtures pass with and without optional mods;
+- the exact VanillaPlus potion registry has no unexplained infusion/wear gaps;
+- first-party mods own their own slot/wear semantics without hard Alchemical Leather dependency;
+- Alex's Mobs potion coverage is complete for the pack version;
+- adversarial review completes a full pass without finding a production change;
+- README/GUIDE/architecture/validation/compatibility docs in every touched repository reflect the actual final behavior.
