@@ -12,7 +12,8 @@
     "GrindstoneMixin",
     "WearLivingMixin",
     "WearEffectTickMixin",
-    "WearDamageMixin"
+    "WearDamageMixin",
+    "WearAttackMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
