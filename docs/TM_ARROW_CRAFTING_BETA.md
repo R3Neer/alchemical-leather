@@ -1,6 +1,6 @@
 # TM: arrow tipping, crafting infusion and beta gate
 
-Status: **implementation/adversarial phases converged; beta release-candidate gate in progress**.
+Status: **release candidate complete; publication is gated by successful `main` CI**.
 
 Active roles for this work: **IMPLEMENTADOR** for production changes, then **ADVERSARIO** for independent review and holdout tests. The cycle follows the iterative TM workflow used by Scale Brews: every phase is re-reviewed until a complete pass produces no changes.
 
@@ -93,7 +93,7 @@ Crafting an already-infused compatible armor item is allowed only when the new p
 - [x] I6 Add the recipe data resource and glass-bottle remainder behavior.
 - [x] I7 Add focused GameTests for arrows, config-independent behavior and crafting normal/splash/lingering modes.
 - [x] I8 Add rejection/atomicity/BedrockIfy ownership regressions.
-- [x] I9 Update release version, README/release notes and publication automation after implementation review converged. Player guide/architecture/validation are completed in the release-candidate documentation pass.
+- [x] I9 Update release version, README/release notes, player guide, architecture, validation and publication automation after implementation review converged.
 
 ## 4. Adversarial model — ADVERSARIO
 
@@ -137,9 +137,13 @@ Independent adversarial review noticed that `ItemStack.copy()` preserved an inpu
 
 After F2, production was frozen again and the complete matrix was rerun.
 
-## 6. Acceptance matrix and functional evidence
+## 6. Acceptance matrix and evidence
 
-Validated implementation candidate: PR `#10`, head `8b8223c3ec309dee4b0271d777df9adf9fac8ca7`, pull-request CI run `34864583775`.
+Functional implementation candidate: PR `#10`, head `8b8223c3ec309dee4b0271d777df9adf9fac8ca7`, pull-request CI run `34864583775`.
+
+Documentation-complete beta candidate: head `26e280cbc99ea08ee944f0740ebb3d93c90d7921`, push CI run `34865578006`.
+
+Both complete runs passed the same matrix:
 
 | Gate | Result |
 |---|---|
@@ -147,6 +151,7 @@ Validated implementation candidate: PR `#10`, head `8b8223c3ec309dee4b0271d777df
 | GameTest registration consistency | **PASS** |
 | Client GameTest under Xvfb / llvmpipe | **PASS** |
 | Real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture | **PASS — 88/88 required GameTests** |
+| CI artifact upload | **PASS** |
 
 The matrix includes:
 
@@ -160,6 +165,6 @@ The matrix includes:
 
 ## 7. Release-candidate closeout
 
-The functional implementation is converged. `0.1.0-beta.1` is now the branch version and release publication is gated by a second complete CI pass on the documentation-complete candidate, followed by the same successful pipeline on `main`. `.github/workflows/release.yml` publishes only a successful `main` build whose version tag does not already exist, and attaches the exact JAR produced by that validated run.
+The implementation, adversarial review and documentation-complete PR gate have converged. `0.1.0-beta.1` is the candidate version. A final no-behavior-change evidence commit is run through the same pipeline before merge. After merge, `main` must pass again; `.github/workflows/release.yml` then publishes only if that successful `main` build's `v0.1.0-beta.1` tag does not already exist, attaching the exact validated JAR and appending its target commit and SHA-256 to the release notes.
 
-A checkbox above means implemented, not demonstrated. Actual execution evidence is also recorded in `docs/validation.md`; the final tagged commit and JAR checksum are appended automatically to the GitHub release notes at publication time.
+Actual execution evidence is also recorded in `docs/validation.md`. The GitHub release is the durable record of the final tagged commit and binary digest.
