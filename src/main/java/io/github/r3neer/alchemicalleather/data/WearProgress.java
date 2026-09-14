@@ -11,7 +11,7 @@ public record WearProgress(List<Entry> entries) {
     public static final WearProgress EMPTY=new WearProgress(List.of());
 
     public record Entry(Identifier effect,double work) {
-        public static final Codec<Entry> CODEC=RecordCodecBuilder.create(i->i.group(
+        public static final Codec<Entry> CODEC=RecordCodecBuilder.<Entry>create(i->i.group(
             Identifier.CODEC.fieldOf("effect").forGetter(Entry::effect),
             Codec.DOUBLE.fieldOf("work").forGetter(Entry::work)
         ).apply(i,Entry::new)).validate(e->Double.isFinite(e.work())&&e.work()>=0
