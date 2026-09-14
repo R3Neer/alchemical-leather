@@ -18,6 +18,7 @@
       "io.github.r3neer.alchemicalleather.test.PotionCauldronInteractionTests",
       "io.github.r3neer.alchemicalleather.test.BetaFeatureTests",
       "io.github.r3neer.alchemicalleather.effect.WearEngineTests",
+      "io.github.r3neer.alchemicalleather.effect.PotionCoverageTests",
       "io.github.r3neer.alchemicalleather.trade.LeatherworkerTradeTests",
       "io.github.r3neer.alchemicalleather.trade.TradeEnchantmentGuardTest"
     ],
