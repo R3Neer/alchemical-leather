@@ -24,6 +24,10 @@ public final class EffectLedger {
     public EffectLedger(LivingEntity entity) { this.entity = entity; }
     public static EffectLedger of(LivingEntity entity) { return ((LedgerHolder) entity).alchemical$ledger(); }
     public boolean managed(Holder<MobEffect> effect) { return !internal && entries.containsKey(effect); }
+    /** True only when the armor copy, rather than an external source, is the currently projected winner. */
+    public boolean armorEffective(Holder<MobEffect> effect) {
+        var entry=entries.get(effect);return !internal&&entry!=null&&entry.armor!=null&&entry.eligible&&winner(entry)==entry.armor;
+    }
     public static MobEffectInstance copy(MobEffectInstance effect) {
         if (effect == null) return null;
         var copy = new MobEffectInstance(effect);
