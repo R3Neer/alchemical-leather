@@ -13,7 +13,8 @@
     "WearLivingMixin",
     "WearEffectTickMixin",
     "WearDamageMixin",
-    "WearAttackMixin"
+    "WearAttackMixin",
+    "WearEffectProcMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
