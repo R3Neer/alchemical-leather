@@ -23,14 +23,15 @@ public final class AlchemicalLeatherClient implements ClientModInitializer {
             colors.add(color);
         },PotionCauldron.BLOCK,DyedWaterCauldron.BLOCK);
         ItemTooltipCallback.EVENT.register((stack,context,flag,lines)->{
-            var single=stack.get(Infusions.TYPE);var animal=stack.get(Infusions.ANIMAL_TYPE);
             var display=stack.get(DataComponents.TOOLTIP_DISPLAY);
-            boolean showSingle=single!=null&&(display==null||display.shows(Infusions.TYPE));
-            boolean showAnimal=animal!=null&&(display==null||display.shows(Infusions.ANIMAL_TYPE));
-            if(!showSingle&&!showAnimal)return;
+            boolean showSingle=stack.has(Infusions.TYPE)&&(display==null||display.shows(Infusions.TYPE));
+            boolean showHumanoid=stack.has(Infusions.HUMANOID_TYPE)&&(display==null||display.shows(Infusions.HUMANOID_TYPE));
+            boolean showAnimal=stack.has(Infusions.ANIMAL_TYPE)&&(display==null||display.shows(Infusions.ANIMAL_TYPE));
+            if(!showSingle&&!showHumanoid&&!showAnimal)return;
             lines.add(Component.translatable("tooltip.alchemical_leather.title").withStyle(ChatFormatting.DARK_AQUA));
-            if(showSingle)addInfusion(lines,single);
-            if(showAnimal)for(var infusion:animal.effects())addInfusion(lines,infusion);
+            if(showSingle)addInfusion(lines,stack.get(Infusions.TYPE));
+            if(showHumanoid)for(var infusion:stack.get(Infusions.HUMANOID_TYPE).effects())addInfusion(lines,infusion);
+            if(showAnimal)for(var infusion:stack.get(Infusions.ANIMAL_TYPE).effects())addInfusion(lines,infusion);
         });
     }
     private static void addInfusion(List<Component> lines,Infusion infusion) {
