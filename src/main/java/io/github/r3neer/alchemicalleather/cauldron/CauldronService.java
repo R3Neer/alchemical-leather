@@ -1,4 +1,5 @@
 package io.github.r3neer.alchemicalleather.cauldron;
+import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
 import net.minecraft.core.*;
 import net.minecraft.core.component.DataComponents;
@@ -7,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.*;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.*;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.*;
@@ -21,9 +21,10 @@ public final class CauldronService {
     private static InteractionResult error(Player player,String error){if(player instanceof net.minecraft.server.level.ServerPlayer server)server.sendSystemMessage(Component.translatable("message.alchemical_leather."+error),true);return InteractionResult.FAIL;}
     private static boolean bottle(ItemStack s){return s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION);}
     private static boolean samePotion(PotionContents first,PotionContents second){return first.potion().equals(second.potion())&&first.customEffects().equals(second.customEffects())&&first.customName().equals(second.customName());}
-    private static boolean hasEffects(PotionContents contents){return contents!=null&&contents.getAllEffects().iterator().hasNext();}
     private static boolean allowed(Player player,Level level,BlockPos pos){return !player.isSpectator()&&player.getAbilities().mayBuild&&(!(level instanceof ServerLevel server)||server.mayInteract(player,pos));}
     private static boolean armorForSide(ItemStack stack,Level level){return level.isClientSide()?Infusions.armorCandidate(stack):Infusions.slot(stack)!=null;}
+    private static int arrowCapacity(int doses){return doses>=3?64:doses*16;}
+    private static int arrowDoses(int count){return count<=16?1:count<=32?2:3;}
 
     public static InteractionResult interact(Player player,Level level,InteractionHand hand,BlockHitResult hit) {
         BlockPos pos=hit.getBlockPos();var state=level.getBlockState(pos);
@@ -94,6 +95,27 @@ public final class CauldronService {
             return InteractionResult.SUCCESS;
         }
 
+        // Arrow tipping is owned only on Alchemical Leather's own potion block. BedrockIfy's
+        // potion cauldron therefore falls through untouched to its registered dispatcher.
+        if(stack.is(Items.ARROW)&&ownPotion) {
+            if(!AlchemicalConfig.cauldronTippedArrows())return InteractionResult.PASS;
+            if(!allowed(player,level,pos))return InteractionResult.FAIL;
+            if(level.isClientSide())return InteractionResult.SUCCESS;
+            if(!(level.getBlockEntity(pos) instanceof PotionCauldronEntity be))return error(player,"invalid");
+            int doses=state.getValue(PotionCauldron.LEVEL);int tipped=Math.min(stack.getCount(),arrowCapacity(doses));
+            if(tipped<=0)return InteractionResult.FAIL;
+            var result=new ItemStack(Items.TIPPED_ARROW,tipped);result.set(DataComponents.POTION_CONTENTS,be.contents);
+            if(player.getAbilities().instabuild){
+                if(!player.getInventory().contains(result))player.getInventory().add(result);
+            }else{
+                stack.shrink(tipped);
+                if(stack.isEmpty())player.setItemInHand(hand,result);
+                else if(!player.getInventory().add(result))player.drop(result,false);
+                write(level,pos,be.contents,be.bottle,doses-arrowDoses(tipped));
+            }
+            player.awardStat(Stats.USE_CAULDRON);player.awardStat(Stats.ITEM_USED.get(Items.ARROW),tipped);splashFeedback(level,pos);return InteractionResult.SUCCESS;
+        }
+
         // BedrockIfy owns the ordinary bottle/fluid lifecycle of its own potion cauldron.
         // Alchemical Leather only reads that block to perform its armor-specific infusion/dye action.
         if(bedPotion&&bottle(stack))return InteractionResult.PASS;
@@ -144,27 +166,10 @@ public final class CauldronService {
         }
         if(armor&&(ownPotion||bedPotion)) {
             if(Infusions.slot(stack)==null)return InteractionResult.PASS;
-            if(contents==null)return error(player,"invalid");
-            var target=Infusions.slot(stack);var result=stack.copy();
-            if(!hasEffects(contents)) {
-                // Effectless potion contents are still a valid colored liquid. They act as a dye bath only:
-                // no infusion is created or replaced, so enchantments and existing infusion components survive.
-                result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
-            } else {
-                if(Infusions.enchanted(stack))return error(player,"enchanted");
-                if(target==EquipmentSlot.BODY) {
-                    var resolved=Infusions.resolveAll(contents,type);if(!resolved.ok())return error(player,resolved.error());
-                    result.remove(Infusions.TYPE);result.set(Infusions.ANIMAL_TYPE,resolved.infusion());
-                } else {
-                    var resolved=Infusions.resolve(contents,type);if(!resolved.ok())return error(player,resolved.error());
-                    if(!Infusions.accepts(stack,target,resolved.infusion().effect()))return error(player,"slot");
-                    result.remove(Infusions.ANIMAL_TYPE);result.set(Infusions.TYPE,resolved.infusion());
-                }
-                result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
-            }
+            var transformed=ArmorInfusionService.apply(stack,contents,type,true);if(!transformed.ok())return error(player,transformed.error());
             if(ownPotion)write(level,pos,contents,type,doses-1);
             else consumeBedrockPotionDose(level,pos,state,doses);
-            player.setItemInHand(hand,result);feedback(level,pos);return InteractionResult.SUCCESS;
+            player.setItemInHand(hand,transformed.stack());feedback(level,pos);return InteractionResult.SUCCESS;
         }
         if(ownPotion&&stack.is(Items.GLASS_BOTTLE)) {
             if(type!=Items.POTION&&type!=Items.SPLASH_POTION&&type!=Items.LINGERING_POTION)return error(player,"invalid");
@@ -188,8 +193,9 @@ public final class CauldronService {
     }
     private static void consumeBedrockPotionDose(Level level,BlockPos pos,BlockState state,int doses){
         if(doses<=1){level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());return;}
-        var property=BedrockifyBridge.property(state);int canonicalLevel=(doses-1)*3-1;level.setBlockAndUpdate(pos,state.setValue(property,canonicalLevel));
+        var property=BedrockifyBridge.property(state);int canonicalLevel=(doses-1)*3-1;level.setBlockAndUpdate(pos,state.setValue(property,remainingCanonical(doses)));
     }
+    private static int remainingCanonical(int doses){return (doses-1)*3-1;}
     private static DyedWaterCauldronEntity dyedEntity(Level level,BlockPos pos){if(level.getBlockEntity(pos) instanceof DyedWaterCauldronEntity be)return be;throw new IllegalStateException("Missing dyed-water cauldron entity");}
     private static void lowerDyed(Level level,BlockPos pos,BlockState state,int amount){int next=state.getValue(DyedWaterCauldron.LEVEL)-amount;if(next<0)throw new IllegalArgumentException("Not enough dyed water");if(next==0)level.setBlockAndUpdate(pos,Blocks.CAULDRON.defaultBlockState());else level.setBlockAndUpdate(pos,state.setValue(DyedWaterCauldron.LEVEL,next));}
     private static void consumeDye(ItemStack stack,Player player,Item used){if(!player.getAbilities().instabuild)stack.shrink(1);player.awardStat(Stats.ITEM_USED.get(used));}
