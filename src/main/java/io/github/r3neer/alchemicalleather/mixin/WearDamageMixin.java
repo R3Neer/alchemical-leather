@@ -38,13 +38,13 @@ public abstract class WearDamageMixin {
         var self=(LivingEntity)(Object)this;
         var resistance=self.getEffect(MobEffects.FIRE_RESISTANCE);
         if(resistance==null||damage<=0||!source.is(DamageTypeTags.IS_FIRE)||self.isDeadOrDying())return;
-        // hurtServer rejects general/base invulnerability before it reaches the Fire Resistance branch.
+        // Vanilla checks base/general invulnerability immediately before the Fire Resistance branch.
         // If that earlier guard already applies, Fire Resistance is not the causal reason damage disappears.
         if(self.isInvulnerableTo(level,source))return;
         InfusionWear.emitBuiltin(self,resistance.getEffect(),DAMAGE_PREVENTED,damage);
     }
 
-    @Inject(method="knockback(DDD)V",at=@At("HEAD"))
+    @Inject(method="knockback",at=@At("HEAD"))
     private void alchemical$knockback(double power,double xd,double zd,CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
