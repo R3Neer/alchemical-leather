@@ -24,7 +24,7 @@ public final class InfusionWear {
 
     private static void emit(LivingEntity wearer,Holder<MobEffect> effect,String type,Identifier source,double amount){
         if(!AlchemicalConfig.infusionWear()||wearer==null||effect==null||source==null||!Double.isFinite(amount)||amount<=0)return;
-        if(!(wearer.level() instanceof ServerLevel)||!wearer.isAlive())return;
+        if(!(wearer.level() instanceof ServerLevel))return;
         Identifier effectId=BuiltInRegistries.MOB_EFFECT.getKey(effect.value());
         if(effectId==null)return;
         var rule=WearRules.rule(effectId);if(rule==null||rule.none())return;
