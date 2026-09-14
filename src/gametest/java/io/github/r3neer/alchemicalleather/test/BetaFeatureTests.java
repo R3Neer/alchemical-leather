@@ -50,8 +50,8 @@ public final class BetaFeatureTests {
         record Case(int doses,int arrows,int tipped,int plain,int remaining){}
         var cases=List.of(
             new Case(1,1,1,0,0),new Case(1,16,16,0,0),new Case(1,17,16,1,0),
-            new Case(2,17,17,0,0),new Case(2,32,32,0,0),new Case(2,33,32,1,0),
-            new Case(3,33,33,0,0),new Case(3,64,64,0,0));
+            new Case(2,1,1,0,1),new Case(2,17,17,0,0),new Case(2,32,32,0,0),new Case(2,33,32,1,0),
+            new Case(3,1,1,0,2),new Case(3,17,17,0,1),new Case(3,33,33,0,0),new Case(3,64,64,0,0));
         for(var c:cases){
             var p=h.makeMockPlayer(GameType.SURVIVAL);CauldronService.write(h.getLevel(),pos,contents,Items.POTION,c.doses());
             h.assertTrue(use(h,p,pos,new ItemStack(Items.ARROW,c.arrows()))==InteractionResult.SUCCESS,"Arrow tipping succeeds at "+c);
@@ -95,6 +95,11 @@ public final class BetaFeatureTests {
         var recipe=recipe(h);var body=new ItemStack(Items.LEATHER_HORSE_ARMOR);body.set(Infusions.ANIMAL_TYPE,new AnimalInfusion(List.of(new Infusion(Identifier.withDefaultNamespace("speed"),0,"timed",40))));
         var turtle=PotionContents.createItemStack(Items.LINGERING_POTION,Potions.TURTLE_MASTER);var input=CraftingInput.of(2,1,List.of(body,turtle));h.assertTrue(recipe.matches(input,h.getLevel()),"BODY armor accepts multi-effect potion in crafting");var result=recipe.assemble(input);var bundle=result.get(Infusions.ANIMAL_TYPE);
         h.assertTrue(bundle!=null&&bundle.effects().size()==2&&!result.has(Infusions.TYPE),"BODY crafting atomically replaces old infusion with complete potion bundle");for(var effect:bundle.effects())h.assertTrue(effect.mode().equals("stable"),"Lingering BODY effects are stable");h.succeed();
+    }
+
+    @GameTest public void armorCraftingProducesExactlyOnePieceFromSyntheticStack(GameTestHelper h){
+        var recipe=recipe(h);var stacked=new ItemStack(Items.LEATHER_LEGGINGS,2);var potion=PotionContents.createItemStack(Items.POTION,Potions.SWIFTNESS);var input=CraftingInput.of(2,1,List.of(stacked,potion));
+        h.assertTrue(recipe.matches(input,h.getLevel()),"Synthetic stack remains a valid ingredient shape");var result=recipe.assemble(input);h.assertTrue(result.getCount()==1&&result.has(Infusions.TYPE),"One potion crafts exactly one infused armor piece even if a mod allows stacked armor");h.succeed();
     }
 
     @GameTest public void armorCraftingRejectsInvalidInputsAtomically(GameTestHelper h){
