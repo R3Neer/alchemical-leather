@@ -50,7 +50,8 @@ public final class ArmorInfusionRecipe extends CustomRecipe {
     @Override public boolean matches(CraftingInput input,Level level){return resolve(input)!=null;}
 
     @Override public ItemStack assemble(CraftingInput input){
-        var resolved=resolve(input);return resolved==null?ItemStack.EMPTY:resolved.result().stack();
+        var resolved=resolve(input);if(resolved==null)return ItemStack.EMPTY;
+        var result=resolved.result().stack();result.setCount(1);return result;
     }
 
     @Override public NonNullList<ItemStack> getRemainingItems(CraftingInput input){
