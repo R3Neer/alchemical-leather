@@ -25,6 +25,7 @@ public final class WearPersistenceTests {
     private static final Identifier SLOWNESS=Identifier.withDefaultNamespace("slowness");
     private static final Identifier JUMP=Identifier.withDefaultNamespace("jump_boost");
     private static final Identifier INSTANT_HEALTH=Identifier.withDefaultNamespace("instant_health");
+    private static final Identifier JUMP_DETECTOR=Identifier.fromNamespaceAndPath("alchemical_leather","jump_boost_jump");
 
     @GameTest public void reinfusionClearsPriorEffectWearDebtAtomically(GameTestHelper h){
         var original=new ItemStack(Items.LEATHER_LEGGINGS);
@@ -40,6 +41,22 @@ public final class WearPersistenceTests {
         h.assertFalse(result.stack().has(Infusions.WEAR_TYPE),"Replacement infusion starts without debt from the previous effect");
         h.assertTrue(original.has(Infusions.WEAR_TYPE)&&original.get(Infusions.TYPE).effect().equals(SPEED),
             "Pure transformation leaves the original stack untouched until the caller commits it");
+        h.succeed();
+    }
+
+    @GameTest public void creativeWearDoesNotBankFractionalDebt(GameTestHelper h){
+        var wearer=h.makeMockPlayer(GameType.CREATIVE);
+        var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
+        leggings.set(Infusions.TYPE,new Infusion(JUMP,0,"stable",0));
+        wearer.setItemSlot(EquipmentSlot.LEGS,leggings);
+        var ledger=EffectLedger.of(wearer);ledger.equipmentManaged=true;
+        ledger.setArmor(EquipmentSlot.LEGS,new MobEffectInstance(MobEffects.JUMP_BOOST,-1,0));
+
+        // Jump Boost needs 16 work for one durability. Eight units used to leave hidden debt even
+        // though creative correctly suppressed the eventual durability hit.
+        for(int i=0;i<8;i++)InfusionWear.emitBuiltin(wearer,MobEffects.JUMP_BOOST,JUMP_DETECTOR,1.0);
+        h.assertTrue(leggings.getDamageValue()==0,"Creative armor takes no alchemical durability damage");
+        h.assertFalse(leggings.has(Infusions.WEAR_TYPE),"Creative use cannot bank debt for a later survival-mode bill");
         h.succeed();
     }
 
