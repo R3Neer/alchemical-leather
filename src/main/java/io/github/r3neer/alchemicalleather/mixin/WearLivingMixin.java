@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -26,10 +27,18 @@ public abstract class WearLivingMixin {
     private static final Identifier JUMP=Identifier.fromNamespaceAndPath("alchemical_leather","jump_boost_jump");
     private static final Identifier WATER_BREATHING=Identifier.fromNamespaceAndPath("alchemical_leather","water_breathing_tick");
     private static final Identifier SLOW_FALLING=Identifier.fromNamespaceAndPath("alchemical_leather","slow_falling_tick");
+
+    @Shadow protected abstract float getWaterSlowDown();
+
     @Unique private Vec3 alchemical$travelOrigin;
     @Unique private Vec3 alchemical$preRelativeVelocity;
     @Unique private boolean alchemical$meterTravel;
     @Unique private double alchemical$movementDistanceLimit;
+    @Unique private Vec3 alchemical$waterTravelOrigin;
+    @Unique private Vec3 alchemical$waterPreRelativeVelocity;
+    @Unique private boolean alchemical$meterWaterTravel;
+    @Unique private double alchemical$waterDistanceLimit;
+    @Unique private double alchemical$waterDrag;
 
     @Inject(method="travel",at=@At("HEAD"))
     private void alchemical$beforeSelfMovement(Vec3 input,CallbackInfo ci){
@@ -69,13 +78,49 @@ public abstract class WearLivingMixin {
         alchemical$preRelativeVelocity=null;
         alchemical$movementDistanceLimit=0.0;
         if(!meter||origin==null)return;
+        emitMovement((LivingEntity)(Object)this,origin,limit);
+    }
+
+    @Inject(method="travelInWater",at=@At("HEAD"))
+    private void alchemical$beforeWaterMovement(Vec3 input,double baseGravity,boolean isFalling,double oldY,CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
-        Vec3 delta=self.position().subtract(origin);
-        double actual=Math.hypot(delta.x,delta.z);
-        double distance=WearPredicates.attributableMovementDistance(actual,limit);
-        if(distance<=0.0)return;
-        emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT,distance);
-        emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT,distance);
+        alchemical$waterPreRelativeVelocity=null;
+        alchemical$waterDistanceLimit=0.0;
+        double efficiency=self.getAttributeValue(Attributes.WATER_MOVEMENT_EFFICIENCY);
+        double inputSqr=input==null?0.0:input.horizontalDistanceSqr();
+        alchemical$meterWaterTravel=!self.level().isClientSide()&&WearPredicates.movementSpeedWaterEligible(
+            self.isPassenger(),self.isFallFlying(),self.isInWater(),efficiency,inputSqr);
+        if(!alchemical$meterWaterTravel){
+            alchemical$waterTravelOrigin=null;
+            return;
+        }
+        alchemical$waterTravelOrigin=self.position();
+        alchemical$waterPreRelativeVelocity=self.getDeltaMovement();
+        alchemical$waterDrag=WearPredicates.waterMovementDrag(
+            self.isSprinting(),getWaterSlowDown(),efficiency,self.onGround(),self.hasEffect(MobEffects.DOLPHINS_GRACE));
+    }
+
+    @Inject(method="travelInWater",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;moveRelative(FLnet/minecraft/world/phys/Vec3;)V",shift=At.Shift.AFTER))
+    private void alchemical$afterWaterAcceleration(Vec3 input,double baseGravity,boolean isFalling,double oldY,CallbackInfo ci){
+        if(!alchemical$meterWaterTravel||alchemical$waterPreRelativeVelocity==null)return;
+        Vec3 after=((LivingEntity)(Object)this).getDeltaMovement();
+        alchemical$waterDistanceLimit=WearPredicates.waterImpulseDistanceLimit(
+            alchemical$waterPreRelativeVelocity.x,alchemical$waterPreRelativeVelocity.z,after.x,after.z,alchemical$waterDrag);
+    }
+
+    @Inject(method="travelInWater",at=@At("RETURN"))
+    private void alchemical$waterMovement(Vec3 input,double baseGravity,boolean isFalling,double oldY,CallbackInfo ci){
+        Vec3 origin=alchemical$waterTravelOrigin;
+        double limit=alchemical$waterDistanceLimit;
+        boolean meter=alchemical$meterWaterTravel;
+        alchemical$meterWaterTravel=false;
+        alchemical$waterTravelOrigin=null;
+        alchemical$waterPreRelativeVelocity=null;
+        alchemical$waterDistanceLimit=0.0;
+        alchemical$waterDrag=0.0;
+        if(!meter||origin==null)return;
+        emitMovement((LivingEntity)(Object)this,origin,limit);
     }
 
     @Inject(method="jumpFromGround",at=@At("RETURN"))
@@ -98,6 +143,15 @@ public abstract class WearLivingMixin {
         if(falling!=null&&!self.onGround()&&!self.isPassenger()&&!self.isInWater()&&!self.isInLava()
             &&WearPredicates.slowFallingChangesGravity(self.getGravity(),self.getDeltaMovement().y))
             InfusionWear.emitBuiltin(self,falling.getEffect(),SLOW_FALLING,1.0);
+    }
+
+    private static void emitMovement(LivingEntity self,Vec3 origin,double limit){
+        Vec3 delta=self.position().subtract(origin);
+        double actual=Math.hypot(delta.x,delta.z);
+        double distance=WearPredicates.attributableMovementDistance(actual,limit);
+        if(distance<=0.0)return;
+        emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT,distance);
+        emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT,distance);
     }
 
     private static void emit(LivingEntity self,MobEffectInstance effect,Identifier detector,double amount){
