@@ -129,7 +129,13 @@ public abstract class WearLivingMixin {
         var self=(LivingEntity)(Object)this;
         if(self.level().isClientSide()||self.isPassenger())return;
         var effect=self.getEffect(MobEffects.JUMP_BOOST);
-        if(effect!=null)InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP,effect.getAmplifier()+1.0);
+        if(effect==null)return;
+        float boost=self.getJumpBoostPower();
+        if(Float.isFinite(boost)&&boost>0.0F){
+            // Vanilla is 0.1 * level. Normalizing by 0.1 preserves the existing balance while
+            // following the contribution actually supplied by the current mechanics/mod stack.
+            InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP,boost/0.1F);
+        }
     }
 
     @Inject(method="tick",at=@At("RETURN"))
