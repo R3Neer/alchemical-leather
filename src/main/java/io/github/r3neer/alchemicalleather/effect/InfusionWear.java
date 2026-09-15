@@ -48,9 +48,8 @@ public final class InfusionWear {
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
-        // Do not use isDamageableItem() here. Enchancement deliberately makes that return false
-        // when its global durability switch is disabled, but alchemical wear is an explicit cost
-        // that must still consume the item's ordinary DAMAGE/MAX_DAMAGE bar and be able to break it.
+        // MAX_DAMAGE, not isDamageableItem(), is the durable-storage invariant. Enchancement may
+        // deliberately report isDamageableItem=false while its global durability switch is off.
         if(stack.isEmpty()||stack.getMaxDamage()<=0)return;
         var progress=stack.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
         double total=progress.work(effect)+addedWork;
@@ -59,7 +58,7 @@ public final class InfusionWear {
         if(damage<=0){
             var next=progress.with(effect,total);if(next.isEmpty())stack.remove(Infusions.WEAR_TYPE);else stack.set(Infusions.WEAR_TYPE,next);return;
         }
-        damageArmorDirectly(stack,wearer,slot,damage);
+        damageArmor(stack,wearer,slot,damage);
         if(stack.isEmpty()){
             EquipmentInfusions.sync(wearer);
             return;
@@ -69,23 +68,30 @@ public final class InfusionWear {
     }
 
     /**
-     * Applies the explicit alchemical cost past ItemStack#isDamageableItem, then rejoins vanilla at
-     * its terminal applyDamage path. Vanilla normally performs the criterion, clamping and break
-     * callback there. A durability-disabling mod may still make ItemStack#isBroken return false,
-     * so a final component-level break check completes only the break that vanilla was prevented
-     * from observing; ordinary durability sources remain disabled.
+     * Prefer Minecraft's complete durability pipeline whenever the current mod stack exposes it.
+     * Only when a compatibility mod masks a MAX_DAMAGE item as non-damageable do we bypass that
+     * gate and rejoin vanilla at its terminal applyDamage method. This keeps Unbreaking/other
+     * legitimate durability hooks intact in ordinary environments while preserving the explicit
+     * alchemical operating cost under Enchancement's global durability-off policy.
      */
-    static void damageArmorDirectly(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
+    static void damageArmor(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
         if(amount<=0||stack.isEmpty()||stack.getMaxDamage()<=0)return;
         if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
+        if(stack.isDamageableItem()){
+            stack.hurtAndBreak(amount,wearer,slot);
+            return;
+        }
+
         long rawDamage=(long)stack.getDamageValue()+amount;
         int newDamage=(int)Math.min(Integer.MAX_VALUE,rawDamage);
         ServerPlayer player=wearer instanceof ServerPlayer sp?sp:null;
         var brokenItem=stack.getItem();
         ((ItemStackDamageAccess)(Object)stack).alchemical$applyDamage(
             newDamage,player,broken->wearer.onEquippedItemBroken(broken,slot));
-        // Enchancement's disableDurability makes isDamageableItem/isBroken false globally. In that
-        // environment applyDamage still updates DAMAGE but deliberately cannot notice the break.
+
+        // A durability-disabling mod can also make ItemStack#isBroken false inside applyDamage.
+        // Complete exactly that suppressed break. In normal environments the branch above already
+        // used hurtAndBreak, so this fallback cannot duplicate a vanilla break callback.
         if(!stack.isEmpty()&&stack.getMaxDamage()>0&&stack.getDamageValue()>=stack.getMaxDamage()){
             stack.shrink(1);
             wearer.onEquippedItemBroken(brokenItem,slot);
