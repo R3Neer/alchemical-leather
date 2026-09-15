@@ -1,5 +1,6 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
+import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import io.github.r3neer.alchemicalleather.effect.WearPredicates;
 import net.minecraft.core.BlockPos;
@@ -150,12 +151,15 @@ public abstract class WearLivingMixin {
         double actual=Math.hypot(delta.x,delta.z);
         double distance=WearPredicates.attributableMovementDistance(actual,limit);
         if(distance<=0.0)return;
-        emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT,distance);
-        emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT,distance);
+        emitMovementEffect(self,self.getEffect(MobEffects.SPEED),distance,true);
+        emitMovementEffect(self,self.getEffect(MobEffects.SLOWNESS),distance,false);
     }
 
-    private static void emit(LivingEntity self,MobEffectInstance effect,Identifier detector,double amount){
-        if(effect!=null)InfusionWear.emitBuiltin(self,effect.getEffect(),detector,amount*(effect.getAmplifier()+1.0));
+    private static void emitMovementEffect(LivingEntity self,MobEffectInstance effect,double distance,boolean beneficial){
+        if(effect==null)return;
+        double contribution=EffectAttributes.contribution(self,Attributes.MOVEMENT_SPEED,effect);
+        double work=WearPredicates.movementSpeedWork(distance,contribution,effect.getAmplifier(),beneficial);
+        if(work>0.0)InfusionWear.emitBuiltin(self,effect.getEffect(),MOVEMENT,work);
     }
 
     private static boolean wouldNeedWaterBreathing(LivingEntity self){
