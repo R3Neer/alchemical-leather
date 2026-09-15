@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Generic causal accounting for vanilla damage prevention and knockback resistance. */
 @Mixin(LivingEntity.class)
@@ -27,15 +26,26 @@ public abstract class WearDamageMixin {
     private static final Identifier KNOCKBACK_REDUCED=Identifier.fromNamespaceAndPath("alchemical_leather","knockback_reduced");
     private static final Identifier ALEX_KNOCKBACK=Identifier.fromNamespaceAndPath("alexsmobs","knockback_resistance");
 
-    @Inject(method="getDamageAfterMagicAbsorb",at=@At("HEAD"))
-    private void alchemical$resistance(DamageSource source,float damage,CallbackInfoReturnable<Float> cir){
-        var self=(LivingEntity)(Object)this;
-        var resistance=self.getEffect(MobEffects.RESISTANCE);
-        if(resistance==null||damage<=0||source.is(DamageTypeTags.BYPASSES_EFFECTS)||source.is(DamageTypeTags.BYPASSES_RESISTANCE))return;
-        int absorbValue=(resistance.getAmplifier()+1)*5;
-        float after=Math.max(damage*(25-absorbValue)/25.0F,0.0F);
-        float prevented=damage-after;
-        if(prevented>0)InfusionWear.emitBuiltin(self,resistance.getEffect(),DAMAGE_PREVENTED,prevented);
+    /**
+     * Wrap the exact Resistance query in getDamageAfterMagicAbsorb. Reaching this call means the
+     * BYPASSES_EFFECTS early return already did not apply; we still mirror the following
+     * BYPASSES_RESISTANCE half of vanilla's condition before attributing any prevented damage.
+     */
+    @WrapOperation(method="getDamageAfterMagicAbsorb",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z",ordinal=0))
+    private boolean alchemical$resistanceDecision(LivingEntity instance,Holder<MobEffect> effect,
+                                                  Operation<Boolean> original,DamageSource source,float damage){
+        boolean active=original.call(instance,effect);
+        if(active&&effect.equals(MobEffects.RESISTANCE)&&damage>0&&!source.is(DamageTypeTags.BYPASSES_RESISTANCE)){
+            var resistance=instance.getEffect(MobEffects.RESISTANCE);
+            if(resistance!=null){
+                int absorbValue=(resistance.getAmplifier()+1)*5;
+                float after=Math.max(damage*(25-absorbValue)/25.0F,0.0F);
+                float prevented=damage-after;
+                if(prevented>0)InfusionWear.emitBuiltin(instance,resistance.getEffect(),DAMAGE_PREVENTED,prevented);
+            }
+        }
+        return active;
     }
 
     /**
