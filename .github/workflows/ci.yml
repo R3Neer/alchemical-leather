@@ -12,22 +12,36 @@ jobs:
           distribution: temurin
           java-version: '25'
       - run: chmod +x gradlew
-      - run: ./gradlew build -x runClientGameTest --console=plain
-      - run: xvfb-run -a ./gradlew runClientGameTest --console=plain
+      - name: Build and server GameTests
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci
+          ./gradlew build -x runClientGameTest --console=plain 2>&1 | tee build/ci/server-build.log
+      - name: Run client GameTests
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run -a ./gradlew runClientGameTest --console=plain 2>&1 | tee build/ci/client-gametest.log
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
       - name: Prepare real compatibility fixture
+        shell: bash
         run: |
-          ./gradlew prepareClingingCompat --console=plain
+          set -o pipefail
+          ./gradlew prepareClingingCompat --console=plain 2>&1 | tee build/ci/compat-prepare.log
           mkdir -p build/compat-src
           git clone --depth 1 --branch chatgpt/alchemical-leather-wear-compat https://github.com/R3Neer/clinging-reoriented.git build/compat-src/clinging-reoriented
           git clone --depth 1 --branch chatgpt/alchemical-leather-wear-compat https://github.com/R3Neer/scale-brews.git build/compat-src/scale-brews
-          (cd build/compat-src/clinging-reoriented && chmod +x gradlew && ./gradlew build --console=plain)
-          (cd build/compat-src/scale-brews && chmod +x gradlew && ./gradlew build --console=plain)
+          (cd build/compat-src/clinging-reoriented && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/clinging-build.log
+          (cd build/compat-src/scale-brews && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/scale-build.log
           find build/compat-src/clinging-reoriented/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/clingingCompat/ \;
           find build/compat-src/scale-brews/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/clingingCompat/ \;
       - name: Run GameTests with coordinated optional mods
-        run: ./gradlew runGameTest -PcompatMods="$GITHUB_WORKSPACE/build/clingingCompat" -PcompatProfile=trade --console=plain
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew runGameTest -PcompatMods="$GITHUB_WORKSPACE/build/clingingCompat" -PcompatProfile=trade --console=plain 2>&1 | tee build/ci/compat-gametest.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -36,3 +50,4 @@ jobs:
             build/libs/*.jar
             build/run/*/logs/latest.log
             build/run/clientGameTest/screenshots/*.png
+            build/ci/*.log
