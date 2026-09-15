@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EquipmentSlot;
 
 /** Registry-driven gate: loaded potion effects may not silently fall through compatibility policy. */
 public final class PotionCoverageTests {
@@ -34,5 +35,22 @@ public final class PotionCoverageTests {
         });
         h.assertTrue(missing.isEmpty(),"Every Alex's Mobs potion used with Alchemical Leather needs a humanoid slot; missing: "+missing);
         h.succeed();
+    }
+
+    @GameTest public void loadedFirstPartyCompanionsOwnExpectedCompatibilityPolicy(GameTestHelper h){
+        assertPolicy(h,"scalebrews:growth",EquipmentSlot.CHEST,true);
+        assertPolicy(h,"scalebrews:shrinking",EquipmentSlot.CHEST,true);
+        assertPolicy(h,"clinging_reoriented:reorientation",EquipmentSlot.FEET,false);
+        assertPolicy(h,"alexsmobs:clinging",EquipmentSlot.FEET,false);
+        h.succeed();
+    }
+
+    private static void assertPolicy(GameTestHelper h,String rawId,EquipmentSlot expectedSlot,boolean expectedNoWear){
+        Identifier id=Identifier.parse(rawId);
+        if(!BuiltInRegistries.MOB_EFFECT.containsKey(id))return;
+        h.assertTrue(EffectSlotRules.slot(id)==expectedSlot,rawId+" must resolve to "+expectedSlot+" from the active compatibility resources");
+        var rule=WearRules.rule(id);
+        h.assertTrue(rule!=null,rawId+" must have an explicit wear classification");
+        h.assertTrue(rule.none()==expectedNoWear,rawId+" wear classification mismatch: expected wear=none "+expectedNoWear);
     }
 }
