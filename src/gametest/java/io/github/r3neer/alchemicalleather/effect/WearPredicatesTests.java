@@ -118,4 +118,26 @@ public final class WearPredicatesTests {
             "Malformed velocity cannot create wear");
         h.succeed();
     }
+
+    @GameTest public void weavingMeasuresRealizedCobwebBenefitNotInput(GameTestHelper h){
+        h.assertTrue(WearPredicates.isWeavingWebMultiplier(0.5,0.25,0.5),
+            "Vanilla Weaving cobweb multiplier is recognized exactly");
+        h.assertFalse(WearPredicates.isWeavingWebMultiplier(0.25,0.05,0.25),
+            "Ordinary cobweb slowdown must not be mistaken for Weaving work");
+
+        double horizontal=WearPredicates.weavingRealizedBenefit(1.0,0.0,0.0,0.5,0.0,0.0);
+        h.assertTrue(Math.abs(horizontal-0.25)<EPS,
+            "Horizontal Weaving work is only the 0.25 blocks recovered over the normal web multiplier");
+        double vertical=WearPredicates.weavingRealizedBenefit(0.0,-1.0,0.0,0.0,-0.25,0.0);
+        h.assertTrue(Math.abs(vertical-0.20)<EPS,
+            "Vertical falling through a web counts even with no movement input because Weaving changes 0.05 to 0.25");
+        h.assertTrue(WearPredicates.weavingRealizedBenefit(1.0,0.0,0.0,0.0,0.0,0.0)==0.0,
+            "A wall that blocks the webbed move leaves no realized Weaving benefit");
+        h.assertTrue(WearPredicates.weavingRealizedBenefit(0.0,0.0,0.0,0.2,0.6,0.0)==0.0,
+            "Step-up/collision displacement cannot create Weaving work on an axis with no requested movement");
+        double clipped=WearPredicates.weavingRealizedBenefit(1.0,0.0,0.0,0.1,0.0,0.0);
+        h.assertTrue(Math.abs(clipped-0.05)<EPS,
+            "Collision-limited movement charges only the realized fraction of the possible Weaving benefit");
+        h.succeed();
+    }
 }
