@@ -95,6 +95,10 @@ public final class WearEngineTests {
         p.setItemSlot(EquipmentSlot.CHEST,chest);
         var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;ledger.setArmor(new MobEffectInstance(MobEffects.STRENGTH,-1,0));
         for(int i=0;i<20;i++)p.tick();
+        // A detached mock player falls while we advance its attack ticker. Pin this holdout to the
+        // ordinary non-critical path so the only variable under test is the pre-reset cooldown.
+        p.fallDistance=0.0;
+        p.setOnGround(true);
         float attackStrength=p.getAttackStrengthScale(0.5F);
         h.assertTrue(attackStrength>0.99F,"Fixture reaches a fully charged attack before the hit");
         var strength=p.getEffect(MobEffects.STRENGTH);
