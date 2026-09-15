@@ -21,11 +21,18 @@ dependencies {
     minecraft 'com.mojang:minecraft:26.2'
     implementation 'net.fabricmc:fabric-loader:0.19.5'
     implementation 'net.fabricmc.fabric-api:fabric-api:0.159.0+26.2'
-    clingingCompat 'maven.modrinth:gravity-changer-unofficial-port:vpktEkWn'
-    clingingCompat 'maven.modrinth:alexs-mobs-continued:fL9nXI68'
-    clingingCompat 'maven.modrinth:codxlib:BwANM3tR'
-    clingingCompat 'maven.modrinth:cloth-config:Nv3xnWXd'
-    clingingCompat 'maven.modrinth:bedrockify:4pyW4Uba'
+
+    // Exact potion/effect contributors and runtime dependencies from VanillaPlus-26.2.
+    clingingCompat 'maven.modrinth:Ga4QXUXC:HuSyysEm'
+    clingingCompat 'maven.modrinth:uinQkPFd:fn3HnOIt'
+    clingingCompat 'maven.modrinth:xsyTjFDs:I5dH2wW6'
+    clingingCompat 'maven.modrinth:9s6osm5g:Ie0AMlex'
+    clingingCompat 'maven.modrinth:oFcZaJUN:OmAV9ct6'
+    clingingCompat 'maven.modrinth:POQ2i9zu:rJBCX3gG'
+    clingingCompat 'maven.modrinth:G1hIVOrD:SmfwDCLg'
+    clingingCompat 'maven.modrinth:AtHRJSUW:TVkz6cZh'
+    clingingCompat 'maven.modrinth:9KawNmQc:Ak4sHFuc'
+    clingingCompat 'maven.modrinth:nHr26oc2:GteyPhns'
 }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
