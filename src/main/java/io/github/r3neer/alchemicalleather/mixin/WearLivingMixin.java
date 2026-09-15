@@ -74,6 +74,9 @@ public abstract class WearLivingMixin {
     private static boolean wouldNeedWaterBreathing(LivingEntity self){
         if(self.canBreatheUnderwater())return false;
         if(self instanceof Player player&&player.getAbilities().invulnerable)return false;
+        // In 26.2 Conduit Power and Breath of the Nautilus independently satisfy vanilla's
+        // water-breathing gate. If either is present, Water Breathing is not the but-for cause.
+        if(self.hasEffect(MobEffects.CONDUIT_POWER)||self.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS))return false;
         if(!self.isEyeInFluid(FluidTags.WATER))return false;
         BlockPos eye=BlockPos.containing(self.getX(),self.getEyeY(),self.getZ());
         return !self.level().getBlockState(eye).is(Blocks.BUBBLE_COLUMN);
