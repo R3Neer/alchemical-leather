@@ -64,7 +64,7 @@ public abstract class WearLivingMixin {
 
         var falling=self.getEffect(MobEffects.SLOW_FALLING);
         if(falling!=null&&!self.onGround()&&!self.isPassenger()&&!self.isInWater()&&!self.isInLava()
-            &&!self.hasEffect(MobEffects.LEVITATION)&&self.getDeltaMovement().y<0.0)
+            &&WearPredicates.slowFallingChangesGravity(self.getGravity(),self.getDeltaMovement().y))
             InfusionWear.emitBuiltin(self,falling.getEffect(),SLOW_FALLING,1.0);
     }
 
