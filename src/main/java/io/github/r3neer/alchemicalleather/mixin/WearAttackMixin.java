@@ -10,7 +10,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,15 +26,25 @@ public abstract class WearAttackMixin {
     /**
      * Player#attack captures attackStrengthScale before onAttack() resets the attack ticker. The
      * hurtOrSimulate call happens after that reset, so reading getAttackStrengthScale() from the
-     * wrapper would reconstruct the wrong damage scale. Preserve the exact pre-reset value here.
+     * wrapper would reconstruct the wrong damage scale. The critical bit is filled from vanilla's
+     * own canCriticalAttack decision before the damage call.
      */
     @Unique private AttackContext alchemical$attackContext;
-    @Unique private record AttackContext(float strengthScale,boolean attributeDriven){}
+    @Unique private record AttackContext(float strengthScale,boolean attributeDriven,boolean critical){}
 
     @Inject(method="attack",at=@At("HEAD"))
     private void alchemical$captureAttackContext(Entity target,CallbackInfo ci){
         var self=(Player)(Object)this;
-        alchemical$attackContext=new AttackContext(self.getAttackStrengthScale(0.5F),!self.isAutoSpinAttack());
+        alchemical$attackContext=new AttackContext(self.getAttackStrengthScale(0.5F),!self.isAutoSpinAttack(),false);
+    }
+
+    @WrapOperation(method="attack",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/player/Player;canCriticalAttack(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean alchemical$captureCriticalDecision(Player instance,Entity target,Operation<Boolean> original){
+        boolean critical=original.call(instance,target);
+        var context=alchemical$attackContext;
+        if(context!=null)alchemical$attackContext=new AttackContext(context.strengthScale(),context.attributeDriven(),critical);
+        return critical;
     }
 
     @WrapOperation(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/Entity;hurtOrSimulate(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
@@ -50,9 +59,7 @@ public abstract class WearAttackMixin {
         if(context!=null&&context.attributeDriven()){
             float attackStrength=context.strengthScale();
             double scale=0.2D+attackStrength*attackStrength*0.8D;
-            boolean critical=attackStrength>0.9F&&self.fallDistance>0.0F&&!self.onGround()&&!self.onClimbable()
-                &&!self.isInWater()&&!self.isMobilityRestricted()&&!self.isPassenger()&&target instanceof LivingEntity&&!self.isSprinting();
-            if(critical)scale*=1.5D;
+            if(context.critical())scale*=1.5D;
 
             var strength=self.getEffect(MobEffects.STRENGTH);
             if(strength!=null){
