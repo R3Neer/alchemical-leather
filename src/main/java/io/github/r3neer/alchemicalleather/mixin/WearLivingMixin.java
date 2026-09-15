@@ -1,17 +1,17 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import io.github.r3neer.alchemicalleather.effect.WearPredicates;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffectUtil;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -138,13 +138,29 @@ public abstract class WearLivingMixin {
         }
     }
 
+    /**
+     * Wrap the exact water-breathing query inside LivingEntity#baseTick. Reaching this call means
+     * the eyes are submerged, the eye block is not a bubble column, and natural underwater
+     * breathing has already failed. We still exclude creative invulnerability and independent
+     * Conduit/Nautilus breathing because those make Water Breathing non-causal.
+     */
+    @WrapOperation(method="baseTick",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/effect/MobEffectUtil;hasWaterBreathing(Lnet/minecraft/world/entity/LivingEntity;)Z"))
+    private boolean alchemical$waterBreathingDecision(LivingEntity entity,Operation<Boolean> original){
+        boolean breathes=original.call(entity);
+        if(!breathes||entity.level().isClientSide())return breathes;
+        var effect=entity.getEffect(MobEffects.WATER_BREATHING);
+        if(effect==null)return breathes;
+        boolean creative=entity instanceof Player player&&player.getAbilities().invulnerable;
+        boolean alternate=entity.hasEffect(MobEffects.CONDUIT_POWER)||entity.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
+        if(!creative&&!alternate)InfusionWear.emitBuiltin(entity,effect.getEffect(),WATER_BREATHING,1.0);
+        return breathes;
+    }
+
     @Inject(method="tick",at=@At("RETURN"))
     private void alchemical$environmentalWear(CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
         if(self.level().isClientSide()||!self.isAlive())return;
-
-        var breathing=self.getEffect(MobEffects.WATER_BREATHING);
-        if(breathing!=null&&wouldNeedWaterBreathing(self))InfusionWear.emitBuiltin(self,breathing.getEffect(),WATER_BREATHING,1.0);
 
         var falling=self.getEffect(MobEffects.SLOW_FALLING);
         boolean creativeFlying=self instanceof Player player&&player.getAbilities().flying;
@@ -168,20 +184,5 @@ public abstract class WearLivingMixin {
         double contribution=EffectAttributes.contribution(self,Attributes.MOVEMENT_SPEED,effect);
         double work=WearPredicates.movementSpeedWork(distance,contribution,effect.getAmplifier(),beneficial);
         if(work>0.0)InfusionWear.emitBuiltin(self,effect.getEffect(),MOVEMENT,work);
-    }
-
-    private static boolean wouldNeedWaterBreathing(LivingEntity self){
-        boolean natural=self.canBreatheUnderwater();
-        boolean creative=self instanceof Player player&&player.getAbilities().invulnerable;
-        // In 26.2 Conduit Power and Breath of the Nautilus independently satisfy vanilla's
-        // water-breathing gate. If either is present, Water Breathing is not the but-for cause.
-        boolean alternate=self.hasEffect(MobEffects.CONDUIT_POWER)||self.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
-        boolean submerged=self.isEyeInFluid(FluidTags.WATER);
-        boolean bubble=false;
-        if(submerged){
-            BlockPos eye=BlockPos.containing(self.getX(),self.getEyeY(),self.getZ());
-            bubble=self.level().getBlockState(eye).is(Blocks.BUBBLE_COLUMN);
-        }
-        return WearPredicates.waterBreathingNeeded(natural,creative,alternate,submerged,bubble);
     }
 }
