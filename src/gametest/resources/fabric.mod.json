@@ -19,6 +19,7 @@
       "io.github.r3neer.alchemicalleather.test.BetaFeatureTests",
       "io.github.r3neer.alchemicalleather.effect.WearEngineTests",
       "io.github.r3neer.alchemicalleather.effect.PotionCoverageTests",
+      "io.github.r3neer.alchemicalleather.effect.CompanionWearBridgeTests",
       "io.github.r3neer.alchemicalleather.effect.WearPredicatesTests",
       "io.github.r3neer.alchemicalleather.effect.WearOwnershipTests",
       "io.github.r3neer.alchemicalleather.effect.WearCombatTests",
