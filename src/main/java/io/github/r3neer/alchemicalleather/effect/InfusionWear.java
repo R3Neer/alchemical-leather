@@ -70,8 +70,10 @@ public final class InfusionWear {
 
     /**
      * Applies the explicit alchemical cost past ItemStack#isDamageableItem, then rejoins vanilla at
-     * its terminal applyDamage path. This preserves vanilla's durability criterion, clamping,
-     * shrink-on-break and equipment-break callback without re-enabling ordinary durability sources.
+     * its terminal applyDamage path. Vanilla normally performs the criterion, clamping and break
+     * callback there. A durability-disabling mod may still make ItemStack#isBroken return false,
+     * so a final component-level break check completes only the break that vanilla was prevented
+     * from observing; ordinary durability sources remain disabled.
      */
     static void damageArmorDirectly(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
         if(amount<=0||stack.isEmpty()||stack.getMaxDamage()<=0)return;
@@ -79,7 +81,14 @@ public final class InfusionWear {
         long rawDamage=(long)stack.getDamageValue()+amount;
         int newDamage=(int)Math.min(Integer.MAX_VALUE,rawDamage);
         ServerPlayer player=wearer instanceof ServerPlayer sp?sp:null;
+        var brokenItem=stack.getItem();
         ((ItemStackDamageAccess)(Object)stack).alchemical$applyDamage(
             newDamage,player,broken->wearer.onEquippedItemBroken(broken,slot));
+        // Enchancement's disableDurability makes isDamageableItem/isBroken false globally. In that
+        // environment applyDamage still updates DAMAGE but deliberately cannot notice the break.
+        if(!stack.isEmpty()&&stack.getMaxDamage()>0&&stack.getDamageValue()>=stack.getMaxDamage()){
+            stack.shrink(1);
+            wearer.onEquippedItemBroken(brokenItem,slot);
+        }
     }
 }
