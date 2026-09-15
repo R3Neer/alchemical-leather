@@ -1,9 +1,11 @@
 package io.github.r3neer.alchemicalleather.effect;
 
+import io.github.r3neer.alchemicalleather.data.EffectSlotRules;
 import io.github.r3neer.alchemicalleather.mixin.EffectAccess;
 import io.github.r3neer.alchemicalleather.mixin.LivingEffectsAccess;
 import java.util.*;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.*;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -57,7 +59,11 @@ public final class EffectLedger {
     }
 
     /** Legacy/test helper: production callers should always identify the owning equipment slot. */
-    public void setArmor(MobEffectInstance armor){setArmor(EquipmentSlot.CHEST,armor);}
+    public void setArmor(MobEffectInstance armor){
+        var id=BuiltInRegistries.MOB_EFFECT.getKey(armor.getEffect().value());
+        var slot=id==null?null:EffectSlotRules.slot(id);
+        setArmor(slot==null?EquipmentSlot.CHEST:slot,armor);
+    }
 
     public void setArmor(EquipmentSlot slot,MobEffectInstance armor){
         var entry=entries.get(armor.getEffect());
