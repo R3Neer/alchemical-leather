@@ -13,11 +13,10 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Generic causal accounting for vanilla damage prevention and knockback resistance. */
 @Mixin(LivingEntity.class)
@@ -66,19 +65,27 @@ public abstract class WearDamageMixin {
         return active;
     }
 
-    /* 26.2 funnels contextual knockback through this overload. The simple helper delegates here. */
-    @Inject(method="knockback",at=@At("HEAD"))
-    private void alchemical$knockback(double power,double xd,double zd,DamageSource source,float damage,boolean blocked,CallbackInfo ci){
-        var self=(LivingEntity)(Object)this;
+    /**
+     * Vanilla applies KNOCKBACK_RESISTANCE exactly when this attribute value is read inside the
+     * three-argument knockback method. Metering here means cancelled/redirected knockback paths
+     * that never reach the vanilla resistance calculation cannot create alchemical wear.
+     */
+    @WrapOperation(method="knockback(DDD)V",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;getAttributeValue(Lnet/minecraft/core/Holder;)D"))
+    private double alchemical$knockbackResistanceValue(LivingEntity instance,Holder<Attribute> attribute,
+                                                       Operation<Double> original,double power,double xd,double zd){
+        double withResistance=original.call(instance,attribute);
+        if(power<=0.0||!attribute.equals(Attributes.KNOCKBACK_RESISTANCE))return withResistance;
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
-        if(holder.isEmpty()||power<=0)return;
-        var effect=self.getEffect(holder.get());if(effect==null)return;
+        if(holder.isEmpty())return withResistance;
+        var effect=instance.getEffect(holder.get());
+        if(effect==null)return withResistance;
 
-        double withResistance=self.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
-        double withoutResistance=EffectAttributes.without(self,Attributes.KNOCKBACK_RESISTANCE,effect);
+        double withoutResistance=EffectAttributes.without(instance,Attributes.KNOCKBACK_RESISTANCE,effect);
         double withMultiplier=Math.max(0.0D,1.0D-withResistance);
         double withoutMultiplier=Math.max(0.0D,1.0D-withoutResistance);
         double prevented=power*Math.max(0.0D,withoutMultiplier-withMultiplier);
-        if(prevented>0)InfusionWear.emitBuiltin(self,effect.getEffect(),KNOCKBACK_REDUCED,prevented);
+        if(prevented>0.0)InfusionWear.emitBuiltin(instance,effect.getEffect(),KNOCKBACK_REDUCED,prevented);
+        return withResistance;
     }
 }
