@@ -1,10 +1,12 @@
 package io.github.r3neer.alchemicalleather.effect;
 
 import com.google.gson.JsonParser;
+import com.mojang.util.Unit;
 import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
 import java.util.*;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.effect.*;
@@ -45,6 +47,20 @@ public final class WearEngineTests {
         var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;ledger.setArmor(new MobEffectInstance(MobEffects.JUMP_BOOST,-1));
         for(int i=0;i<16;i++)InfusionWear.emitBuiltin(p,MobEffects.JUMP_BOOST,JUMP,1.0);
         h.assertTrue(p.getItemBySlot(EquipmentSlot.LEGS).isEmpty(),"Alchemical wear reaches zero and breaks the armor instead of stopping at one durability");
+        h.succeed();
+    }
+
+    @GameTest public void explicitUnbreakableArmorIsNotBypassed(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
+        var effectId=Identifier.withDefaultNamespace("jump_boost");
+        leggings.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
+        leggings.set(DataComponents.UNBREAKABLE,Unit.INSTANCE);
+        p.setItemSlot(EquipmentSlot.LEGS,leggings);
+        var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;ledger.setArmor(new MobEffectInstance(MobEffects.JUMP_BOOST,-1));
+        h.assertFalse(InfusionWear.hasVanillaDamageBar(leggings),"Vanilla UNBREAKABLE remains authoritative over the compatibility bypass");
+        for(int i=0;i<64;i++)InfusionWear.emitBuiltin(p,MobEffects.JUMP_BOOST,JUMP,1.0);
+        h.assertTrue(leggings.getDamageValue()==0&&!leggings.has(Infusions.WEAR_TYPE),"Unbreakable infused armor accumulates neither damage nor hidden alchemical debt");
         h.succeed();
     }
 
