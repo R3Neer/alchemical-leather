@@ -46,7 +46,7 @@ public final class PotionCoverageTests {
         assertPolicy(h,"friendsandfoes:reach",EquipmentSlot.CHEST,false);
         assertPolicy(h,"wilderwild:reach_boost",EquipmentSlot.CHEST,false);
         assertPolicy(h,"wilderwild:scorching",EquipmentSlot.CHEST,false);
-        if(FabricLoader.getInstance().isModLoaded("deeper_dark")){
+        if(FabricLoader.getInstance().isModLoaded("mr_deeper_dark")){
             Identifier blindness=Identifier.parse("minecraft:blindness");
             h.assertTrue(EffectSlotRules.slot(blindness)==EquipmentSlot.HEAD,"Deeper Dark blindness potion must activate the helmet slot rule");
             var rule=WearRules.rule(blindness);
