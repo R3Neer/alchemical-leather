@@ -64,6 +64,27 @@ public final class WearEngineTests {
         h.succeed();
     }
 
+    @GameTest public void fireResistancePaysOnlyWhenItsVanillaBranchRejectsFireDamage(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var chest=new ItemStack(Items.LEATHER_CHESTPLATE);
+        var effectId=Identifier.withDefaultNamespace("fire_resistance");
+        chest.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
+        p.setItemSlot(EquipmentSlot.CHEST,chest);
+        var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;ledger.setArmor(new MobEffectInstance(MobEffects.FIRE_RESISTANCE,-1));
+        h.assertTrue(p.hasEffect(MobEffects.FIRE_RESISTANCE),"Armor projection supplies Fire Resistance for the causal hook");
+
+        p.setInvulnerable(true);
+        p.hurtServer(h.getLevel(),h.getLevel().damageSources().inFire(),16.0F);
+        h.assertTrue(chest.getDamageValue()==0&&!chest.has(Infusions.WEAR_TYPE),
+            "General invulnerability returns before the Fire Resistance query and must not create wear");
+
+        p.setInvulnerable(false);
+        boolean accepted=p.hurtServer(h.getLevel(),h.getLevel().damageSources().inFire(),16.0F);
+        h.assertFalse(accepted,"Fire Resistance rejects the fire hit at its vanilla decision point");
+        h.assertTrue(chest.getDamageValue()==1,"The rejected 16-point fire hit pays exactly one configured durability");
+        h.succeed();
+    }
+
     @GameTest public void strongerExternalEffectPreventsArmorWear(GameTestHelper h){
         var p=h.makeMockPlayer(GameType.SURVIVAL);
         var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
