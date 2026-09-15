@@ -1,8 +1,7 @@
 import groovy.json.JsonSlurper
 
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.20' }
-repositories { mavenCentral(); maven { url = 'https://api.modrinth.com/maven' } }
-configurations { clingingCompat }
+repositories { mavenCentral() }
 loom {
     splitEnvironmentSourceSets()
     mods { alchemical_leather { sourceSet sourceSets.main; sourceSet sourceSets.client } }
@@ -21,18 +20,6 @@ dependencies {
     minecraft 'com.mojang:minecraft:26.2'
     implementation 'net.fabricmc:fabric-loader:0.19.5'
     implementation 'net.fabricmc.fabric-api:fabric-api:0.159.0+26.2'
-
-    // Exact potion/effect contributors and runtime dependencies from VanillaPlus-26.2.
-    clingingCompat 'maven.modrinth:Ga4QXUXC:HuSyysEm'
-    clingingCompat 'maven.modrinth:uinQkPFd:fn3HnOIt'
-    clingingCompat 'maven.modrinth:xsyTjFDs:I5dH2wW6'
-    clingingCompat 'maven.modrinth:9s6osm5g:Ie0AMlex'
-    clingingCompat 'maven.modrinth:oFcZaJUN:OmAV9ct6'
-    clingingCompat 'maven.modrinth:POQ2i9zu:rJBCX3gG'
-    clingingCompat 'maven.modrinth:G1hIVOrD:SmfwDCLg'
-    clingingCompat 'maven.modrinth:AtHRJSUW:TVkz6cZh'
-    clingingCompat 'maven.modrinth:9KawNmQc:Ak4sHFuc'
-    clingingCompat 'maven.modrinth:nHr26oc2:GteyPhns'
 }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
@@ -64,9 +51,5 @@ tasks.register('verifyGameTestEntrypoints') {
     }
 }
 tasks.named('check') { dependsOn tasks.named('verifyGameTestEntrypoints') }
-tasks.register('prepareClingingCompat', Sync) {
-    from configurations.clingingCompat
-    into layout.buildDirectory.dir('clingingCompat')
-}
 
 jar { from('LICENSE') { rename { "${it}_alchemical-leather" } } }
