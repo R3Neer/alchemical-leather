@@ -72,13 +72,22 @@ public abstract class WearLivingMixin {
     }
 
     private static boolean wouldNeedWaterBreathing(LivingEntity self){
-        if(self.canBreatheUnderwater())return false;
-        if(self instanceof Player player&&player.getAbilities().invulnerable)return false;
+        boolean natural=self.canBreatheUnderwater();
+        boolean creative=self instanceof Player player&&player.getAbilities().invulnerable;
         // In 26.2 Conduit Power and Breath of the Nautilus independently satisfy vanilla's
         // water-breathing gate. If either is present, Water Breathing is not the but-for cause.
-        if(self.hasEffect(MobEffects.CONDUIT_POWER)||self.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS))return false;
-        if(!self.isEyeInFluid(FluidTags.WATER))return false;
-        BlockPos eye=BlockPos.containing(self.getX(),self.getEyeY(),self.getZ());
-        return !self.level().getBlockState(eye).is(Blocks.BUBBLE_COLUMN);
+        boolean alternate=self.hasEffect(MobEffects.CONDUIT_POWER)||self.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
+        boolean submerged=self.isEyeInFluid(FluidTags.WATER);
+        boolean bubble=false;
+        if(submerged){
+            BlockPos eye=BlockPos.containing(self.getX(),self.getEyeY(),self.getZ());
+            bubble=self.level().getBlockState(eye).is(Blocks.BUBBLE_COLUMN);
+        }
+        return alchemical$waterBreathingNeeded(natural,creative,alternate,submerged,bubble);
+    }
+
+    /** Pure holdout seam for the vanilla drowning gate; kept package-visible for GameTests. */
+    static boolean alchemical$waterBreathingNeeded(boolean natural,boolean creative,boolean alternate,boolean submerged,boolean bubble){
+        return !natural&&!creative&&!alternate&&submerged&&!bubble;
     }
 }
