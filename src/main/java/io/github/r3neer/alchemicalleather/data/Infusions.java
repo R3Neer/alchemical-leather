@@ -58,7 +58,11 @@ public final class Infusions {
     }
     public static AnimalResolution resolveHumanoid(PotionContents contents,Item bottle,EquipmentSlot target) {
         var all=resolveAll(contents,bottle);if(!all.ok())return all;
-        for(var infusion:all.infusion().effects())if(EffectSlotRules.slot(infusion.effect())!=target)return new AnimalResolution(null,"slot");
+        var seen=new HashSet<Identifier>();
+        for(var infusion:all.infusion().effects()){
+            if(EffectSlotRules.slot(infusion.effect())!=target)return new AnimalResolution(null,"slot");
+            if(!seen.add(infusion.effect()))return new AnimalResolution(null,"duplicate_effect");
+        }
         return all;
     }
     public static Resolution resolve(PotionContents contents,Item bottle) {
