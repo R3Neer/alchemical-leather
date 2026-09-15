@@ -9,6 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -21,19 +22,20 @@ public final class CompanionWearBridgeTests {
         Identifier effectId=Identifier.parse("clinging_reoriented:reorientation");
         var effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
         var player=h.makeMockServerPlayerInLevel();
-        var inputBoots=new ItemStack(Items.LEATHER_BOOTS);
-        inputBoots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
-        player.setItemSlot(EquipmentSlot.FEET,inputBoots);
-
-        // Use the real equipment reconciliation path so the live effect and its owning slot are
-        // established exactly as they are in production. Manually projecting the effect would be
-        // an invalid fixture because wear intentionally refuses to bill an ownerless source.
-        EquipmentInfusions.sync(player);
-        var ledger=EffectLedger.of(player);
+        var boots=new ItemStack(Items.LEATHER_BOOTS);
+        boots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
+        player.setItemSlot(EquipmentSlot.FEET,boots);
         var equippedBoots=player.getItemBySlot(EquipmentSlot.FEET);
-        h.assertTrue(player.hasEffect(effect),"Real equipment sync projects the armor-owned Reorientation effect");
+
+        // GameTest ServerPlayers intentionally have no play connection, so production equipment
+        // reconciliation defers until JOIN. Establish the same slot-aware ledger ownership directly
+        // rather than weakening that connection-safety invariant for a synthetic player.
+        var ledger=EffectLedger.of(player);
+        ledger.equipmentManaged=true;
+        ledger.setArmor(EquipmentSlot.FEET,new MobEffectInstance(effect,-1,0));
+        h.assertTrue(player.hasEffect(effect),"Slot-aware ledger projection exposes the armor-owned Reorientation effect");
         h.assertTrue(ledger.armorEffective(effect),"Reorientation boots are the effective source before the companion event");
-        h.assertTrue(ledger.armorOwner(effect)==EquipmentSlot.FEET,"Real equipment sync attributes Reorientation to the equipped boots");
+        h.assertTrue(ledger.armorOwner(effect)==EquipmentSlot.FEET,"The projected Reorientation source is explicitly owned by the equipped boots");
 
         Class<?> bridge=Class.forName("io.github.r3neer.clingingreoriented.compat.AlchemicalLeatherCompat");
         var successfulTurn=bridge.getMethod("successfulTurn",ServerPlayer.class);
