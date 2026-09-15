@@ -49,11 +49,38 @@ public final class WearPredicatesTests {
         h.assertFalse(WearPredicates.movementSpeedGroundEligible(false,true,false,false,true,1.0),
             "Elytra travel is not movement-speed work");
         h.assertFalse(WearPredicates.movementSpeedGroundEligible(false,false,true,false,true,1.0),
-            "Water travel uses a separate movement path and is not charged by the ground detector");
+            "Water travel is handled only by its causal Depth Strider bridge");
         h.assertFalse(WearPredicates.movementSpeedGroundEligible(false,false,false,true,true,1.0),
             "Lava travel uses a separate movement path and is not charged by the ground detector");
         h.assertFalse(WearPredicates.movementSpeedGroundEligible(false,false,false,false,true,0.0),
             "Passive displacement without input must not pay");
+        h.succeed();
+    }
+
+    @GameTest public void waterMovementOnlyPaysWhenMovementSpeedActuallyFeedsSwimming(GameTestHelper h){
+        h.assertFalse(WearPredicates.movementSpeedWaterEligible(false,false,true,0.0,1.0),
+            "Swimming without Water Movement Efficiency does not use MOVEMENT_SPEED");
+        h.assertTrue(WearPredicates.movementSpeedWaterEligible(false,false,true,1.0/3.0,1.0),
+            "Depth Strider bridges MOVEMENT_SPEED into swimming and makes Speed/Slowness causal");
+        h.assertFalse(WearPredicates.movementSpeedWaterEligible(true,false,true,1.0,1.0),
+            "Passenger transport must not become swimming wear");
+        h.assertFalse(WearPredicates.movementSpeedWaterEligible(false,true,true,1.0,1.0),
+            "Fall-flying is never charged through the water detector");
+        h.assertFalse(WearPredicates.movementSpeedWaterEligible(false,false,true,1.0,0.0),
+            "Water currents without voluntary horizontal input do not count");
+
+        double drag=WearPredicates.waterMovementDrag(false,0.8,1.0,false,false);
+        double expectedDrag=0.8+(0.54600006-0.8)*0.5;
+        h.assertTrue(Math.abs(drag-expectedDrag)<EPS,
+            "Airborne Depth Strider efficiency must be halved exactly like vanilla water travel");
+        h.assertTrue(Math.abs(WearPredicates.waterMovementDrag(false,0.8,1.0,false,true)-0.96)<EPS,
+            "Dolphin's Grace overrides horizontal water drag after Depth Strider blending");
+
+        double limit=WearPredicates.waterImpulseDistanceLimit(4.0,0.0,4.02,0.0,0.8);
+        h.assertTrue(Math.abs(limit-0.1)<EPS,
+            "Existing current/knockback momentum must cancel from the water self-propulsion bound");
+        h.assertTrue(Math.abs(WearPredicates.attributableMovementDistance(4.0,limit)-0.1)<EPS,
+            "Large water displacement cannot be charged beyond the player's own swim impulse");
         h.succeed();
     }
 
