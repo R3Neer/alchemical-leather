@@ -2,12 +2,15 @@ package io.github.r3neer.alchemicalleather.effect;
 
 import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /** Server-authoritative conversion of attributable effect work into ordinary armor durability damage. */
@@ -46,7 +49,10 @@ public final class InfusionWear {
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
-        if(stack.isEmpty()||!stack.isDamageableItem())return;
+        // Do not use isDamageableItem() here. Enchancement deliberately makes that return false
+        // when its global durability switch is disabled, but alchemical wear is an explicit cost
+        // that must still consume the item's ordinary DAMAGE/MAX_DAMAGE bar and be able to break it.
+        if(stack.isEmpty()||stack.getMaxDamage()<=0)return;
         var progress=stack.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
         double total=progress.work(effect)+addedWork;
         int damage=(int)Math.floor(total/rule.workPerDamage());
@@ -54,12 +60,30 @@ public final class InfusionWear {
         if(damage<=0){
             var next=progress.with(effect,total);if(next.isEmpty())stack.remove(Infusions.WEAR_TYPE);else stack.set(Infusions.WEAR_TYPE,next);return;
         }
-        stack.hurtAndBreak(damage,wearer,slot);
+        damageArmorDirectly(stack,wearer,slot,damage);
         if(stack.isEmpty()){
             EquipmentInfusions.sync(wearer);
             return;
         }
         var next=progress.with(effect,remaining);
         if(next.isEmpty())stack.remove(Infusions.WEAR_TYPE);else stack.set(Infusions.WEAR_TYPE,next);
+    }
+
+    /**
+     * Applies the explicit alchemical durability cost without consulting ItemStack#isDamageableItem.
+     * This mirrors vanilla's final damage/break path while remaining compatible with mods that make
+     * ordinary durability globally inert. It does not make the item damageable for any other source.
+     */
+    static void damageArmorDirectly(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
+        if(amount<=0||stack.isEmpty()||stack.getMaxDamage()<=0)return;
+        if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
+        int newDamage=Math.min(Integer.MAX_VALUE,stack.getDamageValue()+amount);
+        if(wearer instanceof ServerPlayer player)CriteriaTriggers.ITEM_DURABILITY_CHANGED.trigger(player,stack,newDamage);
+        stack.setDamageValue(newDamage);
+        if(newDamage>=stack.getMaxDamage()){
+            Item broken=stack.getItem();
+            stack.shrink(1);
+            wearer.onEquippedItemBroken(broken,slot);
+        }
     }
 }
