@@ -61,6 +61,36 @@ public final class WearEngineTests {
         h.succeed();
     }
 
+    @GameTest public void equalExternalEffectWinsTiesAndPreventsArmorWear(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
+        var effectId=Identifier.withDefaultNamespace("jump_boost");
+        leggings.set(Infusions.TYPE,new Infusion(effectId,0,"timed",600));
+        p.setItemSlot(EquipmentSlot.LEGS,leggings);
+        var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;
+        ledger.setArmor(new MobEffectInstance(MobEffects.JUMP_BOOST,600,0));
+        ledger.externalAdd(new MobEffectInstance(MobEffects.JUMP_BOOST,600,0),true);ledger.reconcile();
+        h.assertFalse(ledger.armorEffective(MobEffects.JUMP_BOOST),"Equal amplifier and equal duration resolve to the external source");
+        for(int i=0;i<32;i++)InfusionWear.emitBuiltin(p,MobEffects.JUMP_BOOST,JUMP,1.0);
+        h.assertTrue(leggings.getDamageValue()==0,"Equal winning external source prevents duplicate armor wear");
+        h.succeed();
+    }
+
+    @GameTest public void longerArmorSourceMayStillBeEffectiveAtEqualAmplifier(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
+        var effectId=Identifier.withDefaultNamespace("jump_boost");
+        leggings.set(Infusions.TYPE,new Infusion(effectId,0,"timed",1200));
+        p.setItemSlot(EquipmentSlot.LEGS,leggings);
+        var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;
+        ledger.setArmor(new MobEffectInstance(MobEffects.JUMP_BOOST,1200,0));
+        ledger.externalAdd(new MobEffectInstance(MobEffects.JUMP_BOOST,600,0),true);ledger.reconcile();
+        h.assertTrue(ledger.armorEffective(MobEffects.JUMP_BOOST),"At equal amplifier the longer armor source remains the projected source");
+        for(int i=0;i<16;i++)InfusionWear.emitBuiltin(p,MobEffects.JUMP_BOOST,JUMP,1.0);
+        h.assertTrue(leggings.getDamageValue()==1,"Effective longer armor source pays its own causal wear");
+        h.succeed();
+    }
+
     @GameTest public void turtleMasterBecomesAtomicHumanoidBundle(GameTestHelper h){
         var contents=new PotionContents(Optional.empty(),Optional.empty(),List.of(
             new MobEffectInstance(MobEffects.SLOWNESS,400,3),new MobEffectInstance(MobEffects.RESISTANCE,400,2)),Optional.empty());
