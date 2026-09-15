@@ -42,6 +42,26 @@ public final class WearRuleValidationTests {
         h.succeed();
     }
 
+    @GameTest public void coercibleJsonTypesAreStillMalformed(GameTestHelper h){
+        h.assertTrue(throwsIllegal(() -> WearRules.parse(JsonParser.parseString("""
+            {"work_per_damage":"16","sources":[{"type":"builtin","detector":"alchemical_leather:jump_boost_jump"}]}
+            """).getAsJsonObject())),
+            "Numeric strings do not masquerade as numeric work thresholds");
+        h.assertTrue(throwsIllegal(() -> WearRules.parse(JsonParser.parseString("""
+            {"work_per_damage":16,"sources":[{"type":"builtin","detector":"alchemical_leather:jump_boost_jump","work":"2"}]}
+            """).getAsJsonObject())),
+            "Source weights must be JSON numbers rather than coercible strings");
+        h.assertTrue(throwsIllegal(() -> WearRules.parse(JsonParser.parseString("""
+            {"enabled":"false","wear":"none"}
+            """).getAsJsonObject())),
+            "enabled metadata must be a real JSON boolean");
+        h.assertTrue(throwsIllegal(() -> WearRules.parse(JsonParser.parseString("""
+            {"requires_mod":42,"wear":"none"}
+            """).getAsJsonObject())),
+            "Conditional mod ids must be JSON strings");
+        h.succeed();
+    }
+
     private static boolean throwsIllegal(Runnable action){
         try{action.run();return false;}catch(IllegalArgumentException expected){return true;}
     }
