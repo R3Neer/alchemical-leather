@@ -2,6 +2,7 @@ package io.github.r3neer.alchemicalleather.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import io.github.r3neer.alchemicalleather.effect.ReachWear;
 import net.minecraft.resources.Identifier;
@@ -32,15 +33,22 @@ public abstract class WearAttackMixin {
             &&!self.isInWater()&&!self.isMobilityRestricted()&&!self.isPassenger()&&target instanceof LivingEntity&&!self.isSprinting();
         if(critical)scale*=1.5D;
 
-        emit(self,self.getEffect(MobEffects.STRENGTH),3.0D,scale,totalDamage);
-        emit(self,self.getEffect(MobEffects.WEAKNESS),4.0D,scale,Double.POSITIVE_INFINITY);
+        var strength=self.getEffect(MobEffects.STRENGTH);
+        if(strength!=null){
+            double contribution=Math.max(0.0D,EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,strength));
+            emit(self,strength,contribution*scale,totalDamage);
+        }
+        var weakness=self.getEffect(MobEffects.WEAKNESS);
+        if(weakness!=null){
+            double suppression=Math.max(0.0D,-EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,weakness));
+            emit(self,weakness,suppression*scale,Double.POSITIVE_INFINITY);
+        }
         ReachWear.emit(self,Attributes.ENTITY_INTERACTION_RANGE,target.getBoundingBox().distanceToSqr(self.getEyePosition()));
         return accepted;
     }
 
-    private static void emit(Player player,MobEffectInstance effect,double perLevel,double scale,double cap){
-        if(effect==null)return;
-        double work=perLevel*(effect.getAmplifier()+1.0D)*scale;
+    private static void emit(Player player,MobEffectInstance effect,double work,double cap){
+        if(effect==null||!Double.isFinite(work)||work<=0)return;
         if(Double.isFinite(cap))work=Math.min(work,Math.max(0.0D,cap));
         if(work>0)InfusionWear.emitBuiltin(player,effect.getEffect(),ATTACK_DELTA,work);
     }
