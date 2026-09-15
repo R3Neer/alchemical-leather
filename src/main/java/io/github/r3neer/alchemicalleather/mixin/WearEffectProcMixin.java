@@ -48,7 +48,8 @@ public abstract class WearEffectProcMixin {
         Identifier id=BuiltInRegistries.MOB_EFFECT.getKey(holder.value());
         int beforeSlimes=holder.equals(MobEffects.OOZING)?countSlimes(level,mob):0;
         int beforeWebs=holder.equals(MobEffects.WEAVING)?countWebs(level,mob.blockPosition()):0;
-        int beforeFire=WILDER_SCORCHING.equals(id)?countFire(level,mob.blockPosition()):0;
+        BlockPos scorchingOrigin=WILDER_SCORCHING.equals(id)?mob.getOnPos():null;
+        int beforeFire=scorchingOrigin==null?0:countFire(level,scorchingOrigin);
         original.call(effect,level,mob,amplifier,reason);
         if(reason!=Entity.RemovalReason.KILLED)return;
         if(holder.equals(MobEffects.OOZING)){
@@ -57,8 +58,8 @@ public abstract class WearEffectProcMixin {
             int placed=countWebs(level,mob.blockPosition())-beforeWebs;if(placed>0)InfusionWear.emitBuiltin(mob,holder,PROC,placed);
         }else if(holder.equals(MobEffects.WIND_CHARGED)){
             InfusionWear.emitBuiltin(mob,holder,PROC,1.0);
-        }else if(WILDER_SCORCHING.equals(id)){
-            int placed=countFire(level,mob.blockPosition())-beforeFire;if(placed>0)InfusionWear.emitBuiltin(mob,holder,SCORCHING_FIRE,placed);
+        }else if(WILDER_SCORCHING.equals(id)&&scorchingOrigin!=null){
+            int placed=countFire(level,scorchingOrigin)-beforeFire;if(placed>0)InfusionWear.emitBuiltin(mob,holder,SCORCHING_FIRE,placed);
         }
     }
 
