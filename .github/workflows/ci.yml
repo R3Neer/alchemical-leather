@@ -34,12 +34,9 @@ jobs:
           set -euxo pipefail
           mkdir -p build/ci build/compat-mods build/compat-src
           download_mod() { curl --fail --location --retry 3 --retry-delay 2 "$1" --output "build/compat-mods/$2"; }
-          checkout_exact() {
+          checkout_pinned_main() {
             local repo="$1" sha="$2" dest="$3"
-            git init "$dest"
-            git -C "$dest" remote add origin "$repo"
-            git -C "$dest" fetch --depth 1 origin "$sha"
-            git -C "$dest" checkout --detach FETCH_HEAD
+            git clone --depth 1 --branch main "$repo" "$dest"
             test "$(git -C "$dest" rev-parse HEAD)" = "$sha"
           }
 
@@ -56,8 +53,8 @@ jobs:
           download_mod 'https://cdn.modrinth.com/data/nHr26oc2/versions/GteyPhns/deeper_dark-4.4.1.jar' 'deeper_dark-4.4.1.jar'
 
           # Pin first-party companions to the exact TM-converged commits merged to main.
-          checkout_exact 'https://github.com/R3Neer/clinging-reoriented.git' 'df1cff3a2fb9baf69d3bb8594159681b6966096d' 'build/compat-src/clinging-reoriented'
-          checkout_exact 'https://github.com/R3Neer/scale-brews.git' '7406634902491363ec42007db9be8efefb92e670' 'build/compat-src/scale-brews'
+          checkout_pinned_main 'https://github.com/R3Neer/clinging-reoriented.git' 'df1cff3a2fb9baf69d3bb8594159681b6966096d' 'build/compat-src/clinging-reoriented'
+          checkout_pinned_main 'https://github.com/R3Neer/scale-brews.git' '74066349eb33872d1f2b8584dfd05ffd96eae0f8' 'build/compat-src/scale-brews'
           (cd build/compat-src/clinging-reoriented && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/clinging-build.log
           (cd build/compat-src/scale-brews && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/scale-build.log
           find build/compat-src/clinging-reoriented/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/compat-mods/ \;
