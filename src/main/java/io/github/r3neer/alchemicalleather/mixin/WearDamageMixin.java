@@ -1,12 +1,16 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -34,15 +38,22 @@ public abstract class WearDamageMixin {
         if(prevented>0)InfusionWear.emitBuiltin(self,resistance.getEffect(),DAMAGE_PREVENTED,prevented);
     }
 
-    @Inject(method="hurtServer",at=@At("HEAD"))
-    private void alchemical$fireResistance(ServerLevel level,DamageSource source,float damage,CallbackInfoReturnable<Boolean> cir){
-        var self=(LivingEntity)(Object)this;
-        var resistance=self.getEffect(MobEffects.FIRE_RESISTANCE);
-        if(resistance==null||damage<=0||!source.is(DamageTypeTags.IS_FIRE)||self.isDeadOrDying())return;
-        // Vanilla checks base/general invulnerability immediately before the Fire Resistance branch.
-        // If that earlier guard already applies, Fire Resistance is not the causal reason damage disappears.
-        if(self.isInvulnerableTo(level,source))return;
-        InfusionWear.emitBuiltin(self,resistance.getEffect(),DAMAGE_PREVENTED,damage);
+    /**
+     * Wrap the exact Fire Resistance query in hurtServer. Reaching this call means vanilla's
+     * earlier general-invulnerability and dead-entity guards already passed and IS_FIRE was true;
+     * a prior cancellation by another mixin therefore cannot manufacture alchemical work.
+     */
+    @WrapOperation(method="hurtServer",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z",ordinal=0))
+    private boolean alchemical$fireResistanceDecision(LivingEntity instance,Holder<MobEffect> effect,
+                                                      Operation<Boolean> original,ServerLevel level,
+                                                      DamageSource source,float damage){
+        boolean active=original.call(instance,effect);
+        if(active&&effect.equals(MobEffects.FIRE_RESISTANCE)&&damage>0){
+            var resistance=instance.getEffect(MobEffects.FIRE_RESISTANCE);
+            if(resistance!=null)InfusionWear.emitBuiltin(instance,resistance.getEffect(),DAMAGE_PREVENTED,damage);
+        }
+        return active;
     }
 
     /* 26.2 funnels contextual knockback through this overload. The simple helper delegates here. */
