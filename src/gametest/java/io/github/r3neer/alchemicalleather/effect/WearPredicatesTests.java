@@ -23,7 +23,7 @@ public final class WearPredicatesTests {
         h.succeed();
     }
 
-    @GameTest public void slowFallingOnlyPaysWhenItsClampChangesGravity(GameTestHelper h){
+    @GameTest public void slowFallingOnlyPaysWhenItsGravityPathIsEffective(GameTestHelper h){
         h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,-0.2),
             "Default descending gravity is reduced by Slow Falling");
         h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,0.0),
@@ -36,6 +36,21 @@ public final class WearPredicatesTests {
             "Ascending motion does not use Slow Falling's gravity branch");
         h.assertFalse(WearPredicates.slowFallingChangesGravity(Double.NaN,-0.2),
             "Malformed gravity cannot create wear");
+
+        h.assertTrue(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,false,false),
+            "Descending air travel keeps Slow Falling causal");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,true,false),
+            "Levitation replaces the gravity branch and makes Slow Falling non-causal");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,false,true),
+            "Creative flight restores its own vertical motion instead of retaining Slow Falling gravity");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,true,false,false,false,false,false),
+            "Grounded entities perform no Slow Falling work");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,true,false,false,false,false),
+            "Passenger transport is not charged as wearer Slow Falling work");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,true,false,false,false),
+            "Water travel is outside the metered Slow Falling path");
+        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,true,false,false),
+            "Lava travel is outside the metered Slow Falling path");
         h.succeed();
     }
 
