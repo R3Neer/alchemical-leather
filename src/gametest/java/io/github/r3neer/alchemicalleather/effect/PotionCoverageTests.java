@@ -4,6 +4,7 @@ import io.github.r3neer.alchemicalleather.data.EffectSlotRules;
 import io.github.r3neer.alchemicalleather.data.WearRules;
 import java.util.*;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -37,11 +38,20 @@ public final class PotionCoverageTests {
         h.succeed();
     }
 
-    @GameTest public void loadedFirstPartyCompanionsOwnExpectedCompatibilityPolicy(GameTestHelper h){
+    @GameTest public void loadedVanillaPlusContributorsOwnExpectedCompatibilityPolicy(GameTestHelper h){
         assertPolicy(h,"scalebrews:growth",EquipmentSlot.CHEST,true);
         assertPolicy(h,"scalebrews:shrinking",EquipmentSlot.CHEST,true);
         assertPolicy(h,"clinging_reoriented:reorientation",EquipmentSlot.FEET,false);
         assertPolicy(h,"alexsmobs:clinging",EquipmentSlot.FEET,false);
+        assertPolicy(h,"friendsandfoes:reach",EquipmentSlot.CHEST,false);
+        assertPolicy(h,"wilderwild:reach_boost",EquipmentSlot.CHEST,false);
+        assertPolicy(h,"wilderwild:scorching",EquipmentSlot.CHEST,false);
+        if(FabricLoader.getInstance().isModLoaded("deeper_dark")){
+            Identifier blindness=Identifier.parse("minecraft:blindness");
+            h.assertTrue(EffectSlotRules.slot(blindness)==EquipmentSlot.HEAD,"Deeper Dark blindness potion must activate the helmet slot rule");
+            var rule=WearRules.rule(blindness);
+            h.assertTrue(rule!=null&&rule.none(),"Blindness must remain explicitly classified as wear=none");
+        }
         h.succeed();
     }
 
