@@ -14,38 +14,64 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Attributes accepted melee damage back to Strength/Weakness without charging misses or rejected hits. */
 @Mixin(Player.class)
 public abstract class WearAttackMixin {
     private static final Identifier ATTACK_DELTA=Identifier.fromNamespaceAndPath("alchemical_leather","attack_damage_delta");
 
+    /**
+     * Player#attack captures attackStrengthScale before onAttack() resets the attack ticker. The
+     * hurtOrSimulate call happens after that reset, so reading getAttackStrengthScale() from the
+     * wrapper would reconstruct the wrong damage scale. Preserve the exact pre-reset value here.
+     */
+    @Unique private AttackContext alchemical$attackContext;
+    @Unique private record AttackContext(float strengthScale,boolean attributeDriven){}
+
+    @Inject(method="attack",at=@At("HEAD"))
+    private void alchemical$captureAttackContext(Entity target,CallbackInfo ci){
+        var self=(Player)(Object)this;
+        alchemical$attackContext=new AttackContext(self.getAttackStrengthScale(0.5F),!self.isAutoSpinAttack());
+    }
+
     @WrapOperation(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/Entity;hurtOrSimulate(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
     private boolean alchemical$attackDamage(Entity target,DamageSource source,float totalDamage,Operation<Boolean> original,Entity attacked){
         var self=(Player)(Object)this;
+        // Snapshot before delegating: a damage callback is allowed to re-enter Player#attack and
+        // overwrite the per-player field, but this local remains the context for this exact hit.
+        AttackContext context=alchemical$attackContext;
         boolean accepted=original.call(target,source,totalDamage);
         if(!accepted||self.level().isClientSide())return accepted;
 
-        float attackStrength=self.getAttackStrengthScale(0.5F);
-        double scale=0.2D+attackStrength*attackStrength*0.8D;
-        boolean critical=attackStrength>0.9F&&self.fallDistance>0.0F&&!self.onGround()&&!self.onClimbable()
-            &&!self.isInWater()&&!self.isMobilityRestricted()&&!self.isPassenger()&&target instanceof LivingEntity&&!self.isSprinting();
-        if(critical)scale*=1.5D;
+        if(context!=null&&context.attributeDriven()){
+            float attackStrength=context.strengthScale();
+            double scale=0.2D+attackStrength*attackStrength*0.8D;
+            boolean critical=attackStrength>0.9F&&self.fallDistance>0.0F&&!self.onGround()&&!self.onClimbable()
+                &&!self.isInWater()&&!self.isMobilityRestricted()&&!self.isPassenger()&&target instanceof LivingEntity&&!self.isSprinting();
+            if(critical)scale*=1.5D;
 
-        var strength=self.getEffect(MobEffects.STRENGTH);
-        if(strength!=null){
-            double contribution=Math.max(0.0D,EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,strength));
-            emit(self,strength,contribution*scale,totalDamage);
+            var strength=self.getEffect(MobEffects.STRENGTH);
+            if(strength!=null){
+                double contribution=Math.max(0.0D,EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,strength));
+                emit(self,strength,contribution*scale,totalDamage);
+            }
+            var weakness=self.getEffect(MobEffects.WEAKNESS);
+            if(weakness!=null){
+                double suppression=Math.max(0.0D,-EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,weakness));
+                emit(self,weakness,suppression*scale,Double.POSITIVE_INFINITY);
+            }
         }
-        var weakness=self.getEffect(MobEffects.WEAKNESS);
-        if(weakness!=null){
-            double suppression=Math.max(0.0D,-EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,weakness));
-            emit(self,weakness,suppression*scale,Double.POSITIVE_INFINITY);
-        }
+
         ReachWear.emit(self,Attributes.ENTITY_INTERACTION_RANGE,target.getBoundingBox().distanceToSqr(self.getEyePosition()));
         return accepted;
     }
+
+    @Inject(method="attack",at=@At("RETURN"))
+    private void alchemical$clearAttackContext(Entity target,CallbackInfo ci){alchemical$attackContext=null;}
 
     private static void emit(Player player,MobEffectInstance effect,double work,double cap){
         if(effect==null||!Double.isFinite(work)||work<=0)return;
