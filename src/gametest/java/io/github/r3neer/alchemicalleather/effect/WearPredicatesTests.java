@@ -20,4 +20,20 @@ public final class WearPredicatesTests {
             "Bubble-column breathing is not Water Breathing work");
         h.succeed();
     }
+
+    @GameTest public void slowFallingOnlyPaysWhenItsClampChangesGravity(GameTestHelper h){
+        h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,-0.2),
+            "Default descending gravity is reduced by Slow Falling");
+        h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,0.0),
+            "Vanilla treats zero vertical velocity as falling for the gravity clamp");
+        h.assertFalse(WearPredicates.slowFallingChangesGravity(0.01,-0.2),
+            "A gravity source already at the Slow Falling clamp makes it redundant");
+        h.assertFalse(WearPredicates.slowFallingChangesGravity(0.005,-0.2),
+            "Lower foreign gravity must not be charged to Slow Falling");
+        h.assertFalse(WearPredicates.slowFallingChangesGravity(0.08,0.1),
+            "Ascending motion does not use Slow Falling's gravity branch");
+        h.assertFalse(WearPredicates.slowFallingChangesGravity(Double.NaN,-0.2),
+            "Malformed gravity cannot create wear");
+        h.succeed();
+    }
 }
