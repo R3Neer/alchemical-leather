@@ -1,6 +1,7 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
+import io.github.r3neer.alchemicalleather.effect.WearPredicates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.FluidTags;
@@ -83,11 +84,6 @@ public abstract class WearLivingMixin {
             BlockPos eye=BlockPos.containing(self.getX(),self.getEyeY(),self.getZ());
             bubble=self.level().getBlockState(eye).is(Blocks.BUBBLE_COLUMN);
         }
-        return alchemical$waterBreathingNeeded(natural,creative,alternate,submerged,bubble);
-    }
-
-    /** Pure holdout seam for the vanilla drowning gate; kept package-visible for GameTests. */
-    static boolean alchemical$waterBreathingNeeded(boolean natural,boolean creative,boolean alternate,boolean submerged,boolean bubble){
-        return !natural&&!creative&&!alternate&&submerged&&!bubble;
+        return WearPredicates.waterBreathingNeeded(natural,creative,alternate,submerged,bubble);
     }
 }
