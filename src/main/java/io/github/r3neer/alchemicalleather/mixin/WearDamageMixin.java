@@ -2,6 +2,7 @@ package io.github.r3neer.alchemicalleather.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import net.minecraft.core.Holder;
@@ -66,14 +67,15 @@ public abstract class WearDamageMixin {
     }
 
     /**
-     * Vanilla applies KNOCKBACK_RESISTANCE exactly when this attribute value is read inside the
-     * three-argument knockback method. Metering here means cancelled/redirected knockback paths
-     * that never reach the vanilla resistance calculation cannot create alchemical wear.
+     * Bind to the unique KNOCKBACK_RESISTANCE attribute read rather than a version-fragile method
+     * descriptor. MixinExtras supplies the enclosing method's first double argument as the original
+     * knockback power, regardless of the contextual overload Loom exposes in this mapping set.
      */
-    @WrapOperation(method="knockback(DDD)V",at=@At(value="INVOKE",
+    @WrapOperation(method="knockback",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/entity/LivingEntity;getAttributeValue(Lnet/minecraft/core/Holder;)D"))
     private double alchemical$knockbackResistanceValue(LivingEntity instance,Holder<Attribute> attribute,
-                                                       Operation<Double> original,double power,double xd,double zd){
+                                                       Operation<Double> original,
+                                                       @Local(argsOnly=true,ordinal=0) double power){
         double withResistance=original.call(instance,attribute);
         if(power<=0.0||!attribute.equals(Attributes.KNOCKBACK_RESISTANCE))return withResistance;
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
