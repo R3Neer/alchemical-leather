@@ -4,6 +4,7 @@ package io.github.r3neer.alchemicalleather.effect;
 public final class WearPredicates {
     private static final double MOVEMENT_EPSILON=1.0E-8;
     private static final double BASE_AIR_DRAG=0.91;
+    private static final double DEPTH_STRIDER_TARGET_DRAG=0.54600006;
 
     private WearPredicates(){}
 
@@ -28,27 +29,49 @@ public final class WearPredicates {
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
     public static boolean movementSpeedGroundEligible(boolean passenger,boolean fallFlying,boolean inWater,
                                                       boolean inLava,boolean onGround,double inputHorizontalSqr){
-        return !passenger&&!fallFlying&&!inWater&&!inLava&&onGround&&Double.isFinite(inputHorizontalSqr)
-            &&inputHorizontalSqr>MOVEMENT_EPSILON;
+        return !passenger&&!fallFlying&&!inWater&&!inLava&&onGround&&hasInput(inputHorizontalSqr);
+    }
+
+    /**
+     * Vanilla water travel only blends getSpeed() into moveRelative when WATER_MOVEMENT_EFFICIENCY
+     * is positive (Depth Strider in vanilla). Without that bridge, Speed/Slowness do no water work.
+     */
+    public static boolean movementSpeedWaterEligible(boolean passenger,boolean fallFlying,boolean inWater,
+                                                     double waterMovementEfficiency,double inputHorizontalSqr){
+        return !passenger&&!fallFlying&&inWater&&Double.isFinite(waterMovementEfficiency)
+            &&waterMovementEfficiency>0.0&&hasInput(inputHorizontalSqr);
+    }
+
+    /** Mirrors the horizontal drag chosen by LivingEntity#travelInWater in 26.2. */
+    public static double waterMovementDrag(boolean sprinting,double baseSlowDown,double waterMovementEfficiency,
+                                           boolean onGround,boolean dolphinsGrace){
+        if(!finite(baseSlowDown,waterMovementEfficiency))return 0.0;
+        double drag=sprinting?0.9:baseSlowDown;
+        double efficiency=clamp(waterMovementEfficiency,0.0,1.0);
+        if(!onGround)efficiency*=0.5;
+        if(efficiency>0.0)drag+=(DEPTH_STRIDER_TARGET_DRAG-drag)*efficiency;
+        if(dolphinsGrace)drag=0.96;
+        return clamp(drag,0.0,1.0);
     }
 
     /**
      * Converts only the horizontal velocity added by moveRelative into an upper bound on the
      * distance attributable to that self-propelled impulse. Existing velocity cancels out, so
      * knockback/platform momentum cannot inflate the bound. The geometric tail mirrors vanilla's
-     * post-move ground drag. Degenerate zero-drag states conservatively charge only this tick's
+     * post-move ground drag. Degenerate no-decay states conservatively charge only this tick's
      * impulse instead of manufacturing an infinite distance.
      */
     public static double groundImpulseDistanceLimit(double beforeX,double beforeZ,double afterX,double afterZ,
                                                     double blockFriction,double airDragModifier){
         if(!finite(beforeX,beforeZ,afterX,afterZ,blockFriction,airDragModifier))return 0.0;
-        double impulse=Math.hypot(afterX-beforeX,afterZ-beforeZ);
-        if(impulse<=MOVEMENT_EPSILON)return 0.0;
         double airDrag=clamp(1.0-(1.0-BASE_AIR_DRAG)*airDragModifier,0.0,1.0);
-        double drag=clamp(blockFriction*airDrag,0.0,1.0);
-        if(drag>=0.999999)return impulse;
-        double limit=impulse/(1.0-drag);
-        return Double.isFinite(limit)&&limit>0.0?limit:0.0;
+        return impulseDistanceLimit(beforeX,beforeZ,afterX,afterZ,clamp(blockFriction*airDrag,0.0,1.0));
+    }
+
+    /** Same causal bound for water travel, using the exact horizontal water drag chosen by vanilla. */
+    public static double waterImpulseDistanceLimit(double beforeX,double beforeZ,double afterX,double afterZ,double waterDrag){
+        if(!finite(beforeX,beforeZ,afterX,afterZ,waterDrag))return 0.0;
+        return impulseDistanceLimit(beforeX,beforeZ,afterX,afterZ,clamp(waterDrag,0.0,1.0));
     }
 
     /** The actual travel distance prevents blocked input from creating wear. */
@@ -56,6 +79,18 @@ public final class WearPredicates {
         if(!Double.isFinite(actualHorizontalDistance)||!Double.isFinite(impulseDistanceLimit)
             ||actualHorizontalDistance<=MOVEMENT_EPSILON||impulseDistanceLimit<=MOVEMENT_EPSILON)return 0.0;
         return Math.min(actualHorizontalDistance,impulseDistanceLimit);
+    }
+
+    private static double impulseDistanceLimit(double beforeX,double beforeZ,double afterX,double afterZ,double drag){
+        double impulse=Math.hypot(afterX-beforeX,afterZ-beforeZ);
+        if(impulse<=MOVEMENT_EPSILON)return 0.0;
+        if(drag>=0.999999)return impulse;
+        double limit=impulse/(1.0-drag);
+        return Double.isFinite(limit)&&limit>0.0?limit:0.0;
+    }
+
+    private static boolean hasInput(double inputHorizontalSqr){
+        return Double.isFinite(inputHorizontalSqr)&&inputHorizontalSqr>MOVEMENT_EPSILON;
     }
 
     private static boolean finite(double... values){
