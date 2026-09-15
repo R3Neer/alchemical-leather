@@ -76,6 +76,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     }
 
     private static boolean enabled(JsonObject json,ResourceManager manager){
+        validateMetadataTypes(json);
         if(json.has("enabled")&&!json.get("enabled").getAsBoolean())return false;
         if(json.has("requires_mod")&&!FabricLoader.getInstance().isModLoaded(json.get("requires_mod").getAsString()))return false;
         if(json.has("requires_effect")&&!BuiltInRegistries.MOB_EFFECT.containsKey(Identifier.parse(json.get("requires_effect").getAsString())))return false;
@@ -84,22 +85,30 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     }
 
     public static Rule parse(JsonObject json){
+        validateMetadataTypes(json);
         if(json.has("wear")){
-            if(!json.get("wear").isJsonPrimitive()||!json.get("wear").getAsString().equals("none"))throw new IllegalArgumentException("Only wear=none is supported as a symbolic wear mode");
+            if(!isString(json.get("wear"))||!json.get("wear").getAsString().equals("none"))throw new IllegalArgumentException("Only wear=none is supported as a symbolic wear mode");
             if(json.has("work_per_damage")||json.has("sources"))throw new IllegalArgumentException("wear=none cannot also declare work_per_damage or sources");
             return Rule.noWear();
         }
         if(!json.has("work_per_damage"))throw new IllegalArgumentException("Missing work_per_damage");
+        if(!isNumber(json.get("work_per_damage")))throw new IllegalArgumentException("work_per_damage must be a JSON number");
         double threshold=json.get("work_per_damage").getAsDouble();
         if(!Double.isFinite(threshold)||threshold<=0)throw new IllegalArgumentException("work_per_damage must be finite and positive");
+        if(!json.has("sources")||!json.get("sources").isJsonArray())throw new IllegalArgumentException("sources must be a JSON array");
         var array=json.getAsJsonArray("sources");
-        if(array==null||array.isEmpty())throw new IllegalArgumentException("At least one wear source is required");
+        if(array.isEmpty())throw new IllegalArgumentException("At least one wear source is required");
         var sources=new ArrayList<Source>();var seen=new HashSet<String>();
         for(var element:array){
-            var source=element.getAsJsonObject();String type=source.get("type").getAsString();
+            if(!element.isJsonObject())throw new IllegalArgumentException("Every wear source must be a JSON object");
+            var source=element.getAsJsonObject();
+            if(!source.has("type")||!isString(source.get("type")))throw new IllegalArgumentException("Wear source type must be a JSON string");
+            String type=source.get("type").getAsString();
             String key=switch(type){case "builtin"->"detector";case "event"->"event";default->throw new IllegalArgumentException("Unknown source type "+type);};
-            if(!source.has(key))throw new IllegalArgumentException("Missing "+key+" for "+type+" wear source");
-            var id=Identifier.parse(source.get(key).getAsString());double work=source.has("work")?source.get("work").getAsDouble():1.0;
+            if(!source.has(key)||!isString(source.get(key)))throw new IllegalArgumentException(key+" must be a JSON string for "+type+" wear source");
+            var id=Identifier.parse(source.get(key).getAsString());
+            if(source.has("work")&&!isNumber(source.get("work")))throw new IllegalArgumentException("Wear source work must be a JSON number");
+            double work=source.has("work")?source.get("work").getAsDouble():1.0;
             var parsed=new Source(type,id,work);String unique=type+":"+id;
             if(!seen.add(unique))throw new IllegalArgumentException("Duplicate wear source "+unique);
             sources.add(parsed);
@@ -107,5 +116,18 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
         return new Rule(false,threshold,sources);
     }
 
+    private static void validateMetadataTypes(JsonObject json){
+        if(json.has("enabled")){
+            var value=json.get("enabled");
+            if(!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isBoolean())throw new IllegalArgumentException("enabled must be a JSON boolean");
+        }
+        for(var key:List.of("requires_mod","requires_effect","requires_resource")){
+            if(json.has(key)&&!isString(json.get(key)))throw new IllegalArgumentException(key+" must be a JSON string");
+        }
+        if(json.has("requires_mod")&&json.get("requires_mod").getAsString().isBlank())throw new IllegalArgumentException("requires_mod must not be blank");
+    }
+
+    private static boolean isString(JsonElement value){return value!=null&&value.isJsonPrimitive()&&value.getAsJsonPrimitive().isString();}
+    private static boolean isNumber(JsonElement value){return value!=null&&value.isJsonPrimitive()&&value.getAsJsonPrimitive().isNumber();}
     private static Identifier id(String path){return Identifier.fromNamespaceAndPath("alchemical_leather",path);}
 }
