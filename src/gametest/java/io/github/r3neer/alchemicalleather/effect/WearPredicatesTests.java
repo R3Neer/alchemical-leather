@@ -23,9 +23,9 @@ public final class WearPredicatesTests {
         h.succeed();
     }
 
-    @GameTest public void slowFallingOnlyPaysWhenItsGravityPathIsEffective(GameTestHelper h){
+    @GameTest public void slowFallingOnlyPaysForItsActualGravityClamp(GameTestHelper h){
         h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,-0.2),
-            "Default descending gravity is reduced by Slow Falling");
+            "Default descending gravity can be reduced by Slow Falling");
         h.assertTrue(WearPredicates.slowFallingChangesGravity(0.08,0.0),
             "Vanilla treats zero vertical velocity as falling for the gravity clamp");
         h.assertFalse(WearPredicates.slowFallingChangesGravity(0.01,-0.2),
@@ -37,20 +37,16 @@ public final class WearPredicatesTests {
         h.assertFalse(WearPredicates.slowFallingChangesGravity(Double.NaN,-0.2),
             "Malformed gravity cannot create wear");
 
-        h.assertTrue(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,false,false),
-            "Descending air travel keeps Slow Falling causal");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,true,false),
-            "Levitation replaces the gravity branch and makes Slow Falling non-causal");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,false,false,true),
-            "Creative flight restores its own vertical motion instead of retaining Slow Falling gravity");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,true,false,false,false,false,false),
-            "Grounded entities perform no Slow Falling work");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,true,false,false,false,false),
-            "Passenger transport is not charged as wearer Slow Falling work");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,true,false,false,false),
-            "Water travel is outside the metered Slow Falling path");
-        h.assertFalse(WearPredicates.slowFallingEligible(0.08,-0.2,false,false,false,true,false,false),
-            "Lava travel is outside the metered Slow Falling path");
+        h.assertTrue(WearPredicates.slowFallingGravityApplied(0.08,-0.2,0.01),
+            "The exact 0.01 effective-gravity clamp is attributable Slow Falling work");
+        h.assertFalse(WearPredicates.slowFallingGravityApplied(0.08,-0.2,0.08),
+            "An active effect that did not alter effective gravity performs no work");
+        h.assertFalse(WearPredicates.slowFallingGravityApplied(0.08,0.1,0.01),
+            "A stray 0.01 value while ascending cannot be attributed to Slow Falling");
+        h.assertFalse(WearPredicates.slowFallingGravityApplied(0.01,-0.2,0.01),
+            "Already-clamped native gravity does not become Slow Falling work");
+        h.assertFalse(WearPredicates.slowFallingGravityApplied(0.08,-0.2,0.0),
+            "A foreign gravity override below the vanilla clamp is not credited to Slow Falling");
         h.succeed();
     }
 
