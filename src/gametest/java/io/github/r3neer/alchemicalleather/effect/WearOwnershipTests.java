@@ -67,6 +67,31 @@ public final class WearOwnershipTests {
         h.succeed();
     }
 
+    @GameTest public void externalWinnerEclipsesAllArmorWithoutPausingTheirClocks(GameTestHelper h){
+        var wearer=h.makeMockPlayer(GameType.SURVIVAL);
+        var ledger=EffectLedger.of(wearer);ledger.equipmentManaged=true;
+        ledger.setArmor(EquipmentSlot.LEGS,new MobEffectInstance(MobEffects.JUMP_BOOST,100,0));
+        ledger.setArmor(EquipmentSlot.BODY,new MobEffectInstance(MobEffects.JUMP_BOOST,200,1));
+        ledger.externalAdd(new MobEffectInstance(MobEffects.JUMP_BOOST,2,2),true);
+        ledger.reconcile();
+        h.assertFalse(ledger.armorEffective(MobEffects.JUMP_BOOST),"Stronger external source eclipses every equipped armor source");
+        h.assertTrue(ledger.armorOwner(MobEffects.JUMP_BOOST)==null,"No armor item owns wear while the external source wins");
+
+        ledger.afterTick();
+        h.assertTrue(ledger.remaining(MobEffects.JUMP_BOOST,EquipmentSlot.LEGS)==99,"Hidden LEGS clock keeps advancing under external eclipse");
+        h.assertTrue(ledger.remaining(MobEffects.JUMP_BOOST,EquipmentSlot.BODY)==199,"Hidden BODY clock keeps advancing under external eclipse");
+        h.assertFalse(ledger.armorEffective(MobEffects.JUMP_BOOST),"External source remains winner until its own clock expires");
+
+        ledger.afterTick();
+        h.assertTrue(ledger.remaining(MobEffects.JUMP_BOOST,EquipmentSlot.LEGS)==98,"LEGS clock remains independent after external expiry");
+        h.assertTrue(ledger.remaining(MobEffects.JUMP_BOOST,EquipmentSlot.BODY)==198,"BODY clock remains independent after external expiry");
+        h.assertTrue(ledger.armorEffective(MobEffects.JUMP_BOOST),"Best armor source resurfaces immediately when the external winner expires");
+        h.assertTrue(ledger.armorOwner(MobEffects.JUMP_BOOST)==EquipmentSlot.BODY,"The stronger surviving BODY source regains ownership");
+        h.assertTrue(wearer.getEffect(MobEffects.JUMP_BOOST)!=null&&wearer.getEffect(MobEffects.JUMP_BOOST).getAmplifier()==1,
+            "Visible projection returns to the strongest equipped armor source");
+        h.succeed();
+    }
+
     @GameTest public void repeatedEffectEntriesRemainBodyOnlySemantics(GameTestHelper h){
         var contents=new PotionContents(Optional.empty(),Optional.empty(),List.of(
             new MobEffectInstance(MobEffects.JUMP_BOOST,200,0),
