@@ -10,9 +10,33 @@ import net.minecraft.server.packs.resources.ResourceManager;
 
 /** Data-driven mapping from potion effects to causal wear sources and work budgets. */
 public final class WearRules implements SimpleSynchronousResourceReloadListener {
+    /**
+     * Builtin detectors are implementation-owned protocol names, not an open extension namespace.
+     * Third-party semantics stay extensible through type=event. Keeping this list explicit makes a
+     * typo fail resource loading instead of masquerading as a classified effect that can never emit.
+     */
+    private static final Set<Identifier> BUILTIN_DETECTORS=Set.of(
+        id("self_propelled_movement_speed"),
+        id("jump_boost_jump"),
+        id("damage_prevented"),
+        id("effect_health_delta"),
+        id("water_breathing_tick"),
+        id("slow_falling_tick"),
+        id("effect_proc"),
+        id("weaving_movement"),
+        id("attack_damage_delta"),
+        id("extra_reach_use"),
+        id("knockback_reduced"),
+        id("poison_removed"),
+        id("soulsteal_healing"),
+        id("scorching_ignition"),
+        id("scorching_fire_placement")
+    );
+
     public record Source(String type,Identifier id,double work) {
         public Source {
             if(!type.equals("builtin")&&!type.equals("event"))throw new IllegalArgumentException("Unknown wear source type "+type);
+            if(type.equals("builtin")&&!BUILTIN_DETECTORS.contains(id))throw new IllegalArgumentException("Unknown builtin wear detector "+id);
             if(!Double.isFinite(work)||work<=0)throw new IllegalArgumentException("Wear source work must be finite and positive");
         }
     }
@@ -31,6 +55,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     public static Rule rule(Identifier effect){return rules.get(effect);}
     public static boolean classified(Identifier effect){return rules.containsKey(effect);}
     public static Map<Identifier,Rule> snapshot(){return rules;}
+    static boolean knownBuiltin(Identifier detector){return BUILTIN_DETECTORS.contains(detector);}
 
     @Override public Identifier getFabricId(){return Identifier.fromNamespaceAndPath("alchemical_leather","wear_rules");}
 
@@ -61,6 +86,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     public static Rule parse(JsonObject json){
         if(json.has("wear")){
             if(!json.get("wear").isJsonPrimitive()||!json.get("wear").getAsString().equals("none"))throw new IllegalArgumentException("Only wear=none is supported as a symbolic wear mode");
+            if(json.has("work_per_damage")||json.has("sources"))throw new IllegalArgumentException("wear=none cannot also declare work_per_damage or sources");
             return Rule.noWear();
         }
         if(!json.has("work_per_damage"))throw new IllegalArgumentException("Missing work_per_damage");
@@ -72,6 +98,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
         for(var element:array){
             var source=element.getAsJsonObject();String type=source.get("type").getAsString();
             String key=switch(type){case "builtin"->"detector";case "event"->"event";default->throw new IllegalArgumentException("Unknown source type "+type);};
+            if(!source.has(key))throw new IllegalArgumentException("Missing "+key+" for "+type+" wear source");
             var id=Identifier.parse(source.get(key).getAsString());double work=source.has("work")?source.get("work").getAsDouble():1.0;
             var parsed=new Source(type,id,work);String unique=type+":"+id;
             if(!seen.add(unique))throw new IllegalArgumentException("Duplicate wear source "+unique);
@@ -79,4 +106,6 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
         }
         return new Rule(false,threshold,sources);
     }
+
+    private static Identifier id(String path){return Identifier.fromNamespaceAndPath("alchemical_leather",path);}
 }
