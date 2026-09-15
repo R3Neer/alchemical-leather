@@ -12,7 +12,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 
 /** Cross-mod holdout: the real companion adapter must reach the real wear engine. */
 public final class CompanionWearBridgeTests {
@@ -21,7 +20,7 @@ public final class CompanionWearBridgeTests {
 
         Identifier effectId=Identifier.parse("clinging_reoriented:reorientation");
         var effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
-        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        var player=h.makeMockServerPlayerInLevel();
         var boots=new ItemStack(Items.LEATHER_BOOTS);
         boots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
         player.setItemSlot(EquipmentSlot.FEET,boots);
