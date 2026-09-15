@@ -1,12 +1,12 @@
 # Validation
 
-This document records the current **post-0.1.0-beta.1 development validation** for causal infusion wear, humanoid multi-effect potions and the optional compatibility protocol. It does not assign a new release version or tag.
+This document records the completed **post-0.1.0-beta.1 development validation** for causal infusion wear, humanoid multi-effect potions and the optional compatibility protocol. It does not assign a new release version or tag.
 
 The frozen design is in [`TM_INFUSION_WEAR_SPEC.md`](TM_INFUSION_WEAR_SPEC.md). The execution/closeout record is in [`TM_INFUSION_WEAR_CLOSEOUT.md`](TM_INFUSION_WEAR_CLOSEOUT.md).
 
-## Scope under validation
+## Validated scope
 
-The current branch adds or hardens:
+The merged development line adds or hardens:
 
 - causal durability wear tied to attributable effect work rather than effect presence;
 - per-item/per-effect fractional work accumulation and ordinary break semantics;
@@ -30,7 +30,7 @@ The existing beta.1 features remain part of the regression matrix: cauldron infu
 | S02 — builtin causal detectors | **Complete and adversarially expanded**. Movement, jump/fall, protection/damage, combat, breath/reach and selected mod-effect proc boundaries are covered. |
 | S03 — companion adapters | **Complete**. Scale Brews and Clinging integrations converged independently and are merged to their `main` branches. |
 | S04 — humanoid multi-effect | **Complete**. Same-slot distinct-effect bundles are atomic and keep independent timing/wear attribution. |
-| S05 — exhaustive compatibility / adversarial gate | **Functionally green** on branch candidate `52cae148e287292b240d3ee5c57d4b45b1851c07`; final evidence-only head and post-merge main gate remain. |
+| S05 — exhaustive compatibility / adversarial gate | **Complete and merged**. Branch candidate, evidence-only head and exact Alchemical Leather merge commit all passed the complete matrix. |
 
 ## First-party companion evidence
 
@@ -104,27 +104,39 @@ The survival fixture requires:
 
 The synthetic GameTest player has no network connection, so the fixture establishes slot-aware FEET ledger state directly rather than weakening production's pre-login connection-safety fence. It explicitly forces Survival, clears `instabuild` and asserts non-infinite-material semantics so Creative behavior cannot erase the debt being measured.
 
-## S05 functional evidence
+## S05 final integration evidence
 
-Branch head:
+Functional/documentation candidate:
 
 `52cae148e287292b240d3ee5c57d4b45b1851c07`
 
-passed complete PR workflow **#684** / run **35034528304**.
+passed complete PR workflow **#684** / run **35034528304**, including **124/124 required VanillaPlus compatibility GameTests**.
 
-| Gate | Result |
-|---|---|
-| Gradle build + standalone server GameTests | **PASS** |
-| GameTest entrypoint consistency | **PASS** |
-| Client GameTest under Xvfb / software GL | **PASS** |
-| Exact pinned Clinging + Scale builds | **PASS** |
-| Exact VanillaPlus potion-contributor fixture | **PASS** |
-| Registry-driven potion/wear classification | **PASS** |
-| Direct API + real Clinging bridge → owning boots | **PASS** |
-| Full compatibility GameTest set | **PASS — 124/124 required tests** |
-| CI artifact/log upload | **PASS** |
+Evidence-only PR head:
 
-The workflow artifact explicitly records the expected companion commits and the compatibility log reports `All 124 required tests passed :)`.
+`cc5fa6cc31c45661786c4cd8c69d5f3409d3f872`
+
+passed the same complete pipeline in run **35035044227**.
+
+PR #11 then merged to `main` as:
+
+`fbaf464fb5643021b74b75292c249bfdf49d5742`
+
+The exact merge commit passed post-merge `main` workflow **35035540435**.
+
+| Gate | Branch candidate | Evidence-only PR head | Exact merged `main` |
+|---|---|---|---|
+| Gradle build + standalone server GameTests | **PASS** | **PASS** | **PASS** |
+| GameTest entrypoint consistency | **PASS** | **PASS** | **PASS** |
+| Client GameTest under Xvfb / software GL | **PASS** | **PASS** | **PASS** |
+| Exact pinned Clinging + Scale builds | **PASS** | **PASS** | **PASS** |
+| Exact VanillaPlus potion-contributor fixture | **PASS** | **PASS** | **PASS** |
+| Registry-driven potion/wear classification | **PASS** | **PASS** | **PASS** |
+| Direct API + real Clinging bridge → owning boots | **PASS** | **PASS** | **PASS** |
+| Full compatibility GameTest set | **PASS — 124/124** | **PASS** | **PASS** |
+| CI artifact/log upload | **PASS** | **PASS** | **PASS** |
+
+The workflow artifact records the expected companion commits and the compatibility log reports `All 124 required tests passed :)` on the functional candidate. The post-merge workflow repeats the complete server/client/fixture pipeline on the exact merged tree.
 
 ## Failure classification during S05
 
@@ -141,9 +153,11 @@ The adversarial/fixture campaign deliberately kept red runs instead of rewriting
 
 No Alchemical Leather production behavior was weakened to make a fixture pass.
 
-## Remaining final gate
+## Closeout
 
-This evidence update is intentionally documentation-only. Its exact head must pass the **same complete matrix** before PR #11 is merged. After merge, the exact `main` commit must pass the same workflow again. Those two gates are the remaining mechanical closeout; no new functional work is expected unless one of them finds a new defect.
+S00–S05 are complete and the implementation is merged to `main`. The exact behavior merge has passed the full post-merge pipeline. The final closeout/validation edits after that merge are documentation-only and do not change production behavior.
+
+No release/tag/version bump is part of this campaign. The published prerelease remains **0.1.0-beta.1** until a separate release-preparation decision is made.
 
 ## Manual QA boundary
 
