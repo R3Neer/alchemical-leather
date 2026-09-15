@@ -157,17 +157,41 @@ public abstract class WearLivingMixin {
         return breathes;
     }
 
-    @Inject(method="tick",at=@At("RETURN"))
-    private void alchemical$environmentalWear(CallbackInfo ci){
-        var self=(LivingEntity)(Object)this;
-        if(self.level().isClientSide()||!self.isAlive())return;
+    @WrapOperation(method="travelInAir",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;getEffectiveGravity()D"))
+    private double alchemical$slowFallingAirGravity(LivingEntity entity,Operation<Double> original,Vec3 input){
+        double gravity=original.call(entity);
+        emitSlowFallingGravity(entity,gravity,true);
+        return gravity;
+    }
 
-        var falling=self.getEffect(MobEffects.SLOW_FALLING);
-        boolean creativeFlying=self instanceof Player player&&player.getAbilities().flying;
-        if(falling!=null&&WearPredicates.slowFallingEligible(
-            self.getGravity(),self.getDeltaMovement().y,self.onGround(),self.isPassenger(),self.isInWater(),self.isInLava(),
-            self.hasEffect(MobEffects.LEVITATION),creativeFlying))
-            InfusionWear.emitBuiltin(self,falling.getEffect(),SLOW_FALLING,1.0);
+    @WrapOperation(method="updateFallFlyingMovement",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;getEffectiveGravity()D"))
+    private double alchemical$slowFallingElytraGravity(LivingEntity entity,Operation<Double> original,Vec3 movement){
+        double gravity=original.call(entity);
+        emitSlowFallingGravity(entity,gravity,true);
+        return gravity;
+    }
+
+    @WrapOperation(method="travelInFluid",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;getEffectiveGravity()D"))
+    private double alchemical$slowFallingFluidGravity(LivingEntity entity,Operation<Double> original,Vec3 input){
+        double gravity=original.call(entity);
+        // Water sprinting bypasses getFluidFallingAdjustedMovement's gravity subtraction. Lava
+        // always consumes baseGravity in its final vertical adjustment.
+        boolean consumed=entity.isInLava()||(entity.isInWater()&&!entity.isSprinting());
+        emitSlowFallingGravity(entity,gravity,consumed);
+        return gravity;
+    }
+
+    @Unique
+    private static void emitSlowFallingGravity(LivingEntity entity,double effectiveGravity,boolean consumed){
+        if(!consumed||entity.level().isClientSide()||entity.onGround()||entity.isPassenger())return;
+        if(entity instanceof Player player&&player.getAbilities().flying)return;
+        var effect=entity.getEffect(MobEffects.SLOW_FALLING);
+        if(effect==null)return;
+        if(WearPredicates.slowFallingGravityApplied(entity.getGravity(),entity.getDeltaMovement().y,effectiveGravity))
+            InfusionWear.emitBuiltin(entity,effect.getEffect(),SLOW_FALLING,1.0);
     }
 
     private static void emitMovement(LivingEntity self,Vec3 origin,double limit){
