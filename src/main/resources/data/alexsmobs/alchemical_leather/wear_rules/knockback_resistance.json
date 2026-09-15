@@ -1,0 +1,5 @@
+{
+  "requires_mod":"alexsmobs",
+  "work_per_damage": 8.0,
+  "sources": [{"type":"builtin","detector":"alchemical_leather:knockback_reduced"}]
+}

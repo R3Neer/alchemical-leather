@@ -1,0 +1,4 @@
+{
+  "work_per_damage": 16.0,
+  "sources": [{"type":"builtin","detector":"alchemical_leather:jump_boost_jump"}]
+}

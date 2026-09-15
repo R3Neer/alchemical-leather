@@ -93,13 +93,9 @@ public final class LeatherworkerTrades {
         Resolved resolved = resolve(tier, slot, potion);
         if (resolved == null) return ItemStack.EMPTY;
 
-        if (slot == EquipmentSlot.BODY) {
-            result.remove(Infusions.TYPE);
-            result.set(Infusions.ANIMAL_TYPE, new AnimalInfusion(List.of(resolved.infusion)));
-        } else {
-            result.remove(Infusions.ANIMAL_TYPE);
-            result.set(Infusions.TYPE, resolved.infusion);
-        }
+        Infusions.clearInfusionComponents(result);
+        if (slot == EquipmentSlot.BODY) result.set(Infusions.ANIMAL_TYPE, new AnimalInfusion(List.of(resolved.infusion)));
+        else result.set(Infusions.TYPE, resolved.infusion);
         result.set(DataComponents.DYED_COLOR, new DyedItemColor(resolved.contents.getColor() & 0xffffff));
         int premium = pricePremium(tier, slot, resolved.effectId);
         if (premium > 0) result.set(DataComponents.ADDITIONAL_TRADE_COST, premium);

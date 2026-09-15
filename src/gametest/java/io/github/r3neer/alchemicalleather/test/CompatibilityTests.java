@@ -28,10 +28,11 @@ public class CompatibilityTests {
         h.assertTrue(EffectSlotRules.slot(id)==EquipmentSlot.FEET,"Reorientation belongs to boots");
         var brewing=h.getLevel().potionBrewing();
         var base=BuiltInRegistries.POTION.get(Identifier.parse("alexsmobs:clinging")).orElseThrow();
+        Item gravityCharge=BuiltInRegistries.ITEM.getOptional(Identifier.parse("clinging_reoriented:gravity_charge")).orElseThrow();
         for(var type:List.of(Items.POTION,Items.SPLASH_POTION,Items.LINGERING_POTION)){
-            var bottle=brewing.mix(new ItemStack(Items.SHULKER_SHELL),PotionContents.createItemStack(type,base));
+            var bottle=brewing.mix(new ItemStack(gravityCharge),PotionContents.createItemStack(type,base));
             var contents=bottle.get(DataComponents.POTION_CONTENTS);
-            h.assertTrue(contents.potion().orElseThrow().is(id),"Actual shell recipe");
+            h.assertTrue(contents.potion().orElseThrow().is(id),"Actual Gravity Charge recipe");
             var p=h.makeMockPlayer(GameType.SURVIVAL);var pos=h.absolutePos(new BlockPos(1,1,1));
             CauldronService.write(h.getLevel(),pos,contents,type,1);
             for(var wrong:List.of(Items.LEATHER_HELMET,Items.LEATHER_CHESTPLATE,Items.LEATHER_LEGGINGS)){
@@ -54,7 +55,8 @@ public class CompatibilityTests {
         if(!FabricLoader.getInstance().isModLoaded("clinging_reoriented")){h.succeed();return;}
         var clingingId=Identifier.parse("alexsmobs:clinging");var reorientationId=Identifier.parse("clinging_reoriented:reorientation");
         var base=BuiltInRegistries.POTION.get(clingingId).orElseThrow();var brewing=h.getLevel().potionBrewing();
-        var reorientation=brewing.mix(new ItemStack(Items.SHULKER_SHELL),PotionContents.createItemStack(Items.POTION,base)).get(DataComponents.POTION_CONTENTS);
+        Item gravityCharge=BuiltInRegistries.ITEM.getOptional(Identifier.parse("clinging_reoriented:gravity_charge")).orElseThrow();
+        var reorientation=brewing.mix(new ItemStack(gravityCharge),PotionContents.createItemStack(Items.POTION,base)).get(DataComponents.POTION_CONTENTS);
         for(var contents:List.of(new PotionContents(base),reorientation)){
             var expected=contents.getAllEffects().iterator().next().getEffect();
             for(var animalItem:List.of(Items.LEATHER_HORSE_ARMOR,Items.WOLF_ARMOR)){
@@ -73,6 +75,7 @@ public class CompatibilityTests {
         if(profile.equals("full"))for(String id:List.of("bedrockify","scalebrews","alexsmobs","friendsandfoes","wilderwild","mr_deeper_dark","enchancement","functional_trims"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required full-fixture mod "+id);
         if(profile.equals("clinging"))for(String id:List.of("clinging_reoriented","alexsmobs"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required Clinging fixture mod "+id);
         if(profile.equals("trade"))for(String id:List.of("clinging_reoriented","alexsmobs","scalebrews","bedrockify"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required trade fixture mod "+id);
+        if(profile.equals("vanillaplus"))for(String id:List.of("clinging_reoriented","alexsmobs","scalebrews","bedrockify","friendsandfoes","wilderwild","mr_deeper_dark"))h.assertTrue(FabricLoader.getInstance().isModLoaded(id),"Required VanillaPlus potion-contributor mod "+id);
         h.succeed();
     }
     @GameTest public void allRegisteredFamiliesResolve(GameTestHelper h){

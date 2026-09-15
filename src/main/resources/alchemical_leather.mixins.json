@@ -6,12 +6,20 @@
     "LivingEffectsMixin",
     "LivingEffectsAccess",
     "EffectAccess",
+    "ItemStackDamageAccess",
     "EnchantableStackMixin",
     "AnvilMixin",
     "RepairMixin",
-    "GrindstoneMixin"
+    "GrindstoneMixin",
+    "WearLivingMixin",
+    "WearEffectTickMixin",
+    "WearDamageMixin",
+    "WearAttackMixin",
+    "WearEffectProcMixin",
+    "WearBlockReachMixin",
+    "WearEntityReachMixin",
+    "WearWebMixin",
+    "AlexSoulstealWearMixin"
   ],
-  "injectors": {
-    "defaultRequire": 1
-  }
+  "injectors": {"defaultRequire": 1}
 }

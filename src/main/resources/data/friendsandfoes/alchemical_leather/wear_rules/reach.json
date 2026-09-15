@@ -1,0 +1,5 @@
+{
+  "requires_mod":"friendsandfoes",
+  "work_per_damage": 32.0,
+  "sources": [{"type":"builtin","detector":"alchemical_leather:extra_reach_use"}]
+}

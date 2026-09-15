@@ -20,6 +20,7 @@ public final class AlchemicalLeather implements ModInitializer {
         var data=ResourceManagerHelper.get(PackType.SERVER_DATA);
         data.registerReloadListener(DyeableArmorRules.ID,DyeableArmorRules::new);
         data.registerReloadListener(new EffectSlotRules());
+        data.registerReloadListener(new WearRules());
         UseBlockCallback.EVENT.register(CauldronService::interact);
         EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment,stack,context)->Infusions.blocked(stack)?TriState.FALSE:TriState.DEFAULT);
         ServerEntityEvents.EQUIPMENT_CHANGE.register((entity,slot,previous,next)->{if(Infusions.SLOTS.contains(slot))EquipmentInfusions.sync(entity);});
