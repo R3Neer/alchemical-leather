@@ -23,11 +23,23 @@ public final class WearPredicates {
 
     /**
      * Vanilla 26.2 only changes gravity for Slow Falling while descending and only when the
-     * entity's normal gravity is above the 0.01 clamp. Other movement exclusions are supplied by
-     * the runtime detector because they describe where this mod intentionally meters the physics.
+     * entity's normal gravity is above the 0.01 clamp.
      */
     public static boolean slowFallingChangesGravity(double normalGravity,double verticalVelocity){
         return Double.isFinite(normalGravity)&&Double.isFinite(verticalVelocity)&&verticalVelocity<=0.0&&normalGravity>0.01;
+    }
+
+    /**
+     * Runtime gate for paths in which Slow Falling's effective-gravity clamp is actually retained.
+     * Levitation replaces the gravity branch entirely. Creative flight calls LivingEntity travel but
+     * then restores its own vertical velocity and independently resets fall distance, so it is not
+     * Slow Falling work. Elytra is intentionally not excluded: fall-flying uses getEffectiveGravity.
+     */
+    public static boolean slowFallingEligible(double normalGravity,double verticalVelocity,boolean onGround,
+                                              boolean passenger,boolean inWater,boolean inLava,
+                                              boolean levitating,boolean creativeFlying){
+        return !onGround&&!passenger&&!inWater&&!inLava&&!levitating&&!creativeFlying
+            &&slowFallingChangesGravity(normalGravity,verticalVelocity);
     }
 
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
