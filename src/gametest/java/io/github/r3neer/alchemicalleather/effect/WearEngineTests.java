@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.effect.*;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.GameType;
@@ -88,6 +89,20 @@ public final class WearEngineTests {
         h.assertTrue(ledger.armorEffective(MobEffects.JUMP_BOOST),"At equal amplifier the longer armor source remains the projected source");
         for(int i=0;i<16;i++)InfusionWear.emitBuiltin(p,MobEffects.JUMP_BOOST,JUMP,1.0);
         h.assertTrue(leggings.getDamageValue()==1,"Effective longer armor source pays its own causal wear");
+        h.succeed();
+    }
+
+    @GameTest public void weaknessWorkUsesClampedCounterfactualAttackDamage(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        p.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,200,0));
+        var weakness=p.getEffect(MobEffects.WEAKNESS);
+        h.assertTrue(weakness!=null,"Weakness is active for the counterfactual test");
+        double live=p.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        double without=EffectAttributes.without(p,Attributes.ATTACK_DAMAGE,weakness);
+        double suppression=Math.max(0.0,-EffectAttributes.contribution(p,Attributes.ATTACK_DAMAGE,weakness));
+        h.assertTrue(Math.abs(suppression-(without-live))<1.0E-9,"Weakness work equals the actual clamped attribute delta");
+        h.assertTrue(suppression<=without+1.0E-9,"Weakness cannot suppress more attack damage than existed without it");
+        h.assertTrue(suppression<4.0,"Bare-hand Weakness I is clamped below its nominal -4 modifier");
         h.succeed();
     }
 
