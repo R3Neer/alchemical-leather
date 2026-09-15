@@ -4,6 +4,7 @@ import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
 import io.github.r3neer.alchemicalleather.mixin.ItemStackDamageAccess;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -48,9 +49,9 @@ public final class InfusionWear {
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
-        // MAX_DAMAGE, not isDamageableItem(), is the durable-storage invariant. Enchancement may
-        // deliberately report isDamageableItem=false while its global durability switch is off.
-        if(stack.isEmpty()||stack.getMaxDamage()<=0)return;
+        // MAX_DAMAGE/DAMAGE establish a real durability bar, but vanilla's explicit UNBREAKABLE
+        // component remains authoritative. A compatibility mod may still mask isDamageableItem().
+        if(!hasVanillaDamageBar(stack))return;
         var progress=stack.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
         double total=progress.work(effect)+addedWork;
         int damage=(int)Math.floor(total/rule.workPerDamage());
@@ -67,15 +68,21 @@ public final class InfusionWear {
         if(next.isEmpty())stack.remove(Infusions.WEAR_TYPE);else stack.set(Infusions.WEAR_TYPE,next);
     }
 
+    /** Vanilla's structural damageability predicate before any mixin can override the method result. */
+    static boolean hasVanillaDamageBar(ItemStack stack){
+        return !stack.isEmpty()&&stack.has(DataComponents.MAX_DAMAGE)&&stack.has(DataComponents.DAMAGE)
+            &&!stack.has(DataComponents.UNBREAKABLE)&&stack.getMaxDamage()>0;
+    }
+
     /**
      * Prefer Minecraft's complete durability pipeline whenever the current mod stack exposes it.
-     * Only when a compatibility mod masks a MAX_DAMAGE item as non-damageable do we bypass that
+     * Only when a compatibility mod masks an otherwise vanilla-damageable item do we bypass that
      * gate and rejoin vanilla at its terminal applyDamage method. This keeps Unbreaking/other
      * legitimate durability hooks intact in ordinary environments while preserving the explicit
      * alchemical operating cost under Enchancement's global durability-off policy.
      */
     static void damageArmor(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
-        if(amount<=0||stack.isEmpty()||stack.getMaxDamage()<=0)return;
+        if(amount<=0||!hasVanillaDamageBar(stack))return;
         if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
         if(stack.isDamageableItem()){
             stack.hurtAndBreak(amount,wearer,slot);
@@ -92,7 +99,7 @@ public final class InfusionWear {
         // A durability-disabling mod can also make ItemStack#isBroken false inside applyDamage.
         // Complete exactly that suppressed break. In normal environments the branch above already
         // used hurtAndBreak, so this fallback cannot duplicate a vanilla break callback.
-        if(!stack.isEmpty()&&stack.getMaxDamage()>0&&stack.getDamageValue()>=stack.getMaxDamage()){
+        if(!stack.isEmpty()&&stack.getDamageValue()>=stack.getMaxDamage()){
             stack.shrink(1);
             wearer.onEquippedItemBroken(brokenItem,slot);
         }
