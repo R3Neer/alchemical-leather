@@ -5,6 +5,10 @@ public final class WearPredicates {
     private static final double MOVEMENT_EPSILON=1.0E-8;
     private static final double BASE_AIR_DRAG=0.91;
     private static final double DEPTH_STRIDER_TARGET_DRAG=0.54600006;
+    private static final double WEB_NORMAL_XZ=0.25;
+    private static final double WEB_NORMAL_Y=0.05;
+    private static final double WEB_WEAVING_XZ=0.5;
+    private static final double WEB_WEAVING_Y=0.25;
 
     private WearPredicates(){}
 
@@ -69,6 +73,31 @@ public final class WearPredicates {
     }
 
     /**
+     * True only for the exact stuck multiplier assigned by WebBlock when Weaving changes its
+     * mechanics. In vanilla 26.2 this signature is unique to that WebBlock branch.
+     */
+    public static boolean isWeavingWebMultiplier(double x,double y,double z){
+        return finite(x,y,z)&&Math.abs(x-WEB_WEAVING_XZ)<=MOVEMENT_EPSILON
+            &&Math.abs(y-WEB_WEAVING_Y)<=MOVEMENT_EPSILON&&Math.abs(z-WEB_WEAVING_XZ)<=MOVEMENT_EPSILON;
+    }
+
+    /**
+     * Measures only the part of a completed Entity.move that Weaving can have recovered from a
+     * cobweb. Requested movement bounds the possible counterfactual benefit; actual displacement
+     * removes work blocked by collisions. Per-axis caps also prevent step-up Y motion from being
+     * mistaken for vertical Weaving work when the requested Y delta was zero.
+     */
+    public static double weavingRealizedBenefit(double requestedX,double requestedY,double requestedZ,
+                                                double actualX,double actualY,double actualZ){
+        if(!finite(requestedX,requestedY,requestedZ,actualX,actualY,actualZ))return 0.0;
+        double bx=realizedAxisBenefit(requestedX,actualX,WEB_NORMAL_XZ,WEB_WEAVING_XZ);
+        double by=realizedAxisBenefit(requestedY,actualY,WEB_NORMAL_Y,WEB_WEAVING_Y);
+        double bz=realizedAxisBenefit(requestedZ,actualZ,WEB_NORMAL_XZ,WEB_WEAVING_XZ);
+        double benefit=Math.sqrt(bx*bx+by*by+bz*bz);
+        return Double.isFinite(benefit)&&benefit>MOVEMENT_EPSILON?benefit:0.0;
+    }
+
+    /**
      * Converts only the horizontal velocity added by moveRelative into an upper bound on the
      * distance attributable to that self-propelled impulse. Existing velocity cancels out, so
      * knockback/platform momentum cannot inflate the bound. The geometric tail mirrors vanilla's
@@ -93,6 +122,13 @@ public final class WearPredicates {
         if(!Double.isFinite(actualHorizontalDistance)||!Double.isFinite(impulseDistanceLimit)
             ||actualHorizontalDistance<=MOVEMENT_EPSILON||impulseDistanceLimit<=MOVEMENT_EPSILON)return 0.0;
         return Math.min(actualHorizontalDistance,impulseDistanceLimit);
+    }
+
+    private static double realizedAxisBenefit(double requested,double actual,double normalMultiplier,double weavingMultiplier){
+        double possible=Math.abs(requested)*(weavingMultiplier-normalMultiplier);
+        if(possible<=MOVEMENT_EPSILON)return 0.0;
+        double realizedFraction=(weavingMultiplier-normalMultiplier)/weavingMultiplier;
+        return Math.min(possible,Math.abs(actual)*realizedFraction);
     }
 
     private static double impulseDistanceLimit(double beforeX,double beforeZ,double afterX,double afterZ,double drag){
