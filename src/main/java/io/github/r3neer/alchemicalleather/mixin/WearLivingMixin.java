@@ -8,6 +8,7 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -16,6 +17,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Generic causal wear detectors that can be expressed without effect-specific mod knowledge. */
 @Mixin(LivingEntity.class)
@@ -25,23 +27,53 @@ public abstract class WearLivingMixin {
     private static final Identifier WATER_BREATHING=Identifier.fromNamespaceAndPath("alchemical_leather","water_breathing_tick");
     private static final Identifier SLOW_FALLING=Identifier.fromNamespaceAndPath("alchemical_leather","slow_falling_tick");
     @Unique private Vec3 alchemical$travelOrigin;
+    @Unique private Vec3 alchemical$preRelativeVelocity;
     @Unique private boolean alchemical$meterTravel;
+    @Unique private double alchemical$movementDistanceLimit;
 
     @Inject(method="travel",at=@At("HEAD"))
     private void alchemical$beforeSelfMovement(Vec3 input,CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
-        alchemical$meterTravel=!self.level().isClientSide()&&!self.isPassenger()&&!self.isFallFlying()&&!self.isInWater()&&!self.isInLava()
-            &&input!=null&&input.horizontalDistanceSqr()>1.0E-8;
+        alchemical$preRelativeVelocity=null;
+        alchemical$movementDistanceLimit=0.0;
+        double inputSqr=input==null?0.0:input.horizontalDistanceSqr();
+        alchemical$meterTravel=!self.level().isClientSide()&&WearPredicates.movementSpeedGroundEligible(
+            self.isPassenger(),self.isFallFlying(),self.isInWater(),self.isInLava(),self.onGround(),inputSqr);
         alchemical$travelOrigin=alchemical$meterTravel?self.position():null;
+    }
+
+    @Inject(method="handleRelativeFrictionAndCalculateMovement",at=@At("HEAD"))
+    private void alchemical$beforeGroundAcceleration(Vec3 input,float friction,CallbackInfoReturnable<Vec3> cir){
+        if(!alchemical$meterTravel)return;
+        alchemical$preRelativeVelocity=((LivingEntity)(Object)this).getDeltaMovement();
+    }
+
+    @Inject(method="handleRelativeFrictionAndCalculateMovement",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;moveRelative(FLnet/minecraft/world/phys/Vec3;)V",shift=At.Shift.AFTER))
+    private void alchemical$afterGroundAcceleration(Vec3 input,float friction,CallbackInfoReturnable<Vec3> cir){
+        if(!alchemical$meterTravel||alchemical$preRelativeVelocity==null)return;
+        var self=(LivingEntity)(Object)this;
+        Vec3 after=self.getDeltaMovement();
+        alchemical$movementDistanceLimit=WearPredicates.groundImpulseDistanceLimit(
+            alchemical$preRelativeVelocity.x,alchemical$preRelativeVelocity.z,after.x,after.z,
+            friction,self.getAttributeValue(Attributes.AIR_DRAG_MODIFIER));
     }
 
     @Inject(method="travel",at=@At("RETURN"))
     private void alchemical$selfMovement(Vec3 input,CallbackInfo ci){
-        if(!alchemical$meterTravel||alchemical$travelOrigin==null)return;
+        Vec3 origin=alchemical$travelOrigin;
+        double limit=alchemical$movementDistanceLimit;
+        boolean meter=alchemical$meterTravel;
+        alchemical$meterTravel=false;
+        alchemical$travelOrigin=null;
+        alchemical$preRelativeVelocity=null;
+        alchemical$movementDistanceLimit=0.0;
+        if(!meter||origin==null)return;
         var self=(LivingEntity)(Object)this;
-        Vec3 delta=self.position().subtract(alchemical$travelOrigin);double distance=Math.sqrt(delta.x*delta.x+delta.z*delta.z);
-        alchemical$meterTravel=false;alchemical$travelOrigin=null;
-        if(!Double.isFinite(distance)||distance<=1.0E-8)return;
+        Vec3 delta=self.position().subtract(origin);
+        double actual=Math.hypot(delta.x,delta.z);
+        double distance=WearPredicates.attributableMovementDistance(actual,limit);
+        if(distance<=0.0)return;
         emit(self,self.getEffect(MobEffects.SPEED),MOVEMENT,distance);
         emit(self,self.getEffect(MobEffects.SLOWNESS),MOVEMENT,distance);
     }
