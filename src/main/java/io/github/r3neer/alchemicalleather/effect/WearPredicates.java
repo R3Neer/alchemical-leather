@@ -21,25 +21,20 @@ public final class WearPredicates {
         return !naturalBreathing&&!creativeInvulnerable&&!alternateBreathing&&submergedEyes&&!bubbleColumn;
     }
 
-    /**
-     * Vanilla 26.2 only changes gravity for Slow Falling while descending and only when the
-     * entity's normal gravity is above the 0.01 clamp.
-     */
+    /** Vanilla's Slow Falling clamp can only change gravity while descending from >0.01 gravity. */
     public static boolean slowFallingChangesGravity(double normalGravity,double verticalVelocity){
         return Double.isFinite(normalGravity)&&Double.isFinite(verticalVelocity)&&verticalVelocity<=0.0&&normalGravity>0.01;
     }
 
     /**
-     * Runtime gate for paths in which Slow Falling's effective-gravity clamp is actually retained.
-     * Levitation replaces the gravity branch entirely. Creative flight calls LivingEntity travel but
-     * then restores its own vertical velocity and independently resets fall distance, so it is not
-     * Slow Falling work. Elytra is intentionally not excluded: fall-flying uses getEffectiveGravity.
+     * Confirms that a completed getEffectiveGravity call actually returned Slow Falling's 0.01
+     * clamp rather than merely observing an active effect. The caller separately decides whether
+     * that gravity value is consumed by its movement path.
      */
-    public static boolean slowFallingEligible(double normalGravity,double verticalVelocity,boolean onGround,
-                                              boolean passenger,boolean inWater,boolean inLava,
-                                              boolean levitating,boolean creativeFlying){
-        return !onGround&&!passenger&&!inWater&&!inLava&&!levitating&&!creativeFlying
-            &&slowFallingChangesGravity(normalGravity,verticalVelocity);
+    public static boolean slowFallingGravityApplied(double normalGravity,double verticalVelocity,double effectiveGravity){
+        if(!finite(normalGravity,verticalVelocity,effectiveGravity)||!slowFallingChangesGravity(normalGravity,verticalVelocity))return false;
+        return Math.abs(effectiveGravity-Math.min(normalGravity,0.01))<=MOVEMENT_EPSILON
+            &&effectiveGravity<normalGravity-MOVEMENT_EPSILON;
     }
 
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
