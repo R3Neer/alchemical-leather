@@ -30,7 +30,7 @@ The existing beta.1 features remain part of the regression matrix: cauldron infu
 | S02 — builtin causal detectors | **Complete and adversarially expanded**. Movement, jump/fall, protection/damage, combat, breath/reach and selected mod-effect proc boundaries are covered. |
 | S03 — companion adapters | **Complete**. Scale Brews and Clinging integrations converged independently and are merged to their `main` branches. |
 | S04 — humanoid multi-effect | **Complete**. Same-slot distinct-effect bundles are atomic and keep independent timing/wear attribution. |
-| S05 — exhaustive compatibility / adversarial gate | **Final exact-head gate pending** after documentation closeout. The focused VanillaPlus fixture and cross-mod bridge holdout are in place. |
+| S05 — exhaustive compatibility / adversarial gate | **Functionally green** on branch candidate `52cae148e287292b240d3ee5c57d4b45b1851c07`; final evidence-only head and post-merge main gate remain. |
 
 ## First-party companion evidence
 
@@ -40,9 +40,7 @@ Compatibility ownership merged to Scale Brews `main` as:
 
 `74066349eb33872d1f2b8584dfd05ffd96eae0f8`
 
-Growth/Shrinking own their chestplate slot declarations and explicit `wear: none` policy. Scale introduces no hard Alchemical Leather dependency.
-
-The exact merged `main` commit passed Scale's build workflow run **35029211878**.
+Growth/Shrinking own their chestplate slot declarations and explicit `wear: none` policy. Scale introduces no hard Alchemical Leather dependency. The exact merged `main` commit passed build workflow **35029211878**.
 
 ### Clinging: Reoriented
 
@@ -52,7 +50,7 @@ The final integration merged to Clinging `main` as:
 
 `df1cff3a2fb9baf69d3bb8594159681b6966096d`
 
-The documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed complete workflow run **35031688007**, covering localization, build/unit tests, server GameTests, default client, First Person, Scale Brews server/client, Fresh Animations and semantic snapshots.
+The documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed complete workflow **35031688007**, covering localization, build/unit tests, server GameTests, default client, First Person, Scale Brews server/client, Fresh Animations and semantic snapshots. The exact merged `main` commit then passed post-merge workflow **35032664835**.
 
 ### Production defect found by the adversary
 
@@ -96,44 +94,56 @@ Existing compatibility tests also audit the expected registered potion-family co
 
 `CompanionWearBridgeTests` drives the **real Clinging adapter** into the **real Alchemical Leather API and wear engine** without compiling either production mod against the other.
 
-The fixture establishes a slot-aware Reorientation armor source on equipped boots, then reflectively calls `AlchemicalLeatherCompat.successfulTurn(ServerPlayer)`:
+The test first proves the Alchemical Leather half directly: the loaded Reorientation gravity-turn event maps one semantic unit to exactly 2 work. It then proves the Clinging bridge has resolved the public API and attributes the turn to the same active Reorientation effect before invoking the real bridge repeatedly.
 
-- after 14 successful-turn events the boots must still have zero durability damage and exactly **28 work** debt;
-- the 15th event must complete the configured 30-work bucket, apply exactly **1 ordinary durability damage** and leave zero residual debt.
+The survival fixture requires:
 
-The synthetic GameTest player has no network connection, so the fixture establishes the same slot-aware ledger state directly rather than weakening the production pre-login connection-safety fence merely to make a mock player convenient.
+- one turn-equivalent → exactly **2 work**;
+- fourteen turn-equivalents → **28 work** debt and zero durability damage;
+- the fifteenth → one 30-work bucket, exactly **1 ordinary durability damage**, zero residual debt.
+
+The synthetic GameTest player has no network connection, so the fixture establishes slot-aware FEET ledger state directly rather than weakening production's pre-login connection-safety fence. It explicitly forces Survival, clears `instabuild` and asserts non-infinite-material semantics so Creative behavior cannot erase the debt being measured.
+
+## S05 functional evidence
+
+Branch head:
+
+`52cae148e287292b240d3ee5c57d4b45b1851c07`
+
+passed complete PR workflow **#684** / run **35034528304**.
+
+| Gate | Result |
+|---|---|
+| Gradle build + standalone server GameTests | **PASS** |
+| GameTest entrypoint consistency | **PASS** |
+| Client GameTest under Xvfb / software GL | **PASS** |
+| Exact pinned Clinging + Scale builds | **PASS** |
+| Exact VanillaPlus potion-contributor fixture | **PASS** |
+| Registry-driven potion/wear classification | **PASS** |
+| Direct API + real Clinging bridge → owning boots | **PASS** |
+| Full compatibility GameTest set | **PASS — 124/124 required tests** |
+| CI artifact/log upload | **PASS** |
+
+The workflow artifact explicitly records the expected companion commits and the compatibility log reports `All 124 required tests passed :)`.
 
 ## Failure classification during S05
 
 The adversarial/fixture campaign deliberately kept red runs instead of rewriting history. They exposed the following distinct classes:
 
-1. **Infrastructure — Modrinth Maven resolution.** The initial expanded fixture used Modrinth Maven coordinates and failed before GameTests. The fixture now downloads the exact packwiz-pinned CDN artifacts instead.
-2. **Test-fixture drift — Reorientation brewing ingredient.** An inherited test still used Shulker Shell, while current Clinging beta.3 uses `clinging_reoriented:gravity_charge`. The test was updated to the real current recipe; production was unchanged.
+1. **Infrastructure — Modrinth Maven resolution.** The initial expanded fixture used Modrinth Maven coordinates and failed before GameTests. The fixture now downloads exact packwiz-pinned CDN artifacts instead.
+2. **Test-fixture drift — Reorientation brewing ingredient.** An inherited test still used Shulker Shell, while current Clinging beta.3 uses `clinging_reoriented:gravity_charge`. The test was updated to the current recipe; production was unchanged.
 3. **Test-fixture type — wrong mock player.** The first cross-mod reflection test used a mock that did not satisfy the real `ServerPlayer` method signature. The fixture was corrected.
 4. **Test-fixture ownership — ownerless projection.** Manually projecting an armor effect without an equipment slot correctly caused the wear engine to refuse billing. The holdout was changed to establish explicit FEET ownership.
-5. **Test-fixture lifecycle — pre-login ServerPlayer.** Attempting to use ordinary equipment reconciliation on a synthetic `ServerPlayer` with `connection == null` hit the intentional pre-login safety fence. The fixture now establishes slot-aware ledger state directly; the production fence remains intact.
+5. **Test-fixture lifecycle — pre-login ServerPlayer.** Attempting ordinary equipment reconciliation on a synthetic `ServerPlayer` with `connection == null` hit the intentional pre-login safety fence. The fixture now establishes slot-aware ledger state directly; the production fence remains intact.
 6. **Fixture pinning — direct shallow SHA fetch.** Fetching an isolated merge SHA into a shallow repository proved brittle. The final workflow shallow-clones each companion's `main` and fails if its HEAD differs from the pinned converged SHA.
 7. **Production — Clinging foreign-flight attribution.** The Elytra/fluid/player-flight bug described above was fixed in Clinging and converted into permanent holdouts.
+8. **Test-fixture game mode — infinite materials.** `makeMockServerPlayerInLevel()` supplied infinite-material semantics, so the wear engine correctly discarded damage/debt. The holdout now forces Survival, sets `instabuild=false` and asserts `hasInfiniteMaterials()==false` before measuring wear.
 
 No Alchemical Leather production behavior was weakened to make a fixture pass.
 
-## Required final matrix
+## Remaining final gate
 
-The documentation-complete Alchemical Leather head must pass all of the following in one workflow:
-
-| Gate | Required result |
-|---|---|
-| Gradle build + server GameTests | PASS |
-| GameTest entrypoint consistency | PASS |
-| Client GameTest under Xvfb / software GL | PASS |
-| Build exact pinned Clinging + Scale companion commits | PASS |
-| Load exact VanillaPlus potion-contributor fixture | PASS |
-| Registry-driven potion/wear classification | PASS |
-| Cross-mod Clinging → API → owning-boots wear holdout | PASS |
-| Full compatibility GameTest set | PASS |
-| CI artifact/log upload | PASS |
-
-The exact final head/run will be recorded here and in the closeout document after that single documentation-complete pass succeeds.
+This evidence update is intentionally documentation-only. Its exact head must pass the **same complete matrix** before PR #11 is merged. After merge, the exact `main` commit must pass the same workflow again. Those two gates are the remaining mechanical closeout; no new functional work is expected unless one of them finds a new defect.
 
 ## Manual QA boundary
 
