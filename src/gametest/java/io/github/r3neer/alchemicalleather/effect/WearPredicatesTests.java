@@ -130,6 +130,20 @@ public final class WearPredicatesTests {
         h.succeed();
     }
 
+    @GameTest public void reachOnlyBillsButForEffects(GameTestHelper h){
+        double target=4.5;
+        h.assertFalse(ReachWear.needed(target*target,5.0),
+            "A reach effect is redundant when the remaining sources still reach the target");
+        h.assertTrue(ReachWear.needed(target*target,4.0),
+            "A reach effect is causal when removing it leaves the target outside range");
+        h.assertTrue(Math.abs(ReachWear.share(1.0,2.0)-0.5)<EPS,
+            "Two necessary equal reach contributions split one interaction unit evenly");
+        h.assertTrue(Math.abs(ReachWear.share(2.0,3.0)-2.0/3.0)<EPS,
+            "Necessary reach sources split work in proportion to their live attribute contribution");
+        h.assertTrue(ReachWear.share(1.0,0.0)==0.0,"Degenerate reach weights cannot manufacture work");
+        h.succeed();
+    }
+
     @GameTest public void weavingMeasuresRealizedCobwebBenefitNotInput(GameTestHelper h){
         h.assertTrue(WearPredicates.isWeavingWebMultiplier(0.5,0.25,0.5),
             "Vanilla Weaving cobweb multiplier is recognized exactly");
