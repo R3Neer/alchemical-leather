@@ -2,7 +2,7 @@ package io.github.r3neer.alchemicalleather.effect;
 
 import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
-import net.minecraft.advancements.CriteriaTriggers;
+import io.github.r3neer.alchemicalleather.mixin.ItemStackDamageAccess;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /** Server-authoritative conversion of attributable effect work into ordinary armor durability damage. */
@@ -70,20 +69,17 @@ public final class InfusionWear {
     }
 
     /**
-     * Applies the explicit alchemical durability cost without consulting ItemStack#isDamageableItem.
-     * This mirrors vanilla's final damage/break path while remaining compatible with mods that make
-     * ordinary durability globally inert. It does not make the item damageable for any other source.
+     * Applies the explicit alchemical cost past ItemStack#isDamageableItem, then rejoins vanilla at
+     * its terminal applyDamage path. This preserves vanilla's durability criterion, clamping,
+     * shrink-on-break and equipment-break callback without re-enabling ordinary durability sources.
      */
     static void damageArmorDirectly(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
         if(amount<=0||stack.isEmpty()||stack.getMaxDamage()<=0)return;
         if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
-        int newDamage=Math.min(Integer.MAX_VALUE,stack.getDamageValue()+amount);
-        if(wearer instanceof ServerPlayer player)CriteriaTriggers.ITEM_DURABILITY_CHANGED.trigger(player,stack,newDamage);
-        stack.setDamageValue(newDamage);
-        if(newDamage>=stack.getMaxDamage()){
-            Item broken=stack.getItem();
-            stack.shrink(1);
-            wearer.onEquippedItemBroken(broken,slot);
-        }
+        long rawDamage=(long)stack.getDamageValue()+amount;
+        int newDamage=(int)Math.min(Integer.MAX_VALUE,rawDamage);
+        ServerPlayer player=wearer instanceof ServerPlayer sp?sp:null;
+        ((ItemStackDamageAccess)(Object)stack).alchemical$applyDamage(
+            newDamage,player,broken->wearer.onEquippedItemBroken(broken,slot));
     }
 }
