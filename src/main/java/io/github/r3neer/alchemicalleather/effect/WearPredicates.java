@@ -12,4 +12,13 @@ public final class WearPredicates {
                                                boolean alternateBreathing,boolean submergedEyes,boolean bubbleColumn){
         return !naturalBreathing&&!creativeInvulnerable&&!alternateBreathing&&submergedEyes&&!bubbleColumn;
     }
+
+    /**
+     * Vanilla 26.2 only changes gravity for Slow Falling while descending and only when the
+     * entity's normal gravity is above the 0.01 clamp. Other movement exclusions are supplied by
+     * the runtime detector because they describe where this mod intentionally meters the physics.
+     */
+    public static boolean slowFallingChangesGravity(double normalGravity,double verticalVelocity){
+        return Double.isFinite(normalGravity)&&Double.isFinite(verticalVelocity)&&verticalVelocity<=0.0&&normalGravity>0.01;
+    }
 }
