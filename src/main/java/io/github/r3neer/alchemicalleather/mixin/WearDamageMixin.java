@@ -1,5 +1,6 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
+import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -51,11 +52,12 @@ public abstract class WearDamageMixin {
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
         if(holder.isEmpty()||power<=0)return;
         var effect=self.getEffect(holder.get());if(effect==null)return;
-        double total=self.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
-        double contribution=0.5D*(effect.getAmplifier()+1.0D);
-        double without=Math.max(0.0D,1.0D-Math.max(0.0D,total-contribution));
-        double with=Math.max(0.0D,1.0D-total);
-        double prevented=power*Math.max(0.0D,without-with);
+
+        double withResistance=self.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
+        double withoutResistance=EffectAttributes.without(self,Attributes.KNOCKBACK_RESISTANCE,effect);
+        double withMultiplier=Math.max(0.0D,1.0D-withResistance);
+        double withoutMultiplier=Math.max(0.0D,1.0D-withoutResistance);
+        double prevented=power*Math.max(0.0D,withoutMultiplier-withMultiplier);
         if(prevented>0)InfusionWear.emitBuiltin(self,effect.getEffect(),KNOCKBACK_REDUCED,prevented);
     }
 }
