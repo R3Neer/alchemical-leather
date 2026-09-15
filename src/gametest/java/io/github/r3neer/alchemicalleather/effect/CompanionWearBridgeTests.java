@@ -2,6 +2,7 @@ package io.github.r3neer.alchemicalleather.effect;
 
 import io.github.r3neer.alchemicalleather.data.Infusion;
 import io.github.r3neer.alchemicalleather.data.Infusions;
+import io.github.r3neer.alchemicalleather.data.WearProgress;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,9 +22,10 @@ public final class CompanionWearBridgeTests {
         Identifier effectId=Identifier.parse("clinging_reoriented:reorientation");
         var effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
         var player=h.makeMockServerPlayerInLevel();
-        var boots=new ItemStack(Items.LEATHER_BOOTS);
-        boots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
-        player.setItemSlot(EquipmentSlot.FEET,boots);
+        var inputBoots=new ItemStack(Items.LEATHER_BOOTS);
+        inputBoots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
+        player.setItemSlot(EquipmentSlot.FEET,inputBoots);
+        var equippedBoots=player.getItemBySlot(EquipmentSlot.FEET);
 
         var ledger=EffectLedger.of(player);
         ledger.equipmentManaged=true;
@@ -34,9 +36,14 @@ public final class CompanionWearBridgeTests {
         Class<?> bridge=Class.forName("io.github.r3neer.clingingreoriented.compat.AlchemicalLeatherCompat");
         var successfulTurn=bridge.getMethod("successfulTurn",ServerPlayer.class);
         for(int i=0;i<14;i++)successfulTurn.invoke(null,player);
-        h.assertTrue(boots.getDamageValue()==0,"Fourteen successful Reorientation turns remain below the 30-work durability threshold");
+        var progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
+        h.assertTrue(equippedBoots.getDamageValue()==0,"Fourteen successful Reorientation turns remain below the durability threshold");
+        h.assertTrue(Math.abs(progress.work(effectId)-28.0)<1.0e-9,"Fourteen real companion turn events accumulate exactly 28 work on the equipped boots");
+
         successfulTurn.invoke(null,player);
-        h.assertTrue(boots.getDamageValue()==1,"The fifteenth real companion turn event reaches 30 work and damages the owning boots exactly once");
+        progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
+        h.assertTrue(equippedBoots.getDamageValue()==1,"The fifteenth real companion turn event reaches 30 work and damages the equipped boots exactly once");
+        h.assertTrue(Math.abs(progress.work(effectId))<1.0e-9,"The spent 30-work bucket leaves no hidden fractional debt");
         h.succeed();
     }
 }
