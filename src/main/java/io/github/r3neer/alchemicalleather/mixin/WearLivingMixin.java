@@ -147,8 +147,10 @@ public abstract class WearLivingMixin {
         if(breathing!=null&&wouldNeedWaterBreathing(self))InfusionWear.emitBuiltin(self,breathing.getEffect(),WATER_BREATHING,1.0);
 
         var falling=self.getEffect(MobEffects.SLOW_FALLING);
-        if(falling!=null&&!self.onGround()&&!self.isPassenger()&&!self.isInWater()&&!self.isInLava()
-            &&WearPredicates.slowFallingChangesGravity(self.getGravity(),self.getDeltaMovement().y))
+        boolean creativeFlying=self instanceof Player player&&player.getAbilities().flying;
+        if(falling!=null&&WearPredicates.slowFallingEligible(
+            self.getGravity(),self.getDeltaMovement().y,self.onGround(),self.isPassenger(),self.isInWater(),self.isInLava(),
+            self.hasEffect(MobEffects.LEVITATION),creativeFlying))
             InfusionWear.emitBuiltin(self,falling.getEffect(),SLOW_FALLING,1.0);
     }
 
