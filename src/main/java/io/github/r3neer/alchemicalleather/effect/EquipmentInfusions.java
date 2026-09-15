@@ -20,15 +20,18 @@ public final class EquipmentInfusions {
         boolean any=false;
         for(var slot:Infusions.SLOTS){var stack=entity.getItemBySlot(slot);if(Infusions.blocked(stack)&&Infusions.slot(stack)==slot){any=true;break;}}
         var ledger=((LedgerHolder)entity).alchemical$existingLedger();
-        if(!any){if(ledger!=null){ledger.retainArmor(Set.of());ledger.equipmentManaged=false;}return;}
+        if(!any){if(ledger!=null){ledger.retainArmorSlots(Map.of());ledger.equipmentManaged=false;}return;}
         if(ledger==null)ledger=EffectLedger.of(entity);
         ledger.equipmentManaged=true;
-        Set<Holder<MobEffect>> wanted=new HashSet<>();
+        Map<Holder<MobEffect>,Set<EquipmentSlot>> wanted=new HashMap<>();
         for(var slot:Infusions.HUMANOID_SLOTS){syncHumanoid(level,entity,slot,entity.getItemBySlot(slot),ledger,wanted);if(!entity.isAlive())return;}
         syncAnimal(level,entity,entity.getItemBySlot(EquipmentSlot.BODY),ledger,wanted);
-        if(entity.isAlive())ledger.retainArmor(wanted);
+        if(entity.isAlive())ledger.retainArmorSlots(wanted);
     }
-    private static void syncHumanoid(ServerLevel level,LivingEntity entity,EquipmentSlot slot,ItemStack stack,EffectLedger ledger,Set<Holder<MobEffect>> wanted) {
+    private static void want(Map<Holder<MobEffect>,Set<EquipmentSlot>> wanted,Holder<MobEffect> effect,EquipmentSlot slot){
+        wanted.computeIfAbsent(effect,ignored->EnumSet.noneOf(EquipmentSlot.class)).add(slot);
+    }
+    private static void syncHumanoid(ServerLevel level,LivingEntity entity,EquipmentSlot slot,ItemStack stack,EffectLedger ledger,Map<Holder<MobEffect>,Set<EquipmentSlot>> wanted) {
         if(Infusions.slot(stack)!=slot)return;
         var remaining=new ArrayList<>(Infusions.entries(stack));
         for(int i=0;i<remaining.size();) {
@@ -45,9 +48,9 @@ public final class EquipmentInfusions {
             var holder=infusion.holder();if(holder.isEmpty()||holder.get().value().isInstantaneous())continue;
             winners.merge(holder.get(),infusion,EquipmentInfusions::stronger);
         }
-        winners.forEach((holder,infusion)->{wanted.add(holder);ledger.setArmor(infusion.instance());});
+        winners.forEach((holder,infusion)->{want(wanted,holder,slot);ledger.setArmor(slot,infusion.instance());});
     }
-    private static void syncAnimal(ServerLevel level,LivingEntity entity,ItemStack stack,EffectLedger ledger,Set<Holder<MobEffect>> wanted) {
+    private static void syncAnimal(ServerLevel level,LivingEntity entity,ItemStack stack,EffectLedger ledger,Map<Holder<MobEffect>,Set<EquipmentSlot>> wanted) {
         var bundle=stack.get(Infusions.ANIMAL_TYPE);
         if(bundle==null||!bundle.valid()||!Infusions.animalArmor(stack))return;
         var remaining=new ArrayList<>(bundle.effects());
@@ -66,7 +69,7 @@ public final class EquipmentInfusions {
             var holder=infusion.holder();if(holder.isEmpty()||holder.get().value().isInstantaneous())continue;
             winners.merge(holder.get(),infusion,EquipmentInfusions::stronger);
         }
-        winners.forEach((holder,infusion)->{wanted.add(holder);ledger.setArmor(infusion.instance());});
+        winners.forEach((holder,infusion)->{want(wanted,holder,EquipmentSlot.BODY);ledger.setArmor(EquipmentSlot.BODY,infusion.instance());});
     }
     private static Infusion stronger(Infusion first,Infusion second) {
         if(first.amplifier()!=second.amplifier())return first.amplifier()>second.amplifier()?first:second;
@@ -98,7 +101,7 @@ public final class EquipmentInfusions {
             boolean changed=false,expired=false;var next=new ArrayList<Infusion>(current.size());
             for(var infusion:current) {
                 if(infusion.mode().equals("timed")&&infusion.holder().isPresent()&&Infusions.accepts(stack,slot,infusion.effect())) {
-                    int remaining=ledger.remaining(infusion.holder().get());
+                    int remaining=ledger.remaining(infusion.holder().get(),slot);
                     if(remaining<=0){changed=true;expired=true;continue;}
                     if(remaining!=infusion.remainingTicks()){changed=true;next.add(infusion.remaining(remaining));}else next.add(infusion);
                 } else next.add(infusion);
