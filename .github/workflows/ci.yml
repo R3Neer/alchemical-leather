@@ -34,8 +34,8 @@ jobs:
           set -o pipefail
           ./gradlew prepareClingingCompat --console=plain 2>&1 | tee build/ci/compat-prepare.log
           mkdir -p build/compat-src
-          git clone --depth 1 --branch chatgpt/alchemical-leather-wear-compat https://github.com/R3Neer/clinging-reoriented.git build/compat-src/clinging-reoriented
-          git clone --depth 1 --branch chatgpt/alchemical-leather-wear-compat https://github.com/R3Neer/scale-brews.git build/compat-src/scale-brews
+          git clone --depth 1 --branch chatgpt/alchemical-leather-wear-compat-v2 https://github.com/R3Neer/clinging-reoriented.git build/compat-src/clinging-reoriented
+          git clone --depth 1 --branch main https://github.com/R3Neer/scale-brews.git build/compat-src/scale-brews
           (cd build/compat-src/clinging-reoriented && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/clinging-build.log
           (cd build/compat-src/scale-brews && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/scale-build.log
           find build/compat-src/clinging-reoriented/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/clingingCompat/ \;
