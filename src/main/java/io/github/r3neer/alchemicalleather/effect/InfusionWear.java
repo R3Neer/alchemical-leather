@@ -48,13 +48,19 @@ public final class InfusionWear {
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
+        // Creative/infinite-material players follow vanilla durability semantics: the item pays no
+        // damage and must not quietly bank fractional debt for a later switch back to survival.
+        if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
         // MAX_DAMAGE/DAMAGE establish a real durability bar, but vanilla's explicit UNBREAKABLE
         // component remains authoritative. A compatibility mod may still mask isDamageableItem().
         if(!hasVanillaDamageBar(stack))return;
         var progress=stack.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
-        double total=progress.work(effect)+addedWork;
-        int damage=(int)Math.floor(total/rule.workPerDamage());
-        double remaining=total-damage*rule.workPerDamage();
+        double previous=progress.work(effect);
+        double total=previous>Double.MAX_VALUE-addedWork?Double.MAX_VALUE:previous+addedWork;
+        double rawDamage=Math.floor(total/rule.workPerDamage());
+        int damage=rawDamage>=Integer.MAX_VALUE?Integer.MAX_VALUE:(int)rawDamage;
+        double spent=damage*rule.workPerDamage();
+        double remaining=Math.max(0.0,total-spent);
         if(damage<=0){
             var next=progress.with(effect,total);if(next.isEmpty())stack.remove(Infusions.WEAR_TYPE);else stack.set(Infusions.WEAR_TYPE,next);return;
         }
