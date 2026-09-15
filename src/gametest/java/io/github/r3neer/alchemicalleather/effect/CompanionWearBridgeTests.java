@@ -18,6 +18,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 
 /** Cross-mod holdout: the real companion adapter must reach the real wear engine. */
 public final class CompanionWearBridgeTests {
@@ -28,6 +29,10 @@ public final class CompanionWearBridgeTests {
         Identifier turnEvent=Identifier.parse("clinging_reoriented:gravity_turn");
         Holder<MobEffect> effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
         var player=h.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.SURVIVAL);
+        player.getAbilities().instabuild=false;
+        h.assertFalse(player.hasInfiniteMaterials(),"Wear holdout requires survival/non-infinite material semantics");
+
         var boots=new ItemStack(Items.LEATHER_BOOTS);
         boots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
         player.setItemSlot(EquipmentSlot.FEET,boots);
@@ -42,6 +47,10 @@ public final class CompanionWearBridgeTests {
         h.assertTrue(player.hasEffect(effect),"Slot-aware ledger projection exposes the armor-owned Reorientation effect");
         h.assertTrue(ledger.armorEffective(effect),"Reorientation boots are the effective source before the companion event");
         h.assertTrue(ledger.armorOwner(effect)==EquipmentSlot.FEET,"The projected Reorientation source is explicitly owned by the equipped boots");
+
+        var rule=io.github.r3neer.alchemicalleather.data.WearRules.rule(effectId);
+        h.assertTrue(rule!=null&&!rule.none(),"Loaded Reorientation rule is causal wear");
+        h.assertTrue(Math.abs(rule.work("event",turnEvent,1.0)-2.0)<1.0e-9,"Loaded Reorientation gravity-turn rule contributes exactly two work");
 
         // First prove the Alchemical Leather half independently: one semantic unit for the
         // Reorientation turn rule is exactly two work on the owning boots.
