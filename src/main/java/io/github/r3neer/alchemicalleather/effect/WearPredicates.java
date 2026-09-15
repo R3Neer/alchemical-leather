@@ -42,6 +42,20 @@ public final class WearPredicates {
             &&waterMovementEfficiency>0.0&&hasInput(inputHorizontalSqr);
     }
 
+    /**
+     * Converts causal movement distance to configured work only when the effect changes the live
+     * MOVEMENT_SPEED attribute in the expected direction. Amplifier weighting is intentional balance:
+     * stronger infusions spend more durability per block of otherwise identical causal locomotion.
+     */
+    public static double movementSpeedWork(double attributableDistance,double attributeContribution,
+                                           int amplifier,boolean beneficial){
+        if(!finite(attributableDistance,attributeContribution)||attributableDistance<=MOVEMENT_EPSILON)return 0.0;
+        if(beneficial?attributeContribution<=MOVEMENT_EPSILON:attributeContribution>=-MOVEMENT_EPSILON)return 0.0;
+        int level=Math.max(1,amplifier+1);
+        double work=attributableDistance*level;
+        return Double.isFinite(work)&&work>0.0?work:0.0;
+    }
+
     /** Mirrors the horizontal drag chosen by LivingEntity#travelInWater in 26.2. */
     public static double waterMovementDrag(boolean sprinting,double baseSlowDown,double waterMovementEfficiency,
                                            boolean onGround,boolean dolphinsGrace){
