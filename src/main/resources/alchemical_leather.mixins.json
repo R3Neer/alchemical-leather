@@ -6,6 +6,7 @@
     "LivingEffectsMixin",
     "LivingEffectsAccess",
     "EffectAccess",
+    "ItemStackDamageAccess",
     "EnchantableStackMixin",
     "AnvilMixin",
     "RepairMixin",
