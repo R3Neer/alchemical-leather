@@ -22,6 +22,7 @@
       "io.github.r3neer.alchemicalleather.effect.WearPredicatesTests",
       "io.github.r3neer.alchemicalleather.effect.WearOwnershipTests",
       "io.github.r3neer.alchemicalleather.effect.WearCombatTests",
+      "io.github.r3neer.alchemicalleather.effect.WearPersistenceTests",
       "io.github.r3neer.alchemicalleather.trade.LeatherworkerTradeTests",
       "io.github.r3neer.alchemicalleather.trade.TradeEnchantmentGuardTest"
     ],
