@@ -1,6 +1,6 @@
 # TM closeout: causal infusion wear and VanillaPlus compatibility
 
-Status: **implementation and adversarial work complete; functional/documentation candidate green; final evidence-only CI gate pending**.
+Status: **TM campaign complete and merged to `main`**.
 
 Frozen design source: [`TM_INFUSION_WEAR_SPEC.md`](TM_INFUSION_WEAR_SPEC.md). That specification is intentionally left unchanged as the pre-implementation contract; this document records what was actually built, attacked and converged.
 
@@ -98,9 +98,9 @@ Documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed
 
 ## S05 — exhaustive compatibility and adversarial gate
 
-**Functionally converged.**
+**Complete and merged.**
 
-The original reduced compatibility fixture was insufficient because it did not load all VanillaPlus potion/effect contributors. The final fixture now includes exact pack-pinned versions of:
+The original reduced compatibility fixture was insufficient because it did not load all VanillaPlus potion/effect contributors. The final fixture includes exact pack-pinned versions of:
 
 - Alex's Mobs Continued;
 - Friends & Foes;
@@ -130,25 +130,35 @@ The survival fixture requires:
 - fourteen turn-equivalents → 28 fractional work and zero durability damage;
 - the fifteenth → one complete 30-work bucket, exactly one ordinary durability damage and zero residual debt.
 
-Synthetic GameTest `ServerPlayer` instances intentionally lack a play connection, so the fixture establishes slot-aware FEET ownership directly instead of weakening production's pre-login reconciliation fence. It also explicitly forces `GameType.SURVIVAL`, clears `instabuild` and asserts `hasInfiniteMaterials()==false` so Creative semantics cannot erase wear debt.
+Synthetic GameTest `ServerPlayer` instances intentionally lack a play connection, so the fixture establishes slot-aware FEET ownership directly instead of weakening production's pre-login reconciliation fence. It explicitly forces `GameType.SURVIVAL`, clears `instabuild` and asserts `hasInfiniteMaterials()==false` so Creative semantics cannot erase wear debt.
 
-### Functional/documentation candidate evidence
+## Final integration evidence
 
-Branch head `52cae148e287292b240d3ee5c57d4b45b1851c07` passed complete PR workflow **#684** (`35034528304`).
+Functional/documentation candidate `52cae148e287292b240d3ee5c57d4b45b1851c07` passed complete PR workflow **#684** (`35034528304`), including **124/124 required compatibility GameTests**.
 
-The same run passed:
+Evidence-only PR head `cc5fa6cc31c45661786c4cd8c69d5f3409d3f872` then passed the same complete pipeline in workflow `35035044227`.
+
+PR #11 merged to `main` as:
+
+`fbaf464fb5643021b74b75292c249bfdf49d5742`
+
+The exact merge commit passed post-merge `main` workflow:
+
+`35035540435`
+
+That post-merge run passed:
 
 - Gradle build + standalone server GameTests;
 - GameTest entrypoint consistency through `check`;
 - client GameTest under Xvfb/software GL;
 - exact pinned Clinging and Scale companion builds;
 - exact VanillaPlus potion-contributor fixture preparation;
-- **124/124 required compatibility GameTests**;
 - registry-driven potion/wear classification;
-- the full direct-API + real-Clinging-bridge → owning-boots wear holdout;
+- direct-API + real-Clinging-bridge → owning-boots wear holdout;
+- the full VanillaPlus compatibility GameTest lane;
 - artifact/log upload.
 
-The uploaded evidence records exactly:
+The pre-merge artifact records exactly:
 
 - Clinging: Reoriented `df1cff3a2fb9baf69d3bb8594159681b6966096d`;
 - Scale Brews `74066349eb33872d1f2b8584dfd05ffd96eae0f8`;
@@ -195,9 +205,9 @@ The frozen pre-implementation specification remains unchanged.
 - [x] dynamic potion-registry classification gate added;
 - [x] real direct-API + companion-bridge → owning-item durability holdout added;
 - [x] player/architecture/compatibility/validation documentation updated;
-- [x] functional/documentation candidate `52cae148e287292b240d3ee5c57d4b45b1851c07` passed the complete matrix in run `35034528304` with 124/124 compatibility GameTests;
-- [ ] evidence-only closeout head passes the same complete matrix;
-- [ ] PR #11 merged to `main`;
-- [ ] exact merged `main` commit passes the same CI pipeline.
+- [x] functional/documentation candidate passed the complete matrix with 124/124 compatibility GameTests;
+- [x] evidence-only PR head passed the same complete matrix;
+- [x] PR #11 merged to `main`;
+- [x] exact merged `main` commit passed the same CI pipeline.
 
-The remaining boxes are intentionally left open until their exact GitHub Actions evidence exists. TM is not improved by writing “PASS” slightly before reality catches up.
+The unfinished agent's TM campaign is therefore closed. No release/tag/version bump is implied by this closeout; the published prerelease remains 0.1.0-beta.1 until release preparation is explicitly chosen.
