@@ -46,6 +46,9 @@ public final class WearPersistenceTests {
 
     @GameTest public void creativeWearDoesNotBankFractionalDebt(GameTestHelper h){
         var wearer=h.makeMockPlayer(GameType.CREATIVE);
+        // GameTestHelper's mock only overrides gameMode(); it does not apply creative abilities.
+        // Vanilla's durability decision is Player#hasInfiniteMaterials -> abilities.instabuild.
+        wearer.getAbilities().instabuild=true;
         var leggings=new ItemStack(Items.LEATHER_LEGGINGS);
         leggings.set(Infusions.TYPE,new Infusion(JUMP,0,"stable",0));
         wearer.setItemSlot(EquipmentSlot.LEGS,leggings);
@@ -53,7 +56,7 @@ public final class WearPersistenceTests {
         ledger.setArmor(EquipmentSlot.LEGS,new MobEffectInstance(MobEffects.JUMP_BOOST,-1,0));
 
         // Jump Boost needs 16 work for one durability. Eight units used to leave hidden debt even
-        // though creative correctly suppressed the eventual durability hit.
+        // though infinite materials correctly suppressed the eventual durability hit.
         for(int i=0;i<8;i++)InfusionWear.emitBuiltin(wearer,MobEffects.JUMP_BOOST,JUMP_DETECTOR,1.0);
         h.assertTrue(leggings.getDamageValue()==0,"Creative armor takes no alchemical durability damage");
         h.assertFalse(leggings.has(Infusions.WEAR_TYPE),"Creative use cannot bank debt for a later survival-mode bill");
