@@ -1,14 +1,19 @@
 package io.github.r3neer.alchemicalleather.effect;
 
+import io.github.r3neer.alchemicalleather.api.InfusionWearApi;
 import io.github.r3neer.alchemicalleather.data.Infusion;
 import io.github.r3neer.alchemicalleather.data.Infusions;
 import io.github.r3neer.alchemicalleather.data.WearProgress;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -20,7 +25,8 @@ public final class CompanionWearBridgeTests {
         if(!FabricLoader.getInstance().isModLoaded("clinging_reoriented")){h.succeed();return;}
 
         Identifier effectId=Identifier.parse("clinging_reoriented:reorientation");
-        var effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
+        Identifier turnEvent=Identifier.parse("clinging_reoriented:gravity_turn");
+        Holder<MobEffect> effect=BuiltInRegistries.MOB_EFFECT.get(effectId).orElseThrow();
         var player=h.makeMockServerPlayerInLevel();
         var boots=new ItemStack(Items.LEATHER_BOOTS);
         boots.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
@@ -37,16 +43,35 @@ public final class CompanionWearBridgeTests {
         h.assertTrue(ledger.armorEffective(effect),"Reorientation boots are the effective source before the companion event");
         h.assertTrue(ledger.armorOwner(effect)==EquipmentSlot.FEET,"The projected Reorientation source is explicitly owned by the equipped boots");
 
-        Class<?> bridge=Class.forName("io.github.r3neer.clingingreoriented.compat.AlchemicalLeatherCompat");
-        var successfulTurn=bridge.getMethod("successfulTurn",ServerPlayer.class);
-        for(int i=0;i<14;i++)successfulTurn.invoke(null,player);
+        // First prove the Alchemical Leather half independently: one semantic unit for the
+        // Reorientation turn rule is exactly two work on the owning boots.
+        InfusionWearApi.emit(player,effect,turnEvent,1.0);
         var progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
-        h.assertTrue(equippedBoots.getDamageValue()==0,"Fourteen successful Reorientation turns remain below the durability threshold");
-        h.assertTrue(Math.abs(progress.work(effectId)-28.0)<1.0e-9,"Fourteen real companion turn events accumulate exactly 28 work on the equipped boots");
+        h.assertTrue(Math.abs(progress.work(effectId)-2.0)<1.0e-9,"Direct semantic API event contributes exactly the configured two work");
+
+        // Then prove the companion half itself was initialized and resolves the same active effect.
+        Class<?> bridge=Class.forName("io.github.r3neer.clingingreoriented.compat.AlchemicalLeatherCompat");
+        Field emitter=bridge.getDeclaredField("emit");
+        emitter.setAccessible(true);
+        h.assertTrue(emitter.get(null)!=null,"Clinging optional bridge resolved the Alchemical Leather public API");
+        Method turnEffect=bridge.getDeclaredMethod("turnEffect",ServerPlayer.class);
+        turnEffect.setAccessible(true);
+        h.assertTrue(effect.equals(turnEffect.invoke(null,player)),"Clinging bridge attributes the successful turn to the active Reorientation effect");
+        Method successfulTurn=bridge.getMethod("successfulTurn",ServerPlayer.class);
 
         successfulTurn.invoke(null,player);
         progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
-        h.assertTrue(equippedBoots.getDamageValue()==1,"The fifteenth real companion turn event reaches 30 work and damages the equipped boots exactly once");
+        h.assertTrue(Math.abs(progress.work(effectId)-4.0)<1.0e-9,"The real Clinging bridge reaches the same semantic event path");
+
+        // One direct API event + thirteen companion events = fourteen turn-equivalents = 28 work.
+        for(int i=0;i<12;i++)successfulTurn.invoke(null,player);
+        progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
+        h.assertTrue(equippedBoots.getDamageValue()==0,"Fourteen turn-equivalents remain below the durability threshold");
+        h.assertTrue(Math.abs(progress.work(effectId)-28.0)<1.0e-9,"Fourteen turn-equivalents accumulate exactly 28 work on the equipped boots");
+
+        successfulTurn.invoke(null,player);
+        progress=equippedBoots.getOrDefault(Infusions.WEAR_TYPE,WearProgress.EMPTY);
+        h.assertTrue(equippedBoots.getDamageValue()==1,"The fifteenth turn-equivalent reaches 30 work and damages the equipped boots exactly once");
         h.assertTrue(Math.abs(progress.work(effectId))<1.0e-9,"The spent 30-work bucket leaves no hidden fractional debt");
         h.succeed();
     }
