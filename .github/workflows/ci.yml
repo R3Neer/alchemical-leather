@@ -2,6 +2,9 @@ name: Build and test
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: alchemical-leather-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
