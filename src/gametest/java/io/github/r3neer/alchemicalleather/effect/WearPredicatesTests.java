@@ -57,6 +57,22 @@ public final class WearPredicatesTests {
         h.succeed();
     }
 
+    @GameTest public void movementWorkRequiresARealAttributeContribution(GameTestHelper h){
+        h.assertTrue(Math.abs(WearPredicates.movementSpeedWork(12.0,0.02,0,true)-12.0)<EPS,
+            "Speed I charges one unit of work per attributable block at the base balance");
+        h.assertTrue(Math.abs(WearPredicates.movementSpeedWork(12.0,0.04,1,true)-24.0)<EPS,
+            "Speed II intentionally weights the same causal distance twice");
+        h.assertTrue(Math.abs(WearPredicates.movementSpeedWork(12.0,-0.03,1,false)-24.0)<EPS,
+            "Slowness II uses the same level-weighted causal economy");
+        h.assertTrue(WearPredicates.movementSpeedWork(12.0,0.0,3,true)==0.0,
+            "A clamped Speed modifier that changes no attribute value performs no work");
+        h.assertTrue(WearPredicates.movementSpeedWork(12.0,0.01,3,false)==0.0,
+            "Slowness cannot charge for a contribution in the wrong direction");
+        h.assertTrue(WearPredicates.movementSpeedWork(12.0,-0.01,3,true)==0.0,
+            "Speed cannot charge for a contribution in the wrong direction");
+        h.succeed();
+    }
+
     @GameTest public void waterMovementOnlyPaysWhenMovementSpeedActuallyFeedsSwimming(GameTestHelper h){
         h.assertFalse(WearPredicates.movementSpeedWaterEligible(false,false,true,0.0,1.0),
             "Swimming without Water Movement Efficiency does not use MOVEMENT_SPEED");
