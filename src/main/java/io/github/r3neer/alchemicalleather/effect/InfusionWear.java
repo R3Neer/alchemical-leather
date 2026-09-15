@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /** Server-authoritative conversion of attributable effect work into ordinary armor durability damage. */
@@ -48,9 +49,9 @@ public final class InfusionWear {
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
-        // Creative/infinite-material players follow vanilla durability semantics: the item pays no
-        // damage and must not quietly bank fractional debt for a later switch back to survival.
-        if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
+        // Vanilla exposes the infinite-material decision on Player itself, not only ServerPlayer.
+        // Such players pay neither durability nor fractional debt that could leak into survival.
+        if(wearer instanceof Player player&&player.hasInfiniteMaterials())return;
         // MAX_DAMAGE/DAMAGE establish a real durability bar, but vanilla's explicit UNBREAKABLE
         // component remains authoritative. A compatibility mod may still mask isDamageableItem().
         if(!hasVanillaDamageBar(stack))return;
@@ -88,7 +89,7 @@ public final class InfusionWear {
      */
     static void damageArmor(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,int amount){
         if(amount<=0||!hasVanillaDamageBar(stack))return;
-        if(wearer instanceof ServerPlayer player&&player.hasInfiniteMaterials())return;
+        if(wearer instanceof Player player&&player.hasInfiniteMaterials())return;
         if(stack.isDamageableItem()){
             stack.hurtAndBreak(amount,wearer,slot);
             return;
