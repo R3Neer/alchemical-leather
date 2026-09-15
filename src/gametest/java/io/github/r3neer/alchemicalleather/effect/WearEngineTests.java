@@ -5,11 +5,13 @@ import io.github.r3neer.alchemicalleather.config.AlchemicalConfig;
 import io.github.r3neer.alchemicalleather.data.*;
 import java.util.*;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.util.Unit;
 import net.minecraft.world.effect.*;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
@@ -82,6 +84,30 @@ public final class WearEngineTests {
         boolean accepted=p.hurtServer(h.getLevel(),h.getLevel().damageSources().inFire(),16.0F);
         h.assertFalse(accepted,"Fire Resistance rejects the fire hit at its vanilla decision point");
         h.assertTrue(chest.getDamageValue()==1,"The rejected 16-point fire hit pays exactly one configured durability");
+        h.succeed();
+    }
+
+    @GameTest public void strengthWearUsesThePreResetAttackCooldown(GameTestHelper h){
+        var p=h.makeMockPlayer(GameType.SURVIVAL);
+        var chest=new ItemStack(Items.LEATHER_CHESTPLATE);
+        var effectId=Identifier.withDefaultNamespace("strength");
+        chest.set(Infusions.TYPE,new Infusion(effectId,0,"stable",0));
+        p.setItemSlot(EquipmentSlot.CHEST,chest);
+        var ledger=EffectLedger.of(p);ledger.equipmentManaged=true;ledger.setArmor(new MobEffectInstance(MobEffects.STRENGTH,-1,0));
+        for(int i=0;i<20;i++)p.tick();
+        float attackStrength=p.getAttackStrengthScale(0.5F);
+        h.assertTrue(attackStrength>0.99F,"Fixture reaches a fully charged attack before the hit");
+        var strength=p.getEffect(MobEffects.STRENGTH);
+        h.assertTrue(strength!=null,"Armor projection supplies Strength for the attack holdout");
+        double contribution=EffectAttributes.contribution(p,Attributes.ATTACK_DAMAGE,strength);
+        double expected=contribution*(0.2D+attackStrength*attackStrength*0.8D);
+        var target=h.spawn(EntityTypes.ZOMBIE,new BlockPos(3,2,3));target.setNoAi(true);
+        p.attack(target);
+        var progress=chest.get(Infusions.WEAR_TYPE);
+        h.assertTrue(progress!=null,"Accepted Strength-assisted hit records fractional wear");
+        h.assertTrue(Math.abs(progress.work(effectId)-expected)<1.0E-6,
+            "Strength work must use the pre-onAttack cooldown scale, not the reset ticker visible at hurtOrSimulate");
+        target.discard();
         h.succeed();
     }
 
