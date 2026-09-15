@@ -1,6 +1,6 @@
 # TM closeout: causal infusion wear and VanillaPlus compatibility
 
-Status: **implementation and adversarial work complete; final documentation-complete CI gate pending**.
+Status: **implementation and adversarial work complete; functional/documentation candidate green; final evidence-only CI gate pending**.
 
 Frozen design source: [`TM_INFUSION_WEAR_SPEC.md`](TM_INFUSION_WEAR_SPEC.md). That specification is intentionally left unchanged as the pre-implementation contract; this document records what was actually built, attacked and converged.
 
@@ -82,7 +82,7 @@ The optional adapter:
 
 Adversarial review found one real production defect: continuous Reorientation work could be attributed while Elytra, fluid locomotion or independent player flight actually owned movement. The predicate was fixed and holdouts now cover those contexts plus passengers/support surfaces/Anatomy and lifecycle exclusions.
 
-Documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed full Clinging workflow `35031688007`; integration merged as `df1cff3a2fb9baf69d3bb8594159681b6966096d`.
+Documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed full Clinging workflow `35031688007`; integration merged as `df1cff3a2fb9baf69d3bb8594159681b6966096d`. The exact merge commit then passed post-merge `main` workflow `35032664835`.
 
 ## S04 — humanoid multi-effect support
 
@@ -98,7 +98,7 @@ Documentation-complete PR head `8fbb3fcfd5ff97185c8018812923a1c897f35db6` passed
 
 ## S05 — exhaustive compatibility and adversarial gate
 
-**Implementation complete; final exact documentation-head workflow is the remaining mechanical gate.**
+**Functionally converged.**
 
 The original reduced compatibility fixture was insufficient because it did not load all VanillaPlus potion/effect contributors. The final fixture now includes exact pack-pinned versions of:
 
@@ -118,12 +118,41 @@ The loaded potion registry must contain no unexplained wear gaps. Every loaded p
 
 ### Cross-mod bridge gate
 
-A dedicated holdout invokes the real Clinging `successfulTurn(ServerPlayer)` bridge and requires the real Alchemical Leather rule/accounting path to bill the FEET owner:
+A dedicated holdout exercises both halves of the real path:
 
-- 14 Reorientation turns → 28 fractional work, zero durability damage;
-- 15th turn → one complete 30-work bucket, exactly one durability damage, zero residual work.
+1. direct `InfusionWearApi.emit(...)` proves the loaded Reorientation `gravity_turn` rule contributes exactly 2 work;
+2. the real Clinging `AlchemicalLeatherCompat` bridge is reflectively inspected to prove its API method is resolved and its active-effect attribution selects Reorientation;
+3. real `successfulTurn(ServerPlayer)` calls then flow through the bridge into the same Alchemical Leather wear engine and the FEET owner.
 
-The test establishes explicit FEET ownership in the ledger because synthetic GameTest `ServerPlayer` instances intentionally lack a play connection and production equipment reconciliation correctly defers until JOIN.
+The survival fixture requires:
+
+- one semantic turn-equivalent → 2 work;
+- fourteen turn-equivalents → 28 fractional work and zero durability damage;
+- the fifteenth → one complete 30-work bucket, exactly one ordinary durability damage and zero residual debt.
+
+Synthetic GameTest `ServerPlayer` instances intentionally lack a play connection, so the fixture establishes slot-aware FEET ownership directly instead of weakening production's pre-login reconciliation fence. It also explicitly forces `GameType.SURVIVAL`, clears `instabuild` and asserts `hasInfiniteMaterials()==false` so Creative semantics cannot erase wear debt.
+
+### Functional/documentation candidate evidence
+
+Branch head `52cae148e287292b240d3ee5c57d4b45b1851c07` passed complete PR workflow **#684** (`35034528304`).
+
+The same run passed:
+
+- Gradle build + standalone server GameTests;
+- GameTest entrypoint consistency through `check`;
+- client GameTest under Xvfb/software GL;
+- exact pinned Clinging and Scale companion builds;
+- exact VanillaPlus potion-contributor fixture preparation;
+- **124/124 required compatibility GameTests**;
+- registry-driven potion/wear classification;
+- the full direct-API + real-Clinging-bridge → owning-boots wear holdout;
+- artifact/log upload.
+
+The uploaded evidence records exactly:
+
+- Clinging: Reoriented `df1cff3a2fb9baf69d3bb8594159681b6966096d`;
+- Scale Brews `74066349eb33872d1f2b8584dfd05ffd96eae0f8`;
+- `All 124 required tests passed :)` for the VanillaPlus compatibility run.
 
 ## Red-run / failure classification log
 
@@ -136,6 +165,7 @@ The campaign kept failures visible and classified them before changing code:
 5. **Test-fixture lifecycle:** production `EquipmentInfusions.sync` intentionally defers for pre-login `ServerPlayer` with null connection. Test now establishes slot-aware ledger state without weakening production safety.
 6. **Fixture pinning:** direct shallow fetch by merge SHA was brittle. Final workflow clones `main` and asserts exact expected SHA.
 7. **Production defect:** Clinging continuous Reorientation attribution included Elytra/fluid/player-flight contexts. Fixed in Clinging and converted to permanent holdouts.
+8. **Test-fixture game mode:** `makeMockServerPlayerInLevel()` provided infinite-material semantics, so the wear engine correctly cleared debt. The holdout now forces Survival, clears `instabuild` and asserts non-infinite materials before measuring wear.
 
 No Alchemical Leather production invariant was weakened merely to turn a fixture green.
 
@@ -163,10 +193,11 @@ The frozen pre-implementation specification remains unchanged.
 - [x] real Clinging production attribution defect found, fixed and held out;
 - [x] exact VanillaPlus potion-contributor fixture assembled;
 - [x] dynamic potion-registry classification gate added;
-- [x] real companion-bridge → owning-item durability holdout added;
+- [x] real direct-API + companion-bridge → owning-item durability holdout added;
 - [x] player/architecture/compatibility/validation documentation updated;
-- [ ] exact documentation-complete Alchemical Leather branch head passes standalone server, client and pinned VanillaPlus compatibility matrix;
+- [x] functional/documentation candidate `52cae148e287292b240d3ee5c57d4b45b1851c07` passed the complete matrix in run `35034528304` with 124/124 compatibility GameTests;
+- [ ] evidence-only closeout head passes the same complete matrix;
 - [ ] PR #11 merged to `main`;
 - [ ] exact merged `main` commit passes the same CI pipeline.
 
-The final three boxes are intentionally left open until their exact GitHub Actions evidence exists. TM is not improved by writing “PASS” slightly before reality catches up.
+The remaining boxes are intentionally left open until their exact GitHub Actions evidence exists. TM is not improved by writing “PASS” slightly before reality catches up.
