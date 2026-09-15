@@ -1,0 +1,8 @@
+{
+  "requires_mod":"wilderwild",
+  "work_per_damage": 8.0,
+  "sources": [
+    {"type":"builtin","detector":"alchemical_leather:scorching_ignition"},
+    {"type":"builtin","detector":"alchemical_leather:scorching_fire_placement","work":2.0}
+  ]
+}

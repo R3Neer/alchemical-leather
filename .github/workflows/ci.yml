@@ -2,6 +2,9 @@ name: Build and test
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: alchemical-leather-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,21 +15,59 @@ jobs:
           distribution: temurin
           java-version: '25'
       - run: chmod +x gradlew
-      - run: ./gradlew build -x runClientGameTest --console=plain
-      - run: xvfb-run -a ./gradlew runClientGameTest --console=plain
+      - name: Build and server GameTests
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci
+          ./gradlew build -x runClientGameTest --console=plain 2>&1 | tee build/ci/server-build.log
+      - name: Run client GameTests
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run -a ./gradlew runClientGameTest --console=plain 2>&1 | tee build/ci/client-gametest.log
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
-      - name: Prepare real compatibility fixture
+      - name: Prepare VanillaPlus potion compatibility fixture
+        shell: bash
         run: |
-          ./gradlew prepareClingingCompat --console=plain
-          curl --fail --location \
-            --output build/clingingCompat/clinging-reoriented-0.1.0-alpha.6.jar \
-            https://github.com/R3Neer/clinging-reoriented/releases/download/v0.1.0-alpha.6/clinging-reoriented-0.1.0-alpha.6.jar
-          curl --fail --location \
-            --output build/clingingCompat/scalebrews-0.1.0-beta.5.jar \
-            https://github.com/R3Neer/scale-brews/releases/download/v0.1.0-beta.5/scalebrews-0.1.0-beta.5.jar
-      - name: Run GameTests with real optional mods
-        run: ./gradlew runGameTest -PcompatMods="$GITHUB_WORKSPACE/build/clingingCompat" -PcompatProfile=trade --console=plain
+          set -euxo pipefail
+          mkdir -p build/ci build/compat-mods build/compat-src
+          download_mod() { curl --fail --location --retry 3 --retry-delay 2 "$1" --output "build/compat-mods/$2"; }
+          checkout_pinned_main() {
+            local repo="$1" sha="$2" dest="$3"
+            git clone --depth 1 --branch main "$repo" "$dest"
+            test "$(git -C "$dest" rev-parse HEAD)" = "$sha"
+          }
+
+          # Exact versions/URLs from R3Neer/VanillaPlus-26.2 packwiz metadata.
+          download_mod 'https://cdn.modrinth.com/data/jwgNKFuT/versions/vpktEkWn/gravity_changer-1.5.2-beta.5-mc26.2.jar' 'gravity_changer-1.5.2-beta.5-mc26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/kYIaHHfw/versions/fL9nXI68/alexsmobs-2.1.9-fabric%2B26.2.jar' 'alexsmobs-2.1.9-fabric+26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/6oyMM4yX/versions/BwANM3tR/codxlib-1.5.1-fabric%2B26.2.jar' 'codxlib-1.5.1-fabric+26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/9s6osm5g/versions/Nv3xnWXd/cloth-config-26.2.155.jar' 'cloth-config-26.2.155.jar'
+          download_mod 'https://cdn.modrinth.com/data/ox3rDp1B/versions/4pyW4Uba/bedrockify-1.11.8%2Bmc26.2.jar' 'bedrockify-1.11.8+mc26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/POQ2i9zu/versions/rJBCX3gG/friendsandfoes-fabric-4.0.27%2Bmc26.2.jar' 'friendsandfoes-fabric-4.0.27+mc26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/G1hIVOrD/versions/SmfwDCLg/ResourcefulLib-5.0.3.jar' 'ResourcefulLib-5.0.3.jar'
+          download_mod 'https://cdn.modrinth.com/data/AtHRJSUW/versions/TVkz6cZh/WilderWild-4.2.11-mc26.2.jar' 'WilderWild-4.2.11-mc26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/9KawNmQc/versions/Ak4sHFuc/FrozenLib-2.5.3-mc26.2.jar' 'FrozenLib-2.5.3-mc26.2.jar'
+          download_mod 'https://cdn.modrinth.com/data/nHr26oc2/versions/GteyPhns/deeper_dark-4.4.1.jar' 'deeper_dark-4.4.1.jar'
+
+          # Pin first-party companions to the exact TM-converged commits merged to main.
+          checkout_pinned_main 'https://github.com/R3Neer/clinging-reoriented.git' 'df1cff3a2fb9baf69d3bb8594159681b6966096d' 'build/compat-src/clinging-reoriented'
+          checkout_pinned_main 'https://github.com/R3Neer/scale-brews.git' '74066349eb33872d1f2b8584dfd05ffd96eae0f8' 'build/compat-src/scale-brews'
+          (cd build/compat-src/clinging-reoriented && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/clinging-build.log
+          (cd build/compat-src/scale-brews && chmod +x gradlew && ./gradlew build --console=plain) 2>&1 | tee build/ci/scale-build.log
+          find build/compat-src/clinging-reoriented/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/compat-mods/ \;
+          find build/compat-src/scale-brews/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} build/compat-mods/ \;
+          printf 'clinging-reoriented %s\nscale-brews %s\n' \
+            "$(git -C build/compat-src/clinging-reoriented rev-parse HEAD)" \
+            "$(git -C build/compat-src/scale-brews rev-parse HEAD)" | tee build/ci/companion-commits.txt
+          find build/compat-mods -maxdepth 1 -type f -name '*.jar' -printf '%f\n' | sort | tee build/ci/compat-jars.txt
+      - name: Run GameTests with VanillaPlus potion contributors
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew runGameTest -PcompatMods="$GITHUB_WORKSPACE/build/compat-mods" -PcompatProfile=vanillaplus --console=plain 2>&1 | tee build/ci/compat-gametest.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -35,3 +76,5 @@ jobs:
             build/libs/*.jar
             build/run/*/logs/latest.log
             build/run/clientGameTest/screenshots/*.png
+            build/ci/*.log
+            build/ci/*.txt

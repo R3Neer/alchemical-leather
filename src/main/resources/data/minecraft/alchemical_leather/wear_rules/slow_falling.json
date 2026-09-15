@@ -1,0 +1,4 @@
+{
+  "work_per_damage": 1200.0,
+  "sources": [{"type":"builtin","detector":"alchemical_leather:slow_falling_tick"}]
+}

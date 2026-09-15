@@ -1,6 +1,8 @@
 # Architecture and implementation notes
 
-This document describes the architecture of Alchemical Leather 0.1.0-beta.1. Player-facing mechanics live in [GUIDE.md](GUIDE.md).
+This document describes the current Alchemical Leather development architecture built on top of the published **0.1.0-beta.1** baseline. The causal infusion-wear and humanoid multi-effect work documented here is intentionally separate from release/version claims until its final main-branch validation is complete.
+
+Player-facing mechanics live in [GUIDE.md](GUIDE.md). Optional-mod contracts live in [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ## Armor classification
 
@@ -9,151 +11,242 @@ Alchemical Leather does not classify armor by material or item ID. `Infusions.sl
 Dyeability has three sources:
 
 1. `#minecraft:cauldron_can_remove_dye`;
-2. a loaded, self-recoloring `minecraft:crafting_dye` recipe whose result item is also accepted by its target ingredient;
+2. a loaded self-recoloring `minecraft:crafting_dye` recipe whose result item is also accepted by its target ingredient;
 3. `#alchemical_leather:dyeable_armor` as an explicit compatibility fallback.
 
-The recipe index is built on server-data reload. It receives registry context, applies Fabric `fabric:load_conditions`, validates candidates with Minecraft 26.2's registry-aware `DyeRecipe.MAP_CODEC`, and then extracts only the target/result relationship needed to determine self-recoloring. Invalid or conditionally disabled resources provide no evidence. A transmuting A→B recipe cannot classify A merely because B receives `DYED_COLOR`.
-
-Exact classification is server-authoritative. Client interaction prediction intentionally uses the broader `armorCandidate` check (`EQUIPPABLE` + armor slot) so remote clients do not need a second copy of the server recipe/tag index.
+The recipe index is built on server-data reload, honors Fabric load conditions and accepts only genuine self-recoloring evidence. Exact classification is server-authoritative. Client interaction prediction deliberately uses the broader `armorCandidate` check so a remote client does not need a duplicate copy of the server's recipe/tag index.
 
 ## Infusion data model
 
-The original persistent `alchemical_leather:infusion` component remains unchanged for humanoid armor, preserving alpha.1 item decoding.
+The item is the durable source of truth. Alchemical Leather currently has four persistent item components relevant to infusion/wear:
 
-BODY / animal armor uses `alchemical_leather:animal_infusion`. `AnimalInfusion` is a non-empty immutable list of `Infusion` entries representing **one potion**, not a collection of separately accumulated potions. Reinfusion replaces the entire bundle.
+- `alchemical_leather:infusion` — the original single-effect humanoid representation, retained for backwards-compatible decoding and still used for one-effect humanoid infusions;
+- `alchemical_leather:humanoid_infusion` — a non-empty bundle of at least two **distinct** humanoid effects that all belong to the same equipment slot;
+- `alchemical_leather:animal_infusion` — the complete non-empty effect bundle from one BODY/animal potion, where repeated effect identities remain legal;
+- `alchemical_leather:wear_progress` — fractional causal work, keyed per effect, accumulated on that exact item.
 
-`resolveAll` converts every effect in `PotionContents`, including repeated effect IDs. Normal and splash bottles produce timed entries, lingering bottles produce stable entries, and instantaneous effects remain instant. The legacy `resolve` path requires exactly one effect and an effect-slot mapping for humanoid armor. Zero-effect contents remain invalid to both resolution functions; the cauldron layer deliberately handles them before invoking infusion resolution rather than weakening the non-empty infusion invariant.
+`Infusions.entries(stack)` normalizes those representations for runtime projection. `clearInfusionComponents` clears all infusion forms plus wear progress, which makes reinfusion atomic and prevents stale wear debt from surviving a different potion.
 
-`ArmorInfusionService` is the beta.1 transformation kernel shared by cauldron and crafting paths. It receives the target stack, complete `PotionContents`, source bottle type and whether effectless dye-only application is allowed. It copies the target before mutation, applies HUMANOID/BODY resolution, clears mutually exclusive old Alchemical infusion components before setting the new one, transfers visible potion RGB through `DYED_COLOR`, and returns either a transformed stack or a stable error key. This prevents crafting and cauldron semantics from drifting independently.
+### Resolution rules
 
-## Slot policy
+`resolveAll` converts every potion effect into an `Infusion`, preserving amplifier and bottle semantics:
+
+- normal/splash non-instant effects become `timed` with their original duration;
+- lingering non-instant effects become `stable`;
+- instantaneous effects remain `instant`.
+
+BODY armor accepts the resulting complete potion bundle.
+
+Humanoid armor uses `resolveHumanoid(contents, bottle, targetSlot)`. Every effect must map through `EffectSlotRules` to the same actual target slot, and effect identities must be distinct. One resolved effect is stored in the legacy `infusion` component; two or more become `HumanoidInfusion`. This allows potions such as Turtle Master when their constituent effects share one humanoid slot while still rejecting cross-slot bundles.
+
+Zero-effect contents remain invalid **as an infusion**. Cauldron dye-only behavior handles them one layer higher rather than weakening the non-empty infusion invariant.
+
+## Shared armor transformation
+
+`ArmorInfusionService` is the transformation kernel shared by cauldron and crafting paths. It receives the target stack, complete `PotionContents`, bottle type and whether effectless dye-only application is allowed.
+
+The service:
+
+1. verifies exact armor eligibility;
+2. copies the input before mutation;
+3. handles effectless dye-only policy separately;
+4. rejects enchanted targets for effectful infusion;
+5. resolves BODY or same-slot humanoid contents;
+6. clears all previous Alchemical infusion/wear components atomically;
+7. writes the new single/bundle component;
+8. transfers visible potion RGB through `DYED_COLOR`.
+
+This keeps cauldron and crafting semantics from drifting independently and ensures reinfusion does not leave stale components or fractional wear behind.
+
+## Effect-slot policy
 
 `Infusions.SLOTS` contains HEAD, CHEST, LEGS, FEET and BODY.
 
-- HUMANOID_ARMOR requires `EffectSlotRules.slot(effect) == actualSlot` and keeps the single-effect component.
-- ANIMAL_ARMOR accepts any valid potion effect and stores the one-potion bundle.
+Humanoid policy is data-driven through `EffectSlotRules`. BODY armor bypasses humanoid effect-slot mapping and stores a whole potion bundle. Optional first-party mods own their own effect-slot resources where appropriate; Alchemical Leather no longer duplicates Scale Brews or Reorientation ownership.
 
-This means modded dyeable humanoid armor inherits the same body-part rules as vanilla leather, while compatible BODY armor is independent of the humanoid effect-slot datapack.
-
-## Leatherworker trade economy
-
-Minecraft 26.2 exposes villager trades and trade sets as data-driven registries. Alchemical Leather adds exactly three `villager_trade` resources and appends their keys to the vanilla Leatherworker level tags without replacing the underlying vanilla `TradeSet` or removing any vanilla trade:
-
-- one Expert timed category at level IV;
-- one Master timed category at level V;
-- one Master persistent category at level V.
-
-Each category stays a single candidate regardless of how many armor/potion combinations it can generate. `InfusedArmorTradeFunction` is a registered loot-item function used by those trade resources. It delegates to `LeatherworkerTrades`, which first chooses among valid armor items and only then among valid potions for the selected slot. This two-stage selection prevents BODY armor from becoming more likely merely because its permitted potion union is larger.
-
-Trade economy eligibility is intentionally separate from mechanical infusion compatibility. The item tags `#alchemical_leather:leatherworker/expert_armor` and `#alchemical_leather:leatherworker/master_armor` are explicit economic allowlists. Slot-specific potion tags define curated tier pools. Optional Scale Brews and Alex's Mobs entries use non-required tag elements and introduce no compile-time dependency.
-
-Tag membership is only a candidate source, not authority. Runtime policy revalidates the generated stack and effect:
-
-- armor must still be actually dyeable/equippable and must not start enchanted;
-- Expert accepts only LEGS/FEET and amplifier 0;
-- Master timed accepts HEAD/CHEST/LEGS/FEET/BODY and amplifier at most 1;
-- every villager tier rejects amplifier 2 or greater;
-- persistent trades force stable mode and amplifier 0;
-- `clinging_reoriented:reorientation` is hard-rejected regardless of datapack tags;
-- humanoid effects must still match `EffectSlotRules`; BODY keeps its independent slot policy;
-- multi-effect and instantaneous trade potions are rejected.
-
-The output stack receives the same `infusion` or `animal_infusion` component used by manual infusion plus the potion-derived `DYED_COLOR`. Variant pricing is attached transiently through Minecraft's `ADDITIONAL_TRADE_COST`; `VillagerTrade` folds that into the first emerald cost and removes the component from the sold item. The persistent trade keeps one Dragon's Breath as `additional_wants`, so reputation/demand changes to the primary emerald cost cannot erase the End-resource gate.
-
-If datapacks leave a category with no valid armor/potion combination, the custom loot function returns an empty stack. Vanilla `VillagerTrade.getOffer` then omits that offer rather than exposing invalid equipment.
+Resource loading is server-data-driven and guarded by optional `requires_mod`, `requires_effect`, `requires_resource` and `enabled` conditions.
 
 ## Runtime effect ownership
 
-`EffectLedger` keeps the armor-owned source separate from Minecraft's external effect chain. Only the visible winner is projected into the entity's live effect map; external effects are not destroyed merely because armor temporarily outranks them.
+`EffectLedger` separates armor-owned sources from Minecraft's external effect chain. Only the appropriate visible winner is projected into the entity's live effect map; external effects are not destroyed simply because armor temporarily outranks them.
 
-Timed armor clocks are written back to the item and advance only while equipped. BODY entries with the same effect ID keep independent clocks; `EquipmentInfusions` chooses the strongest current entry for projection, and a surviving weaker source is exposed immediately when the stronger one expires.
+For every armor-managed effect the ledger also records the **owning equipment slot**. That owner is essential for causal wear: reporting that an effect performed work is not enough. The wear engine bills only the exact equipped item selected by the ledger for that effect.
 
-Instant entries are removed from the item before firing so they cannot replay after death, unload or a repeated synchronization. For a BODY potion containing instant and non-instant siblings, only the instant entries are consumed.
+`EquipmentInfusions` reconciles each equipment slot independently, projects the strongest currently relevant armor entry, writes timed clocks back to the item, consumes instant entries before they can replay and updates slot ownership in the ledger. Multi-effect humanoid entries keep independent timing and wear attribution even though they live in one atomic infusion bundle.
 
-Saves replace projected entries with the actual external state. Armor state remains on the item component. No global entity or inventory scan is introduced; synchronization is driven by equipment changes, entity load and player join.
+An equal/stronger external effect may eclipse the armor source. While the armor is not the effective source, its item is not charged for causal work. When the external source disappears, the surviving armor source can become visible again without having destroyed the external clock or its own item state.
 
 ## ServerPlayer connection lifecycle
 
-A `ServerPlayer` can have NBT/equipment loaded before its play connection exists. Projecting an armor effect in that state reaches `ServerPlayer.onEffectAdded` and attempts to send through a null connection.
+A `ServerPlayer` can have NBT/equipment loaded before its play connection exists. Projecting an armor effect in that state would eventually try to send an effect packet through a null connection.
 
-`EquipmentInfusions.sync` therefore returns before ledger creation, instant consumption or projection whenever `entity instanceof ServerPlayer` and `connection == null`. `ServerPlayConnectionEvents.JOIN` performs the deferred reconciliation once packet delivery is safe. This preserves the item state during pre-login loading rather than merely suppressing the packet side effect.
+`EquipmentInfusions.sync` therefore defers reconciliation when a `ServerPlayer` has no connection. `ServerPlayConnectionEvents.JOIN` performs the real synchronization once packet delivery is safe. Tests preserve this invariant rather than weakening it for synthetic pre-login players.
+
+## Causal infusion-wear engine
+
+Causal wear is split into **classification**, **causal detection**, **source ownership** and **durability accounting**.
+
+### Wear-rule loading
+
+`WearRules` reloads JSON resources from:
+
+`data/<effect-namespace>/alchemical_leather/wear_rules/<effect-path>.json`
+
+A rule is either explicit `wear: none`, or supplies a positive finite `work_per_damage` threshold and one or more recognized sources. Sources are either:
+
+- `builtin` — a known Alchemical Leather causal detector;
+- `event` — a semantic event whose success can only be known by another mod.
+
+Unknown detector types/names, malformed values and coercible-but-wrong JSON types are rejected rather than silently becoming permissive policy. An absent rule is **unclassified**, not implicit no-wear.
+
+### Builtin causal detectors
+
+Mixin hooks are placed at causal decision/consumption sites instead of inferring work from coincident world state whenever Minecraft exposes a suitable boundary.
+
+Examples include:
+
+- self-propelled movement contribution rather than raw displacement;
+- actual jump contribution;
+- Slow Falling at gravity application;
+- effect-owned healing/damage ticks;
+- damage genuinely prevented by Resistance/Fire Resistance;
+- attack contribution from Strength/Weakness;
+- breath/drowning prevention;
+- extended reach only when baseline reach was insufficient;
+- knockback-resistance consumption;
+- successful proc sites such as Infested/Oozing/Wind Charged/Scorching/Soulsteal where appropriate.
+
+Movement predicates explicitly exclude vehicle/passenger travel, passive support displacement, teleportation, knockback/external impulses and locomotion modes the effect does not actually modify.
+
+### Public semantic-event API
+
+`InfusionWearApi.emit(wearer, effect, event, amount)` is deliberately tiny. A companion reports only that one semantic unit occurred. It does not select armor, inspect infusion mode or apply durability.
+
+`InfusionWear.emitEvent` then verifies:
+
+- global wear is enabled;
+- the event amount is finite/positive;
+- the effect has a rule accepting that event;
+- the ledger reports an armor-owned source for the effect;
+- that armor source is currently effective;
+- the owning slot still contains an infusion with that effect.
+
+Only then is configured event work accumulated on that exact stack.
+
+### Fractional work and durability
+
+`WearProgress` stores fractional work per effect on the item. `InfusionWear` adds causal work, converts complete `work_per_damage` buckets into integer item damage and keeps only the residual fraction.
+
+Terminal damage goes through Minecraft's ordinary item-damage path. Consequences are intentional:
+
+- alchemical wear and ordinary armor damage share one durability pool;
+- the item may break normally at zero durability;
+- there is no one-durability floor or dormant infusion mode;
+- Unbreakable items remain unbreakable;
+- vanilla repair remains vanilla repair;
+- Creative/infinite-material players receive no alchemical damage and do not accumulate hidden debt;
+- reinfusion removes the old wear component together with the old infusion.
+
+Stable/lingering affects **time expiry**, not causal durability. A stable effect with a real work rule still pays when it performs work.
+
+## First-party companion ownership
+
+### Scale Brews
+
+Scale Brews owns Growth and Shrinking effect-slot/wear resources in its own JAR. Both map to CHEST and explicitly declare `wear: none`. There is no Alchemical Leather Java dependency in Scale Brews.
+
+### Clinging: Reoriented
+
+Clinging: Reoriented owns Reorientation's FEET slot and the semantic gravity events used by Clinging/Reorientation wear. Its optional bridge resolves `InfusionWearApi.emit` reflectively only when Alchemical Leather is present.
+
+It publishes a discrete gravity-turn event only after its authoritative gravity attempt returns success. Continuous Reorientation work is published only for controlled airborne self-locomotion and excludes passenger/support transport, Anatomy support, fluids, Elytra and independent player flight.
+
+Alchemical Leather still performs source/equipment validation. A companion event cannot force an arbitrary item to take damage.
+
+## Leatherworker economy
+
+Villager trade eligibility is intentionally separate from mechanical infusion compatibility. Alchemical Leather contributes Expert timed, Master timed and Master persistent categories through data-driven villager-trade resources/tags.
+
+Runtime policy revalidates armor, effect slot, enchantment state and amplifier ceilings. Reorientation is hard-rejected from trades. Multi-effect and instantaneous trade potions remain excluded even though multi-effect humanoid potions can now be manually infused when they share a slot.
+
+Trade-generated armor uses the same infusion components and runtime/wear engine as manually created armor.
 
 ## Cauldron transactions
 
-`UseBlockCallback` is the common transaction boundary. Eligibility, potion policy, enchantment state and source contents are validated before item/fluid mutation.
+`UseBlockCallback` remains the common transaction boundary. Validation happens before item/fluid mutation.
 
-Potion cauldrons retain full `PotionContents` plus the original bottle type. **Storage validity and infusion eligibility are separate concerns.** Any non-water potion item carrying valid `POTION_CONTENTS` can be stored and round-tripped even if the contents have no effects or are not infusible into a particular humanoid slot. Water potions remain delegated to Minecraft/Alchemical Leather water-cauldron semantics. Normal, splash and lingering bottles all use the same ordinary block-use path; a successful cauldron interaction consumes the gesture before splash/lingering item use can throw the bottle.
+Potion cauldrons retain complete `PotionContents` and source bottle type. Storage validity and infusion eligibility remain separate:
 
-When armor is used on stored liquid, the cauldron delegates the actual item transformation to `ArmorInfusionService`:
+- effectful armor application delegates to `ArmorInfusionService` and consumes a dose only after the transformation is valid;
+- effectless contents may act as dye-only baths when the caller permits it and preserve existing infusion/enchantment state;
+- normal, splash and lingering bottles share ordinary block-use semantics;
+- water potions remain on the water-cauldron path.
 
-- **effectful contents** keep the existing infusion transaction: enchanted targets are rejected, HUMANOID armor resolves one mapped effect, BODY resolves the non-empty potion bundle, the target is copied, Alchemical components plus `DYED_COLOR` are changed, and one dose is consumed only after validation succeeds;
-- **effectless contents** are allowed by the cauldron's `allowEffectlessDye=true` policy: exact Alchemical Leather dyeable-armor eligibility is still required, but no infusion resolver is invoked and the enchantment/infusion mutual-exclusion rule is irrelevant because no infusion is being created. The target is copied, only `DYED_COLOR` is replaced with the cauldron's visible RGB, existing humanoid/BODY infusion data and enchantments remain untouched, and one dose is consumed atomically.
+Tinting rebuilds only the visible custom color while preserving potion identity/effects/name/bottle/dose data.
 
-This split intentionally leaves `Infusions.resolve`/`resolveAll` strict. In particular, `AnimalInfusion` never gains an empty bundle representation merely to support dyeing.
+## Tipped arrows
 
-Dye items can tint an Alchemical Leather potion cauldron. Tinting rebuilds `PotionContents` with only its custom color changed; potion holder, custom effects, custom name, bottle type and dose count stay intact. Potion identity comparisons deliberately ignore custom color, so a matching refill remains compatible with a tinted cauldron and preserves the existing tint. The same rule applies to effectless contents. A no-op blend consumes no dye.
+Native Alchemical Leather potion cauldrons tip arrows without BedrockIfy. Capacity maps the three whole stored doses to 16/32/64 arrows. Complete `PotionContents` is copied to the tipped arrows.
 
-Beta.1 adds arrow tipping as another **native-block-only** cauldron transaction. The arrow branch requires `state.is(PotionCauldron.BLOCK)` and never treats a foreign potion-looking cauldron as equivalent. The result copies the stored `PotionContents` directly into `TIPPED_ARROW`. Capacity is mapped onto Alchemical Leather's three whole stored doses: 1/2/3 doses allow at most 16/32/64 arrows, while 1–16 / 17–32 / 33–64 arrows consume 1 / 2 / 3 doses. The config gate is checked before permission or mutation; disabled handling returns `PASS`. Creative handling consumes neither arrows nor fluid and avoids repeatedly adding an identical result stack.
+`cauldronTippedArrows` gates only this native interaction. Creative consumes neither source arrows nor potion doses and avoids repeated identical-result duplication.
 
-Vanilla water washing removes `DYED_COLOR`, `infusion` and `animal_infusion` from exact qualifying armor and lowers the vanilla water level once.
+## Crafting infusion
 
-## Crafting infusion boundary
+`ArmorInfusionRecipe` is a dedicated shapeless `CustomRecipe`, not a `DyeRecipe`. It accepts exactly one compatible armor item plus one normal/splash/lingering effectful potion and delegates to `ArmorInfusionService`.
 
-`ArmorInfusionRecipe` is a registered shapeless `CustomRecipe`, not a `DyeRecipe`. It accepts exactly two non-empty inputs: one compatible armor stack and one of `POTION`, `SPLASH_POTION` or `LINGERING_POTION` carrying valid `POTION_CONTENTS`.
+The output is copied, component-safe and forced to count one. It returns a glass bottle. Same-slot humanoid multi-effect bundles are valid; cross-slot/duplicate-invalid bundles, malformed/effectless contents, enchantments, incompatible armor and ambiguous inputs are rejected atomically.
 
-The recipe calls `ArmorInfusionService` with `allowEffectlessDye=false`. Consequently effectless potion storage/dyeing remains a cauldron mechanic while effectful crafting and effectful cauldron application use the same resolution and replacement semantics. Invalid slot policy, enchantments, malformed potion data, ambiguous inputs and unrelated extra ingredients fail matching before assembly. The assembled armor is a copied/transformed stack with count forced to exactly one, preventing modded stackable armor from multiplying one potion into several infused outputs. The consumed potion slot returns a glass bottle through crafting remainders.
+## Dyed-water subsystem and client rendering
 
-Because this serializer is separate from `minecraft:crafting_dye`, it neither depends on nor bypasses BedrockIfy's deliberate recipe revocation for ordinary armor dyeing.
+`alchemical_leather:dyed_water_cauldron` uses six logical levels and a block entity for RGB. Dyes use Minecraft-style brightness-preserving mixing. Armor recoloring, bottles, buckets and water-tint removal consume the documented unit amounts.
 
-## Native dyed-water subsystem
-
-`alchemical_leather:dyed_water_cauldron` uses a block state with six logical levels and `DyedWaterCauldronEntity` for RGB. Its model reuses vanilla water-cauldron geometry, mapping levels 1-2 / 3-4 / 5-6 to vanilla visual fill levels 1 / 2 / 3.
-
-Dyes are discovered via `DataComponents.DYE`. `DyeColors` implements the same brightness-preserving averaging used by Minecraft dye mixing. The subsystem supports color mixing, one-unit armor recoloring, two-unit bottle extraction, full six-unit bucket extraction, water-potion tint removal and vanilla water-bucket refill delegation.
-
-The block entity persists RGB independently of the six-level block state and synchronizes it using the standard update-packet path.
-
-## Client render-data boundary
-
-Fabric 26.2's `BlockTintsFactory` can execute from chunk-meshing threads. It must not inspect mutable block entities directly.
-
-Both custom cauldron block entities implement Fabric's `RenderDataBlockEntity` contract and expose their current RGB as an immutable `Integer`. The tint factory reads only `FabricBlockGetter.getBlockEntityRenderData(pos)`, falling back to white if no valid snapshot exists. `setChanged()` plus `sendBlockUpdated(..., 3)` and the block entity update packet synchronize changed RGB to the client.
-
-A tint-only update does not change the cauldron `BlockState`, so packet synchronization alone is insufficient to guarantee that an already-built terrain mesh is rebuilt with the new RGB. After a client-side block entity load changes the exposed color, `CauldronRenderInvalidation` forwards the exact originating `Level` and block position to the client initializer. The client marks only that containing section dirty through Minecraft 26.2's `ClientLevel#setSectionRangeDirty(...)` path. The common bridge contains no client-only class reference and is a no-op on dedicated servers.
+Both custom cauldron block entities expose immutable render-data snapshots. The client tint path never reads mutable block entities from chunk-meshing threads. Tint-only block-entity updates explicitly dirty only the containing client section so existing terrain geometry is remeshed immediately.
 
 ## BedrockIfy ownership
 
-BedrockIfy is optional and is never linked at compile time. `BedrockifyBridge` uses reflection for the minimal state it needs.
+BedrockIfy is optional and linked reflectively only at the narrow boundary needed for foreign cauldron state.
 
-Ownership is deliberately per interaction:
+Ownership remains per interaction:
 
-- Alchemical Leather always owns its native dyed-water block and its native potion-cauldron arrow branch.
-- With active BedrockIfy cauldrons, BedrockIfy owns vanilla water + dye and all ordinary interactions on its own potion/colored-water blocks.
-- **Arrow tipping on `bedrockify:potion_cauldron` is owned entirely by BedrockIfy.** Alchemical Leather returns `PASS` without changing the foreign state or input stack.
-- Alchemical Leather intercepts only compatible armor actions on BedrockIfy blocks.
-- BedrockIfy potion import accepts only canonical complete-bottle levels 2/5/8; one armor infusion **or effectless dye-only application** consumes one canonical dose without replacing the foreign block unless it becomes empty.
-- BedrockIfy colored water recolors compatible armor and consumes exactly one of its six units.
-- BedrockIfy's active cauldron feature deliberately revokes ordinary `DyeRecipe.matches(...)`; Alchemical Leather treats that as foreign recipe policy rather than attempting to restore crafting-table dyeing. Its dedicated infusion recipe is a different serializer and does not patch that policy.
-- If the BedrockIfy setting cannot be positively verified because it is absent, disabled, reflectively incompatible or otherwise fails at runtime, Alchemical Leather treats it as inactive and keeps its native vanilla-water dye and own-cauldron arrow entry points.
+- Alchemical Leather owns its native potion/dyed-water blocks;
+- BedrockIfy owns ordinary interactions and arrow tipping on its own potion cauldron;
+- Alchemical Leather may apply compatible armor semantics to canonical foreign potion doses without replacing BedrockIfy's block ownership;
+- non-canonical fractional imported potion levels are rejected;
+- BedrockIfy's deliberate ordinary `DyeRecipe` revocation is treated as foreign policy, not patched around.
 
-There is no registry replacement, handler clearing, mixin-priority contest or production mutation of BedrockIfy settings.
+There is no handler clearing, registry replacement or mixin-priority contest.
 
-## Configuration boundary
+## Configuration
 
-`AlchemicalConfig` loads `config/alchemical-leather.json` at initialization and writes defaults when the file does not yet exist. Beta.1 exposes `cauldronTippedArrows`, default `true`. Missing/non-boolean fields fall back to defaults; unreadable or malformed whole files log a warning and use defaults for that launch. The parser is pure and separately GameTestable, while the file-backed state is read only by the native arrow transaction.
+`AlchemicalConfig` persists JSON defaults and currently exposes:
 
-No configuration path reaches BedrockIfy ownership or mutates foreign settings.
+- `cauldronTippedArrows`, default `true`;
+- `infusionWear`, default `true`.
+
+Missing/non-boolean fields fall back to defaults. A malformed/unreadable whole file logs a warning and uses defaults for that launch.
 
 ## Enchanting and item transforms
 
-`Infusions.blocked` covers both humanoid and BODY components. Fabric enchanting hooks plus the existing vanilla/anvil/crafting/grindstone guards maintain the mutual exclusion between enchantments and Alchemical Leather **infusions**. Dye-only effectless potion application does not create an infusion and therefore may recolor an already-enchanted compatible item while preserving its enchantments. Standard component-preserving transforms such as armor trims and self-recoloring dye recipes retain infusion data when those transforms remain enabled by the active mod set.
+All three infusion representations are mutually exclusive with enchantments. Effectless dye-only application does not create an infusion and may therefore recolor enchanted compatible armor without violating that invariant.
 
-Administrative component editing and third-party code that directly mutates internal effect maps remain outside the balancing contract.
+Standard component-preserving transforms such as trims can retain infusion and wear data. Administrative component editing and third-party direct mutation of internal live-effect maps remain outside the balancing contract.
 
-## Validation boundaries
+## VanillaPlus validation architecture
 
-Automated tests cover classification false positives, disabled/invalid recipe resources, humanoid and BODY policy, repeated/multi/instant effects, external ownership, persistence, pre-connection player loading, six-level dyed water, potion-cauldron tinting and bottle interaction modes, effectless potion storage/dye-only behavior, BedrockIfy ownership, real Clinging Reoriented/Scale Brews integration and the data-driven Leatherworker economy. Beta.1 additionally covers standalone tipped-arrow dose/capacity boundaries, partial-dose retention, exact custom `PotionContents` propagation, creative invariants, JSON config parsing, normal/splash/lingering crafting modes, glass-bottle remainders, component preservation, BODY reinfusion, malformed/incompatible/enchanted/wrong-slot rejection, synthetic stackable armor and explicit arrow ownership on a real BedrockIfy fixture.
+The S05 compatibility gate is deliberately narrower than loading every decorative/client mod in VanillaPlus but broader than the historical beta.1 fixture. It loads the exact pack-pinned **potion/effect contributors** plus BedrockIfy:
 
-The Gradle `verifyGameTestEntrypoints` task scans server GameTest source classes and compares them with the Fabric `fabric-gametest` entrypoint list. `check` fails on either an unregistered GameTest class or a stale descriptor entry, preventing silent test-discovery drift from producing misleadingly green CI.
+- Alex's Mobs Continued;
+- Clinging: Reoriented;
+- Scale Brews;
+- Friends & Foes;
+- Wilder Wild;
+- Deeper Dark;
+- BedrockIfy and required runtime libraries.
 
-The converged functional beta.1 candidate passed 88/88 required server GameTests standalone, the client GameTest under Xvfb/llvmpipe, and 88/88 required tests with the real Clinging Reoriented + Scale Brews + BedrockIfy + Alex's Mobs fixture. See [validation.md](validation.md) for exact release-candidate evidence, failure classification and historical runs.
+Clinging and Scale are built from exact TM-converged commits merged to their `main` branches. Third-party JARs come from the exact CDN URLs recorded by `R3Neer/VanillaPlus-26.2` packwiz metadata.
+
+`PotionCoverageTests` walks the **loaded potion registry** and fails if any effect lacks an explicit wear classification. Additional policy sentinels pin important slots and no-wear/wear decisions. `CompanionWearBridgeTests` exercises the real Clinging semantic bridge through the public API into slot-aware Alchemical Leather accounting.
+
+The standalone server suite, client GameTest and compatibility fixture are all required. `verifyGameTestEntrypoints` additionally prevents compiled server GameTests from silently disappearing because somebody forgot to register them, an historical failure mode sufficiently embarrassing to deserve permanent automation.
+
+See [validation.md](validation.md) and [TM_INFUSION_WEAR_CLOSEOUT.md](TM_INFUSION_WEAR_CLOSEOUT.md) for execution evidence.

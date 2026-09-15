@@ -125,7 +125,7 @@ public final class CauldronService {
             if(level.isClientSide())return InteractionResult.SUCCESS;
             if(Infusions.slot(stack)==null)return InteractionResult.PASS;
             if(!Infusions.blocked(stack)&&!stack.has(DataComponents.DYED_COLOR))return InteractionResult.PASS;
-            stack.remove(Infusions.TYPE);stack.remove(Infusions.ANIMAL_TYPE);stack.remove(DataComponents.DYED_COLOR);player.awardStat(Stats.CLEAN_ARMOR);
+            Infusions.clearInfusionComponents(stack);stack.remove(DataComponents.DYED_COLOR);player.awardStat(Stats.CLEAN_ARMOR);
             LayeredCauldronBlock.lowerFillLevel(state,level,pos);splashFeedback(level,pos);return InteractionResult.SUCCESS;
         }
 

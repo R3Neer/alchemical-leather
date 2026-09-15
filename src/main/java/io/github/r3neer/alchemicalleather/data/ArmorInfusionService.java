@@ -26,14 +26,15 @@ public final class ArmorInfusionService {
         if(target==EquipmentSlot.BODY){
             var resolved=Infusions.resolveAll(contents,bottle);
             if(!resolved.ok())return new Result(null,resolved.error());
-            result.remove(Infusions.TYPE);result.remove(Infusions.ANIMAL_TYPE);
+            Infusions.clearInfusionComponents(result);
             result.set(Infusions.ANIMAL_TYPE,resolved.infusion());
         }else{
-            var resolved=Infusions.resolve(contents,bottle);
+            var resolved=Infusions.resolveHumanoid(contents,bottle,target);
             if(!resolved.ok())return new Result(null,resolved.error());
-            if(!Infusions.accepts(input,target,resolved.infusion().effect()))return new Result(null,"slot");
-            result.remove(Infusions.TYPE);result.remove(Infusions.ANIMAL_TYPE);
-            result.set(Infusions.TYPE,resolved.infusion());
+            Infusions.clearInfusionComponents(result);
+            var effects=resolved.infusion().effects();
+            if(effects.size()==1)result.set(Infusions.TYPE,effects.getFirst());
+            else result.set(Infusions.HUMANOID_TYPE,new HumanoidInfusion(effects));
         }
         result.set(DataComponents.DYED_COLOR,new DyedItemColor(contents.getColor()&0xffffff));
         return new Result(result,null);

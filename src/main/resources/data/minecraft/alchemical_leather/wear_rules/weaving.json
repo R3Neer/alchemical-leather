@@ -1,0 +1,7 @@
+{
+  "work_per_damage": 128.0,
+  "sources": [
+    {"type":"builtin","detector":"alchemical_leather:weaving_movement"},
+    {"type":"builtin","detector":"alchemical_leather:effect_proc","work":32.0}
+  ]
+}

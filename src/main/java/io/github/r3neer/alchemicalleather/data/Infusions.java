@@ -12,6 +12,10 @@ public final class Infusions {
         Identifier.fromNamespaceAndPath("alchemical_leather","infusion"),DataComponentType.<Infusion>builder().persistent(Infusion.CODEC).networkSynchronized(Infusion.STREAM_CODEC).build());
     public static final DataComponentType<AnimalInfusion> ANIMAL_TYPE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
         Identifier.fromNamespaceAndPath("alchemical_leather","animal_infusion"),DataComponentType.<AnimalInfusion>builder().persistent(AnimalInfusion.CODEC).networkSynchronized(AnimalInfusion.STREAM_CODEC).build());
+    public static final DataComponentType<HumanoidInfusion> HUMANOID_TYPE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+        Identifier.fromNamespaceAndPath("alchemical_leather","humanoid_infusion"),DataComponentType.<HumanoidInfusion>builder().persistent(HumanoidInfusion.CODEC).networkSynchronized(HumanoidInfusion.STREAM_CODEC).build());
+    public static final DataComponentType<WearProgress> WEAR_TYPE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+        Identifier.fromNamespaceAndPath("alchemical_leather","wear_progress"),DataComponentType.<WearProgress>builder().persistent(WearProgress.CODEC).build());
     public static final List<EquipmentSlot> HUMANOID_SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET);
     public static final List<EquipmentSlot> SLOTS=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET,EquipmentSlot.BODY);
     public static boolean armorCandidate(ItemStack stack) {
@@ -27,10 +31,12 @@ public final class Infusions {
         return actualSlot.getType()==EquipmentSlot.Type.ANIMAL_ARMOR||EffectSlotRules.slot(effect)==actualSlot;
     }
     public static List<Infusion> entries(ItemStack stack) {
+        var humanoid=stack.get(HUMANOID_TYPE);if(humanoid!=null)return humanoid.effects();
         var animal=stack.get(ANIMAL_TYPE);if(animal!=null)return animal.effects();
         var single=stack.get(TYPE);return single==null?List.of():List.of(single);
     }
-    public static boolean blocked(ItemStack stack) { return stack.has(TYPE)||stack.has(ANIMAL_TYPE); }
+    public static boolean hasEffect(ItemStack stack,Identifier effect){return entries(stack).stream().anyMatch(i->i.effect().equals(effect));}
+    public static boolean blocked(ItemStack stack) { return stack.has(TYPE)||stack.has(ANIMAL_TYPE)||stack.has(HUMANOID_TYPE); }
     public static boolean enchanted(ItemStack stack) {
         var normal=stack.get(DataComponents.ENCHANTMENTS); var stored=stack.get(DataComponents.STORED_ENCHANTMENTS);
         return normal!=null&&!normal.isEmpty() || stored!=null&&!stored.isEmpty();
@@ -50,12 +56,24 @@ public final class Infusions {
         }
         return new AnimalResolution(new AnimalInfusion(resolved),null);
     }
+    public static AnimalResolution resolveHumanoid(PotionContents contents,Item bottle,EquipmentSlot target) {
+        var all=resolveAll(contents,bottle);if(!all.ok())return all;
+        var seen=new HashSet<Identifier>();
+        for(var infusion:all.infusion().effects()){
+            if(EffectSlotRules.slot(infusion.effect())!=target)return new AnimalResolution(null,"slot");
+            if(!seen.add(infusion.effect()))return new AnimalResolution(null,"duplicate_effect");
+        }
+        return all;
+    }
     public static Resolution resolve(PotionContents contents,Item bottle) {
         var all=resolveAll(contents,bottle);if(!all.ok())return new Resolution(null,all.error());
         if(all.infusion().effects().size()>1)return new Resolution(null,"multiple_effects");
         var infusion=all.infusion().effects().getFirst();
         if(EffectSlotRules.slot(infusion.effect())==null)return new Resolution(null,"unsupported");
         return new Resolution(infusion,null);
+    }
+    public static void clearInfusionComponents(ItemStack stack){
+        stack.remove(TYPE);stack.remove(ANIMAL_TYPE);stack.remove(HUMANOID_TYPE);stack.remove(WEAR_TYPE);
     }
     public static void initialize() { }
 }
