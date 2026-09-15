@@ -34,18 +34,17 @@ public final class InfusionWear {
         double work=rule.work(type,source,amount);if(!Double.isFinite(work)||work<=0)return;
         var ledger=((LedgerHolder)wearer).alchemical$existingLedger();
         if(ledger==null||!ledger.armorEffective(effect))return;
-        var owner=findOwner(wearer,effectId);if(owner==null)return;
+        var owner=findOwner(wearer,ledger,effect,effectId);if(owner==null)return;
         apply(owner.stack(),wearer,owner.slot(),effectId,rule,work);
     }
 
     private record Owner(ItemStack stack,EquipmentSlot slot){}
-    private static Owner findOwner(LivingEntity wearer,Identifier effect){
-        for(var slot:Infusions.SLOTS){
-            var stack=wearer.getItemBySlot(slot);
-            if(stack.isEmpty()||Infusions.slot(stack)!=slot||!Infusions.hasEffect(stack,effect)||!Infusions.accepts(stack,slot,effect))continue;
-            return new Owner(stack,slot);
-        }
-        return null;
+    private static Owner findOwner(LivingEntity wearer,EffectLedger ledger,Holder<MobEffect> effect,Identifier effectId){
+        EquipmentSlot slot=ledger.armorOwner(effect);
+        if(slot==null)return null;
+        var stack=wearer.getItemBySlot(slot);
+        if(stack.isEmpty()||Infusions.slot(stack)!=slot||!Infusions.hasEffect(stack,effectId)||!Infusions.accepts(stack,slot,effectId))return null;
+        return new Owner(stack,slot);
     }
 
     static void apply(ItemStack stack,LivingEntity wearer,EquipmentSlot slot,Identifier effect,WearRules.Rule rule,double addedWork){
