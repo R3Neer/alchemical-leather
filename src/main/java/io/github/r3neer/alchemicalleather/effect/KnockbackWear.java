@@ -12,37 +12,24 @@ public final class KnockbackWear {
     private KnockbackWear(){}
 
     public static void emitMultiplicative(LivingEntity target,double baseMagnitude,double withResistance){
-        emit(target,baseMagnitude,withResistance,Mode.LOWER_CLAMPED);
+        emit(target,baseMagnitude,withResistance,false);
     }
 
     /** Guster clamps the literal (1-resistance) factor into [0,1], including negative resistance. */
     public static void emitUnitClampedMultiplicative(LivingEntity target,double baseMagnitude,double withResistance){
-        emit(target,baseMagnitude,withResistance,Mode.UNIT_CLAMPED);
+        emit(target,baseMagnitude,withResistance,true);
     }
 
-    /**
-     * Some 26.2 mechanics consume the literal signed factor (1-resistance), so values above one
-     * reverse their impulse instead of clamping it to zero. In those paths wear represents only an
-     * actual reduction in impulse magnitude; a reversal/increase is not "prevented knockback".
-     */
-    public static void emitSignedMultiplicative(LivingEntity target,double baseMagnitude,double withResistance){
-        emit(target,baseMagnitude,withResistance,Mode.SIGNED);
-    }
-
-    private enum Mode { LOWER_CLAMPED, UNIT_CLAMPED, SIGNED }
-
-    private static void emit(LivingEntity target,double baseMagnitude,double withResistance,Mode mode){
+    private static void emit(LivingEntity target,double baseMagnitude,double withResistance,boolean unitClamped){
         if(!Double.isFinite(baseMagnitude)||baseMagnitude<=0.0||!Double.isFinite(withResistance))return;
         var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_EFFECT);
         if(holder.isEmpty())return;
         var effect=target.getEffect(holder.get());
         if(effect==null)return;
         double withoutResistance=EffectAttributes.without(target,Attributes.KNOCKBACK_RESISTANCE,effect);
-        double work=switch(mode){
-            case LOWER_CLAMPED -> multiplicativeReduction(baseMagnitude,withResistance,withoutResistance);
-            case UNIT_CLAMPED -> unitClampedMultiplicativeReduction(baseMagnitude,withResistance,withoutResistance);
-            case SIGNED -> signedMultiplicativeReduction(baseMagnitude,withResistance,withoutResistance);
-        };
+        double work=unitClamped
+            ?unitClampedMultiplicativeReduction(baseMagnitude,withResistance,withoutResistance)
+            :multiplicativeReduction(baseMagnitude,withResistance,withoutResistance);
         if(work>0.0)InfusionWear.emitBuiltin(target,effect.getEffect(),DETECTOR,work);
     }
 
@@ -57,7 +44,11 @@ public final class KnockbackWear {
         if(work>0.0)InfusionWear.emitBuiltin(target,effect.getEffect(),DETECTOR,work);
     }
 
-    /** For paths that clamp only a non-positive (1-resistance) contribution away. */
+    /**
+     * 26.2 KNOCKBACK_RESISTANCE is sanitized to [-2,1]. Most consumers use max(0,1-r) or an
+     * equivalent raw (1-r), which is therefore non-negative at runtime. Negative resistance may
+     * still amplify knockback and remains part of the counterfactual.
+     */
     public static double multiplicativeReduction(double baseMagnitude,double withResistance,double withoutResistance){
         if(!finite(baseMagnitude,withResistance,withoutResistance)||baseMagnitude<=0.0)return 0.0;
         double with=Math.max(0.0,1.0-withResistance);
@@ -66,23 +57,11 @@ public final class KnockbackWear {
         return Double.isFinite(work)&&work>0.0?work:0.0;
     }
 
-    /** For Guster-style paths that clamp (1-resistance) at both zero and one. */
+    /** For Guster-style paths that additionally cap negative-resistance amplification at one. */
     public static double unitClampedMultiplicativeReduction(double baseMagnitude,double withResistance,double withoutResistance){
         if(!finite(baseMagnitude,withResistance,withoutResistance)||baseMagnitude<=0.0)return 0.0;
         double with=clamp(1.0-withResistance,0.0,1.0);
         double without=clamp(1.0-withoutResistance,0.0,1.0);
-        double work=baseMagnitude*Math.max(0.0,without-with);
-        return Double.isFinite(work)&&work>0.0?work:0.0;
-    }
-
-    /**
-     * For paths that consume the signed (1-resistance) factor directly. Compare absolute impulse
-     * magnitude so an overshoot that reverses/increases knockback cannot masquerade as protection.
-     */
-    public static double signedMultiplicativeReduction(double baseMagnitude,double withResistance,double withoutResistance){
-        if(!finite(baseMagnitude,withResistance,withoutResistance)||baseMagnitude<=0.0)return 0.0;
-        double with=Math.abs(1.0-withResistance);
-        double without=Math.abs(1.0-withoutResistance);
         double work=baseMagnitude*Math.max(0.0,without-with);
         return Double.isFinite(work)&&work>0.0?work:0.0;
     }
