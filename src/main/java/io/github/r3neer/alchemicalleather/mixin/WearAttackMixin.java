@@ -73,7 +73,11 @@ public abstract class WearAttackMixin {
             }
         }
 
-        ReachWear.emit(self,Attributes.ENTITY_INTERACTION_RANGE,target.getBoundingBox().distanceToSqr(self.getEyePosition()));
+        // Explicit 26.2 ATTACK_RANGE components replace ENTITY_INTERACTION_RANGE for attacks.
+        // An active reach effect is therefore redundant for this exact action when such a component
+        // is present, even if the target lies outside the ordinary interaction range.
+        if(ReachWear.attackUsesInteractionRange(self.getMainHandItem()))
+            ReachWear.emit(self,Attributes.ENTITY_INTERACTION_RANGE,target.getBoundingBox().distanceToSqr(self.getEyePosition()));
         return accepted;
     }
 
