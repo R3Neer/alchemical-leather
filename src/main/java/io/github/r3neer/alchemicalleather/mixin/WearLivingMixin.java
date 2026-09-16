@@ -43,7 +43,7 @@ public abstract class WearLivingMixin {
     @Unique private double alchemical$waterDistanceLimit;
     @Unique private double alchemical$waterDrag;
     @Unique private double alchemical$jumpPreY=Double.NaN;
-    @Unique private float alchemical$slowFallingPreAiStepFallDistance=Float.NaN;
+    @Unique private double alchemical$slowFallingPreAiStepFallDistance=Double.NaN;
     @Unique private long alchemical$slowFallingWearTick=Long.MIN_VALUE;
 
     @Inject(method="travel",at=@At("HEAD"))
@@ -163,8 +163,8 @@ public abstract class WearLivingMixin {
         target="Lnet/minecraft/world/entity/LivingEntity;travel(Lnet/minecraft/world/phys/Vec3;)V"))
     private void alchemical$slowFallingFallDistanceReset(CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
-        float before=alchemical$slowFallingPreAiStepFallDistance;
-        alchemical$slowFallingPreAiStepFallDistance=Float.NaN;
+        double before=alchemical$slowFallingPreAiStepFallDistance;
+        alchemical$slowFallingPreAiStepFallDistance=Double.NaN;
         if(self.level().isClientSide()||self.hasEffect(MobEffects.LEVITATION))return;
         var effect=self.getEffect(MobEffects.SLOW_FALLING);
         if(effect!=null&&SlowFallingWear.fallDistanceResetNeeded(before,self.fallDistance,false))
