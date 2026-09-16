@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /** Hoglin throw subtracts KNOCKBACK_RESISTANCE from ATTACK_KNOCKBACK before both random components. */
 @Mixin(HoglinBase.class)
-public abstract class WearHoglinKnockbackMixin {
+public interface WearHoglinKnockbackMixin {
     @WrapOperation(method="throwTarget",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/entity/LivingEntity;getAttributeValue(Lnet/minecraft/core/Holder;)D",ordinal=1))
     private static double alchemical$hoglinResistance(LivingEntity target,Holder<Attribute> attribute,
