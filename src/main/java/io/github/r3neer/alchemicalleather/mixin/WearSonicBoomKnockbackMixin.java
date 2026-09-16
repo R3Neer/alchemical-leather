@@ -47,6 +47,6 @@ public abstract class WearSonicBoomKnockbackMixin {
         DamageSource afterSource=target.getLastDamageSource();
         if(afterSource==beforeSource||afterSource==null||!afterSource.is(DamageTypes.SONIC_BOOM)||afterSource.getEntity()!=body)return;
         if(baseMagnitude<=0.0D||!Double.isFinite(baseMagnitude))return;
-        KnockbackWear.emitMultiplicative(target,baseMagnitude,target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
+        KnockbackWear.emitSignedMultiplicative(target,baseMagnitude,target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
     }
 }
