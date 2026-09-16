@@ -45,6 +45,18 @@ public final class WearFinalAuditTests {
         h.succeed();
     }
 
+    @GameTest public void jumpBoostPaysOnlyItsRealizedVerticalDelta(GameTestHelper h){
+        h.assertTrue(Math.abs(WearPredicates.jumpBoostWork(0.0D,0.62D,0.20D,0.62D)-2.0D)<1.0E-9,
+            "A fully causal Jump Boost II jump keeps the historical two work units");
+        h.assertTrue(Math.abs(WearPredicates.jumpBoostWork(0.55D,0.62D,0.20D,0.62D)-0.7D)<1.0E-9,
+            "Existing upward momentum that eclipses part of the boost bills only the realized remainder");
+        h.assertTrue(WearPredicates.jumpBoostWork(0.70D,0.62D,0.20D,0.70D)==0.0D,
+            "An external upward impulse already above boosted jump power makes Jump Boost redundant");
+        h.assertTrue(WearPredicates.jumpBoostWork(0.0D,0.62D,0.20D,0.42D)==0.0D,
+            "A foreign hook that suppresses the boost before RETURN cannot manufacture wear");
+        h.succeed();
+    }
+
     @GameTest public void alexBugPheromonesBillsOnlyARealArthropodTargetVeto(GameTestHelper h){
         if(!BuiltInRegistries.MOB_EFFECT.containsKey(BUG_PHEROMONES)){h.succeed();return;}
         var player=h.makeMockPlayer(GameType.SURVIVAL);
