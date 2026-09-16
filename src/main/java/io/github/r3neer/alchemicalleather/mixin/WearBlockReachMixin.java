@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerPlayerGameMode;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
@@ -41,6 +42,9 @@ public abstract class WearBlockReachMixin {
     @Inject(method="useItemOn",at=@At("RETURN"))
     private void alchemical$blockReach(ServerPlayer player,Level level,ItemStack stack,InteractionHand hand,BlockHitResult hit,CallbackInfoReturnable<InteractionResult> cir){
         var result=cir.getReturnValue();if(result==null||!result.consumesAction())return;
+        // Brush is a sustained action: bill only a real archaeology progress update in
+        // WearBrushReachMixin, not the gesture that merely starts brushing.
+        if(stack.is(Items.BRUSH))return;
         ReachWear.emit(player,Attributes.BLOCK_INTERACTION_RANGE,player.getEyePosition().distanceToSqr(hit.getLocation()));
     }
 
