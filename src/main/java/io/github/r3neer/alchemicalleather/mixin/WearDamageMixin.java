@@ -59,9 +59,9 @@ public abstract class WearDamageMixin {
     }
 
     /**
-     * Wrap the exact Fire Resistance query in hurtServer. Reaching this call means vanilla's
-     * earlier general-invulnerability and dead-entity guards already passed and IS_FIRE was true;
-     * a prior cancellation by another mixin therefore cannot manufacture alchemical work.
+     * Fire Resistance short-circuits hurtServer before its ordinary damage cooldown. Credit only
+     * the portion that would really have crossed that gate without Fire Resistance; an i-frame
+     * rejection is not alchemical work.
      */
     @WrapOperation(method="hurtServer",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z",ordinal=0))
@@ -71,7 +71,9 @@ public abstract class WearDamageMixin {
         boolean active=original.call(instance,effect);
         if(active&&effect.equals(MobEffects.FIRE_RESISTANCE)&&damage>0){
             var resistance=instance.getEffect(MobEffects.FIRE_RESISTANCE);
-            if(resistance!=null)InfusionWear.emitBuiltin(instance,resistance.getEffect(),DAMAGE_PREVENTED,damage);
+            double prevented=WearPredicates.damagePassingCooldown(
+                damage,instance.invulnerableTime,lastHurt,source.is(DamageTypeTags.BYPASSES_COOLDOWN));
+            if(resistance!=null&&prevented>0.0)InfusionWear.emitBuiltin(instance,resistance.getEffect(),DAMAGE_PREVENTED,prevented);
         }
         return active;
     }
