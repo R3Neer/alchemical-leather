@@ -24,6 +24,11 @@
     "WearBrushReachMixin",
     "WearWebMixin",
     "WearWeaknessCureMixin",
+    "WearMaceKnockbackMixin",
+    "WearIronGolemKnockbackMixin",
+    "WearHoglinKnockbackMixin",
+    "WearArrowKnockbackMixin",
+    "WearSonicBoomKnockbackMixin",
     "AlexSoulstealWearMixin",
     "AlexBugPheromonesWearMixin"
   ],
