@@ -23,8 +23,8 @@ public abstract class AlexBugPheromonesWearMixin {
     @Unique private static final Identifier TARGET_REJECTION=Identifier.fromNamespaceAndPath("alchemical_leather","bug_pheromones_target_rejection");
 
     @Inject(method="fireChangeTarget",at=@At("RETURN"),remap=false)
-    private static void alchemical$targetRejected(Mob mob, LivingEntity newTarget, CallbackInfoReturnable<Boolean> cir){
-        if(!cir.getReturnValueZ()||mob==null||newTarget==null||!mob.getType().is(EntityTypeTags.ARTHROPOD))return;
+    private static void alchemical$targetRejected(Mob mob,LivingEntity newTarget,CallbackInfoReturnable<Boolean> cir){
+        if(!cir.getReturnValueZ()||mob==null||newTarget==null||!mob.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD))return;
         if(mob.getLastHurtByMob()==newTarget)return;
         Holder<MobEffect> holder=BuiltInRegistries.MOB_EFFECT.get(BUG_PHEROMONES).map(value->(Holder<MobEffect>)value).orElse(null);
         if(holder!=null&&newTarget.hasEffect(holder))InfusionWear.emitBuiltin(newTarget,holder,TARGET_REJECTION,1.0);
