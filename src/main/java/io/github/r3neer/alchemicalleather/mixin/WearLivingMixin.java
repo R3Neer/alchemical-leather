@@ -157,8 +157,8 @@ public abstract class WearLivingMixin {
 
     /**
      * The reset happens immediately before travel. Confirm that accumulated fall distance was
-     * actually erased, exclude Levitation's independent cause, and share the same once-per-tick
-     * meter as the gravity-clamp hooks so ordinary Slow Falling does not pay twice.
+     * actually erased, exclude contexts where no independent fall damage can result, and share the
+     * same once-per-tick meter as the gravity-clamp hooks so ordinary Slow Falling does not pay twice.
      */
     @Inject(method="aiStep",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/entity/LivingEntity;travel(Lnet/minecraft/world/phys/Vec3;)V"))
@@ -166,7 +166,10 @@ public abstract class WearLivingMixin {
         var self=(LivingEntity)(Object)this;
         double before=alchemical$slowFallingPreAiStepFallDistance;
         alchemical$slowFallingPreAiStepFallDistance=Double.NaN;
-        if(self.level().isClientSide()||self.hasEffect(MobEffects.LEVITATION))return;
+        if(self.level().isClientSide())return;
+        boolean levitation=self.hasEffect(MobEffects.LEVITATION);
+        boolean independentFlight=self instanceof Player player&&player.getAbilities().flying;
+        if(!SlowFallingWear.resetContextEligible(self.onGround(),self.isPassenger(),independentFlight,levitation))return;
         var effect=self.getEffect(MobEffects.SLOW_FALLING);
         if(effect!=null&&SlowFallingWear.fallDistanceResetNeeded(before,self.fallDistance,false))
             alchemical$emitSlowFallingWork(self,effect);
