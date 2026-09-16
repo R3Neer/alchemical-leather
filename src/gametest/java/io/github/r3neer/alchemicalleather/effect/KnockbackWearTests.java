@@ -2,11 +2,14 @@ package io.github.r3neer.alchemicalleather.effect;
 
 import io.github.r3neer.alchemicalleather.data.Infusion;
 import io.github.r3neer.alchemicalleather.data.Infusions;
+import java.lang.reflect.Method;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -18,6 +21,7 @@ import net.minecraft.world.level.GameType;
 /** Reserved coverage for mechanics that consume KNOCKBACK_RESISTANCE outside LivingEntity#knockback. */
 public final class KnockbackWearTests {
     private static final Identifier EFFECT=Identifier.parse("alexsmobs:knockback_resistance");
+    private static final Identifier BISON=Identifier.parse("alexsmobs:bison");
 
     @GameTest public void directKnockbackFormulasUseTheActualMechanicContract(GameTestHelper h){
         h.assertTrue(Math.abs(KnockbackWear.multiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
@@ -81,6 +85,27 @@ public final class KnockbackWearTests {
         h.assertTrue(progress!=null&&progress.work(EFFECT)>0.0D,
             "Hoglin's ATTACK_KNOCKBACK-resistance subtraction must reach the alchemical detector");
         hoglin.discard();
+        h.succeed();
+    }
+
+    @GameTest public void alexBisonLaunchBillsTheRealOptionalAdapter(GameTestHelper h){
+        if(!BuiltInRegistries.MOB_EFFECT.containsKey(EFFECT)||!BuiltInRegistries.ENTITY_TYPE.containsKey(BISON)){h.succeed();return;}
+        var type=BuiltInRegistries.ENTITY_TYPE.get(BISON).orElseThrow().value();
+        Entity bison=type.create(h.getLevel(),EntitySpawnReason.COMMAND);
+        h.assertTrue(bison!=null,"Pinned Alex 2.1.9 fixture must create its bison entity");
+        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        var boots=equip(player);
+        try{
+            Method launch=bison.getClass().getDeclaredMethod("launch",Entity.class,boolean.class);
+            launch.setAccessible(true);
+            launch.invoke(bison,player,false);
+        }catch(ReflectiveOperationException e){
+            throw new AssertionError("Pinned Alex 2.1.9 Bison launch boundary changed",e);
+        }
+        var progress=boots.get(Infusions.WEAR_TYPE);
+        h.assertTrue(progress!=null&&progress.work(EFFECT)>0.0D,
+            "Real Alex Bison target-resistance consumption must reach the optional alchemical adapter");
+        bison.discard();
         h.succeed();
     }
 
