@@ -13,7 +13,7 @@ import net.minecraft.world.entity.animal.golem.IronGolem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Iron Golem lift is a fixed 0.4 vertical impulse scaled by 1-KNOCKBACK_RESISTANCE. */
+/** Iron Golem lift is a fixed 0.4F vertical impulse scaled by 1-KNOCKBACK_RESISTANCE. */
 @Mixin(IronGolem.class)
 public abstract class WearIronGolemKnockbackMixin {
     @WrapOperation(method="doHurtTarget",at=@At(value="INVOKE",
@@ -22,7 +22,7 @@ public abstract class WearIronGolemKnockbackMixin {
                                               Operation<Double> original,ServerLevel level,Entity attacked){
         double withResistance=original.call(target,attribute);
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE))
-            KnockbackWear.emitMultiplicative(target,0.4D,withResistance);
+            KnockbackWear.emitMultiplicative(target,0.4F,withResistance);
         return withResistance;
     }
 }
