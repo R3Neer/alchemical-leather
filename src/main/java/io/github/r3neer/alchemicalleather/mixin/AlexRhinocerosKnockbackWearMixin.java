@@ -37,7 +37,7 @@ public abstract class AlexRhinocerosKnockbackWearMixin {
         alchemical$launchRandom=Float.NaN;
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE)&&Float.isFinite(draw)){
             double base=1.0D+draw*0.5D*scale;
-            KnockbackWear.emitSignedMultiplicative(target,base,withResistance);
+            KnockbackWear.emitMultiplicative(target,base,withResistance);
         }
         return withResistance;
     }
