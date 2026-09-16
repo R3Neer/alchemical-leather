@@ -27,7 +27,7 @@ public abstract class AlexSoulstealWearMixin {
      */
     @WrapOperation(
         method="onLivingDamageEvent",
-        at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/LivingEntity;heal(F)V"),
+        at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/LivingEntity;heal(F)V",remap=true),
         remap=false
     )
     private void alchemical$soulstealHeal(LivingEntity attacker,float requested,Operation<Void> original){
