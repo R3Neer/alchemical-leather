@@ -3,11 +3,13 @@ package io.github.r3neer.alchemicalleather.effect;
 import io.github.r3neer.alchemicalleather.data.WearRules;
 import java.util.*;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /** Causal attribution for successful interactions that only extended reach made possible. */
 public final class ReachWear {
@@ -40,6 +42,15 @@ public final class ReachWear {
             double amount=share(candidate.contribution(),totalWeight);
             if(amount>0.0)InfusionWear.emitBuiltin(player,candidate.effect().getEffect(),DETECTOR,amount);
         }
+    }
+
+    /**
+     * 26.2 attacks use an explicit ATTACK_RANGE component in preference to
+     * ENTITY_INTERACTION_RANGE. In that case a reach potion cannot be the but-for cause of the
+     * attack being in range, even though it may still be active on the player.
+     */
+    public static boolean attackUsesInteractionRange(ItemStack mainHand){
+        return mainHand==null||!mainHand.has(DataComponents.ATTACK_RANGE);
     }
 
     static boolean needed(double targetDistanceSqr,double rangeWithoutEffect){
