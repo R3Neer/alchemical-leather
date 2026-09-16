@@ -58,24 +58,35 @@ public final class WearPredicates {
         return Double.isFinite(work)&&work>0.0?work:0.0;
     }
 
-    /**
-     * Mirrors 26.2 fall-damage flooring and measures only integer damage points that the Jump Boost
-     * SAFE_FALL_DISTANCE modifier can explain. The actual return value caps attribution so a
-     * foreign hook that raises damage cannot be hidden inside the potion's credit; a foreign
-     * reduction can never make us charge more than Jump Boost's own theoretical contribution.
-     */
+    /** Convenience form for contexts where the damage cooldown is known not to intervene. */
     public static double jumpBoostFallDamagePrevented(double fallDistance,double damageModifier,double fallDamageMultiplier,
                                                        double safeFallWith,double safeFallWithout,int actualDamage){
-        if(!finite(fallDistance,damageModifier,fallDamageMultiplier,safeFallWith,safeFallWithout)
+        return jumpBoostFallDamagePrevented(fallDistance,damageModifier,fallDamageMultiplier,
+            safeFallWith,safeFallWithout,actualDamage,0,0.0F,true);
+    }
+
+    /**
+     * Mirrors 26.2 fall-damage flooring and the pre-actuallyHurt cooldown gate. Jump Boost gets
+     * credit only for damage that would really have reached the damage pipeline without its
+     * SAFE_FALL_DISTANCE contribution. If another mixin changes calculateFallDamage away from the
+     * vanilla result for the live attributes, the counterfactual is no longer knowable here and we
+     * conservatively report no work rather than inventing attribution.
+     */
+    public static double jumpBoostFallDamagePrevented(double fallDistance,double damageModifier,double fallDamageMultiplier,
+                                                       double safeFallWith,double safeFallWithout,int actualDamage,
+                                                       int invulnerableTime,float lastHurt,boolean bypassesCooldown){
+        if(!finite(fallDistance,damageModifier,fallDamageMultiplier,safeFallWith,safeFallWithout,lastHurt)
             ||fallDistance<0.0||damageModifier<=0.0||fallDamageMultiplier<=0.0
-            ||safeFallWith<=safeFallWithout+MOVEMENT_EPSILON)return 0.0;
+            ||safeFallWith<=safeFallWithout+MOVEMENT_EPSILON||actualDamage<0)return 0.0;
         double scale=damageModifier*fallDamageMultiplier;
         if(!Double.isFinite(scale)||scale<=0.0)return 0.0;
         int withEffect=positiveFallDamage(fallDistance,safeFallWith,scale);
         int withoutEffect=positiveFallDamage(fallDistance,safeFallWithout,scale);
-        int theoretical=Math.max(0,withoutEffect-withEffect);
-        int realized=Math.max(0,withoutEffect-Math.max(0,actualDamage));
-        return Math.min(theoretical,realized);
+        if(actualDamage!=withEffect)return 0.0;
+        double withDelivered=damageAfterCooldown(withEffect,invulnerableTime,lastHurt,bypassesCooldown);
+        double withoutDelivered=damageAfterCooldown(withoutEffect,invulnerableTime,lastHurt,bypassesCooldown);
+        double prevented=withoutDelivered-withDelivered;
+        return Double.isFinite(prevented)&&prevented>0.0?prevented:0.0;
     }
 
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
@@ -170,6 +181,15 @@ public final class WearPredicates {
         if(!Double.isFinite(actualHorizontalDistance)||!Double.isFinite(impulseDistanceLimit)
             ||actualHorizontalDistance<=MOVEMENT_EPSILON||impulseDistanceLimit<=MOVEMENT_EPSILON)return 0.0;
         return Math.min(actualHorizontalDistance,impulseDistanceLimit);
+    }
+
+    private static double damageAfterCooldown(int damage,int invulnerableTime,float lastHurt,boolean bypassesCooldown){
+        if(damage<=0)return 0.0;
+        if(invulnerableTime>10&&!bypassesCooldown){
+            if(damage<=lastHurt)return 0.0;
+            return Math.max(0.0,damage-lastHurt);
+        }
+        return damage;
     }
 
     private static int positiveFallDamage(double fallDistance,double safeFall,double scale){
