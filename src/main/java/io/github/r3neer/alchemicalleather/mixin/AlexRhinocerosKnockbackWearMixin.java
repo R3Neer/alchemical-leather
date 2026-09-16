@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Preserve the exact random launch scale used by Alex 2.1.9 without consuming another RNG value. */
+/** Preserve the exact random float launch scale used by Alex 2.1.9 without consuming another RNG value. */
 @Pseudo
 @Mixin(targets="com.github.alexthe666.alexsmobs.entity.EntityRhinoceros",remap=false)
 public abstract class AlexRhinocerosKnockbackWearMixin {
@@ -36,7 +36,7 @@ public abstract class AlexRhinocerosKnockbackWearMixin {
         float draw=alchemical$launchRandom;
         alchemical$launchRandom=Float.NaN;
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE)&&Float.isFinite(draw)){
-            double base=1.0D+draw*0.5D*scale;
+            float base=1.0F+draw*0.5F*scale;
             KnockbackWear.emitMultiplicative(target,base,withResistance);
         }
         return withResistance;
