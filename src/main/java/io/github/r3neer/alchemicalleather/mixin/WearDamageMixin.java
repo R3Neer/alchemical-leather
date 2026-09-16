@@ -5,9 +5,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
+import io.github.r3neer.alchemicalleather.effect.KnockbackWear;
 import io.github.r3neer.alchemicalleather.effect.WearPredicates;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
@@ -22,7 +22,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Generic causal accounting for vanilla damage prevention and knockback resistance. */
@@ -30,8 +29,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class WearDamageMixin {
     private static final Identifier DAMAGE_PREVENTED=Identifier.fromNamespaceAndPath("alchemical_leather","damage_prevented");
     private static final Identifier JUMP_FALL_PREVENTED=Identifier.fromNamespaceAndPath("alchemical_leather","jump_boost_fall_damage_prevented");
-    private static final Identifier KNOCKBACK_REDUCED=Identifier.fromNamespaceAndPath("alchemical_leather","knockback_reduced");
-    private static final Identifier ALEX_KNOCKBACK=Identifier.fromNamespaceAndPath("alexsmobs","knockback_resistance");
 
     @Shadow protected float lastHurt;
     @Unique private DamageSource alchemical$fallDamageSource;
@@ -111,28 +108,15 @@ public abstract class WearDamageMixin {
         alchemical$fallDamageSource=null;
     }
 
-    /**
-     * Bind to the unique KNOCKBACK_RESISTANCE attribute read rather than a version-fragile method
-     * descriptor. MixinExtras supplies the enclosing method's first double argument as the original
-     * knockback power, regardless of the contextual overload Loom exposes in this mapping set.
-     */
+    /** Common knockback() path: the raw power is multiplied by 1-KNOCKBACK_RESISTANCE. */
     @WrapOperation(method="knockback",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/entity/LivingEntity;getAttributeValue(Lnet/minecraft/core/Holder;)D"))
     private double alchemical$knockbackResistanceValue(LivingEntity instance,Holder<Attribute> attribute,
                                                        Operation<Double> original,
                                                        @Local(argsOnly=true,ordinal=0) double power){
         double withResistance=original.call(instance,attribute);
-        if(power<=0.0||!attribute.equals(Attributes.KNOCKBACK_RESISTANCE))return withResistance;
-        var holder=BuiltInRegistries.MOB_EFFECT.get(ALEX_KNOCKBACK);
-        if(holder.isEmpty())return withResistance;
-        var effect=instance.getEffect(holder.get());
-        if(effect==null)return withResistance;
-
-        double withoutResistance=EffectAttributes.without(instance,Attributes.KNOCKBACK_RESISTANCE,effect);
-        double withMultiplier=Math.max(0.0D,1.0D-withResistance);
-        double withoutMultiplier=Math.max(0.0D,1.0D-withoutResistance);
-        double prevented=power*Math.max(0.0D,withoutMultiplier-withMultiplier);
-        if(prevented>0.0)InfusionWear.emitBuiltin(instance,effect.getEffect(),KNOCKBACK_REDUCED,prevented);
+        if(power>0.0&&attribute.equals(Attributes.KNOCKBACK_RESISTANCE))
+            KnockbackWear.emitMultiplicative(instance,power,withResistance);
         return withResistance;
     }
 }
