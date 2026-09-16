@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Exact 2.1.9 Tusklin fling: target resistance scales the signed live 0.4/0.9 launch strength. */
+/** Exact 2.1.9 Tusklin fling: target resistance scales the live 0.4/0.9 launch strength. */
 @Pseudo
 @Mixin(targets="com.github.alexthe666.alexsmobs.entity.EntityTusklin",remap=false)
 public abstract class AlexTusklinKnockbackWearMixin {
@@ -24,7 +24,7 @@ public abstract class AlexTusklinKnockbackWearMixin {
     private double alchemical$tusklinResistance(LivingEntity target,Holder<Attribute> attribute,Operation<Double> original){
         double withResistance=original.call(target,attribute);
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE))
-            KnockbackWear.emitSignedMultiplicative(target,getLaunchStrength(),withResistance);
+            KnockbackWear.emitMultiplicative(target,getLaunchStrength(),withResistance);
         return withResistance;
     }
 }
