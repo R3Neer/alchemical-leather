@@ -37,6 +37,26 @@ public final class WearPredicates {
             &&effectiveGravity<normalGravity-MOVEMENT_EPSILON;
     }
 
+    /**
+     * Measures only the vertical velocity actually added by Jump Boost at vanilla's
+     * max(boostedJumpPower, existingY) boundary. Existing upward momentum can partially or fully
+     * eclipse the effect; later foreign motion is capped out by expectedWithEffect.
+     *
+     * Work stays normalized to the historical 0.1 velocity per amplifier level, so a fully causal
+     * Jump Boost II jump still reports two units while a partially eclipsed jump reports a fraction.
+     */
+    public static double jumpBoostWork(double preJumpY,double boostedJumpPower,double boost,double actualAfterY){
+        if(!finite(preJumpY,boostedJumpPower,boost,actualAfterY)||boost<=MOVEMENT_EPSILON)return 0.0;
+        double withoutBoost=boostedJumpPower-boost;
+        double expectedWithout=Math.max(withoutBoost,preJumpY);
+        double expectedWith=Math.max(boostedJumpPower,preJumpY);
+        double realizedWith=Math.min(actualAfterY,expectedWith);
+        double contribution=realizedWith-expectedWithout;
+        if(contribution<=MOVEMENT_EPSILON)return 0.0;
+        double work=contribution/0.1D;
+        return Double.isFinite(work)&&work>0.0?work:0.0;
+    }
+
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
     public static boolean movementSpeedGroundEligible(boolean passenger,boolean fallFlying,boolean inWater,
                                                       boolean inLava,boolean onGround,double inputHorizontalSqr){
