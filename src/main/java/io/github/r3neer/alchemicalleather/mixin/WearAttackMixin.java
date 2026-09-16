@@ -2,14 +2,17 @@ package io.github.r3neer.alchemicalleather.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import io.github.r3neer.alchemicalleather.effect.CombatWear;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import io.github.r3neer.alchemicalleather.effect.ReachWear;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,9 +53,14 @@ public abstract class WearAttackMixin {
     @WrapOperation(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/Entity;hurtOrSimulate(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
     private boolean alchemical$attackDamage(Entity target,DamageSource source,float totalDamage,Operation<Boolean> original,Entity attacked){
         var self=(Player)(Object)this;
-        // Snapshot before delegating: a damage callback is allowed to re-enter Player#attack and
-        // overwrite the per-player field, but this local remains the context for this exact hit.
+        // Snapshot before delegating: hurtServer mutates lastHurt/invulnerableTime, and damage
+        // callbacks may also re-enter Player#attack and overwrite the per-player attack context.
         AttackContext context=alchemical$attackContext;
+        LivingEntity livingTarget=target instanceof LivingEntity living?living:null;
+        int invulnerableTime=livingTarget==null?0:livingTarget.invulnerableTime;
+        float lastHurt=livingTarget==null?0.0F:((LivingHurtAccess)livingTarget).alchemical$getLastHurt();
+        boolean bypassesCooldown=livingTarget==null||source.is(DamageTypeTags.BYPASSES_COOLDOWN);
+
         boolean accepted=original.call(target,source,totalDamage);
         if(!accepted||self.level().isClientSide())return accepted;
 
@@ -63,13 +71,17 @@ public abstract class WearAttackMixin {
 
             var strength=self.getEffect(MobEffects.STRENGTH);
             if(strength!=null){
-                double contribution=Math.max(0.0D,EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,strength));
-                emit(self,strength,contribution*scale,totalDamage);
+                double contribution=Math.max(0.0D,EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,strength))*scale;
+                double work=livingTarget==null?Math.min(contribution,Math.max(0.0D,totalDamage)):
+                    CombatWear.attackDeltaWork(totalDamage,contribution,invulnerableTime,lastHurt,bypassesCooldown);
+                emit(self,strength,work);
             }
             var weakness=self.getEffect(MobEffects.WEAKNESS);
             if(weakness!=null){
-                double suppression=Math.max(0.0D,-EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,weakness));
-                emit(self,weakness,suppression*scale,Double.POSITIVE_INFINITY);
+                double suppression=Math.max(0.0D,-EffectAttributes.contribution(self,Attributes.ATTACK_DAMAGE,weakness))*scale;
+                double work=livingTarget==null?suppression:
+                    CombatWear.attackDeltaWork(totalDamage,-suppression,invulnerableTime,lastHurt,bypassesCooldown);
+                emit(self,weakness,work);
             }
         }
 
@@ -84,9 +96,8 @@ public abstract class WearAttackMixin {
     @Inject(method="attack",at=@At("RETURN"))
     private void alchemical$clearAttackContext(Entity target,CallbackInfo ci){alchemical$attackContext=null;}
 
-    private static void emit(Player player,MobEffectInstance effect,double work,double cap){
-        if(effect==null||!Double.isFinite(work)||work<=0)return;
-        if(Double.isFinite(cap))work=Math.min(work,Math.max(0.0D,cap));
-        if(work>0)InfusionWear.emitBuiltin(player,effect.getEffect(),ATTACK_DELTA,work);
+    private static void emit(Player player,MobEffectInstance effect,double work){
+        if(effect!=null&&Double.isFinite(work)&&work>0)
+            InfusionWear.emitBuiltin(player,effect.getEffect(),ATTACK_DELTA,work);
     }
 }
