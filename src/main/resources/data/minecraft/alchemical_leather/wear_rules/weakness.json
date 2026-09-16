@@ -1,4 +1,7 @@
 {
   "work_per_damage": 20.0,
-  "sources": [{"type":"builtin","detector":"alchemical_leather:attack_damage_delta"}]
+  "sources": [
+    {"type":"builtin","detector":"alchemical_leather:attack_damage_delta"},
+    {"type":"builtin","detector":"alchemical_leather:weakness_zombie_cure","work":20.0}
+  ]
 }
