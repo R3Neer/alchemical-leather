@@ -29,6 +29,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
         id("knockback_reduced"),
         id("poison_removed"),
         id("soulsteal_healing"),
+        id("bug_pheromones_target_rejection"),
         id("scorching_ignition"),
         id("scorching_fire_placement")
     );
