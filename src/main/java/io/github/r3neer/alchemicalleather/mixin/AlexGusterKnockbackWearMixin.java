@@ -32,7 +32,7 @@ public abstract class AlexGusterKnockbackWearMixin {
         double extraZ=self.getZ()+radius*Mth.cos(angle);
         double dx=extraX-lifted.getX();
         double dz=extraZ-lifted.getZ();
-        double base=Math.sqrt(dx*dx+0.01D+dz*dz);
+        double base=Math.sqrt(dx*dx+0.1D*0.1D+dz*dz);
         KnockbackWear.emitUnitClampedMultiplicative(lifted,base,withResistance);
         return withResistance;
     }
