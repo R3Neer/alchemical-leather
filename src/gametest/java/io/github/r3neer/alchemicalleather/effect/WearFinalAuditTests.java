@@ -14,6 +14,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.AttackRange;
@@ -84,7 +85,7 @@ public final class WearFinalAuditTests {
         h.succeed();
     }
 
-    private static ItemStack equip(net.minecraft.server.level.ServerPlayer player,Identifier effect,int amplifier){
+    private static ItemStack equip(Player player,Identifier effect,int amplifier){
         var chest=new ItemStack(Items.LEATHER_CHESTPLATE);
         var infusion=new Infusion(effect,amplifier,"stable",0);
         chest.set(Infusions.TYPE,infusion);
