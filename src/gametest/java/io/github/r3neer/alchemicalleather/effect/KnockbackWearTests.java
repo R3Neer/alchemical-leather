@@ -1,0 +1,78 @@
+package io.github.r3neer.alchemicalleather.effect;
+
+import io.github.r3neer.alchemicalleather.data.Infusion;
+import io.github.r3neer.alchemicalleather.data.Infusions;
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.hoglin.HoglinBase;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
+
+/** Reserved coverage for vanilla mechanics that consume KNOCKBACK_RESISTANCE outside LivingEntity#knockback. */
+public final class KnockbackWearTests {
+    private static final Identifier EFFECT=Identifier.parse("alexsmobs:knockback_resistance");
+
+    @GameTest public void directKnockbackFormulasUseTheActualVanillaContract(GameTestHelper h){
+        h.assertTrue(Math.abs(KnockbackWear.multiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
+            "A 0.5 resistance contribution removes half of a multiplicative two-unit impulse");
+        h.assertTrue(KnockbackWear.multiplicativeReduction(2.0D,1.5D,1.0D)==0.0D,
+            "An effect already eclipsed beyond vanilla's zero multiplier cannot manufacture work");
+        h.assertTrue(Math.abs(KnockbackWear.subtractiveReduction(1.0D,0.75D,0.25D)-0.5D)<1.0E-9,
+            "Hoglin-style subtraction bills the exact effective-power difference");
+        h.assertTrue(Math.abs(KnockbackWear.subtractiveReduction(0.4D,0.75D,0.25D)-0.15D)<1.0E-9,
+            "Subtractive resistance may fully suppress the live impulse while only partly suppressing the counterfactual");
+        h.assertTrue(KnockbackWear.multiplicativeReduction(Double.NaN,0.5D,0.0D)==0.0D,
+            "Non-finite input fails closed");
+        h.succeed();
+    }
+
+    @GameTest public void ironGolemLiftBillsAlexResistanceAtItsDirectAttributeRead(GameTestHelper h){
+        if(!BuiltInRegistries.MOB_EFFECT.containsKey(EFFECT)){h.succeed();return;}
+        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        var boots=equip(player);
+        var golem=h.spawn(EntityTypes.IRON_GOLEM,new BlockPos(3,2,3));
+        golem.setNoAi(true);
+        player.setHealth(player.getMaxHealth());
+        h.assertTrue(golem.doHurtTarget(h.getLevel(),player),"Iron Golem fixture must land a real accepted attack");
+        var progress=boots.get(Infusions.WEAR_TYPE);
+        h.assertTrue(progress!=null&&progress.work(EFFECT)>0.0D,
+            "Iron Golem's direct 0.4*(1-resistance) lift must reach the alchemical knockback detector");
+        golem.discard();
+        h.succeed();
+    }
+
+    @GameTest public void hoglinThrowBillsItsSubtractiveResistancePath(GameTestHelper h){
+        if(!BuiltInRegistries.MOB_EFFECT.containsKey(EFFECT)){h.succeed();return;}
+        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        var boots=equip(player);
+        var hoglin=h.spawn(EntityTypes.HOGLIN,new BlockPos(3,2,3));
+        hoglin.setNoAi(true);
+        var attackKnockback=hoglin.getAttribute(Attributes.ATTACK_KNOCKBACK);
+        h.assertTrue(attackKnockback!=null,"Hoglin exposes ATTACK_KNOCKBACK in the 26.2 fixture");
+        attackKnockback.setBaseValue(2.0D);
+        HoglinBase.throwTarget(hoglin,player);
+        var progress=boots.get(Infusions.WEAR_TYPE);
+        h.assertTrue(progress!=null&&progress.work(EFFECT)>0.0D,
+            "Hoglin's ATTACK_KNOCKBACK-resistance subtraction must reach the alchemical detector");
+        hoglin.discard();
+        h.succeed();
+    }
+
+    private static ItemStack equip(net.minecraft.world.entity.player.Player player){
+        var boots=new ItemStack(Items.LEATHER_BOOTS);
+        var infusion=new Infusion(EFFECT,0,"stable",0);
+        boots.set(Infusions.TYPE,infusion);
+        player.setItemSlot(EquipmentSlot.FEET,boots);
+        var ledger=EffectLedger.of(player);
+        ledger.equipmentManaged=true;
+        ledger.setArmor(EquipmentSlot.FEET,infusion.instance());
+        return boots;
+    }
+}
