@@ -1,43 +1,41 @@
 package io.github.r3neer.alchemicalleather.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
-import java.util.ArrayDeque;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Optional Alex's Mobs adapter. The target class need not exist in standalone Alchemical Leather. */
 @Pseudo
-@Mixin(targets="com.github.alexthe666.alexsmobs.fabric.event.FabricServerEvents",remap=false)
+@Mixin(targets="com.github.alexthe666.alexsmobs.event.ServerEvents",remap=false)
 public abstract class AlexSoulstealWearMixin {
     @Unique private static final Identifier SOULSTEAL=Identifier.fromNamespaceAndPath("alexsmobs","soulsteal");
     @Unique private static final Identifier HEALING=Identifier.fromNamespaceAndPath("alchemical_leather","soulsteal_healing");
-    @Unique private static final ThreadLocal<ArrayDeque<Snapshot>> alchemical$stack=ThreadLocal.withInitial(ArrayDeque::new);
-    @Unique private record Snapshot(LivingEntity attacker,float health,Holder<MobEffect> effect){}
 
-    @Inject(method="fireLivingDamage",at=@At("HEAD"),remap=false)
-    private static void alchemical$beforeDamage(LivingEntity victim,DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir){
-        LivingEntity attacker=source.getEntity() instanceof LivingEntity living?living:null;
+    /**
+     * Wrap only Soulsteal's own heal call. The same Alex handler can later damage the attacker via
+     * Spiked Turtle Shell retaliation; a HEAD/RETURN health delta would incorrectly subtract that
+     * unrelated retaliation from the amount of healing Soulsteal actually performed.
+     */
+    @WrapOperation(
+        method="onLivingDamageEvent",
+        at=@At(value="INVOKE",target="Lnet/minecraft/world/entity/LivingEntity;heal(F)V"),
+        remap=false
+    )
+    private void alchemical$soulstealHeal(LivingEntity attacker,float requested,Operation<Void> original){
+        float before=attacker.getHealth();
+        original.call(attacker,requested);
+        float healed=attacker.getHealth()-before;
+        if(healed<=0)return;
         Holder<MobEffect> holder=BuiltInRegistries.MOB_EFFECT.get(SOULSTEAL).map(value->(Holder<MobEffect>)value).orElse(null);
-        if(attacker==null||holder==null||!attacker.hasEffect(holder))alchemical$stack.get().push(new Snapshot(null,0,null));
-        else alchemical$stack.get().push(new Snapshot(attacker,attacker.getHealth(),holder));
-    }
-
-    @Inject(method="fireLivingDamage",at=@At("RETURN"),remap=false)
-    private static void alchemical$afterDamage(LivingEntity victim,DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir){
-        var stack=alchemical$stack.get();if(stack.isEmpty())return;
-        var snapshot=stack.pop();if(stack.isEmpty())alchemical$stack.remove();
-        if(snapshot.attacker()==null||snapshot.effect()==null)return;
-        float healed=snapshot.attacker().getHealth()-snapshot.health();
-        if(healed>0)InfusionWear.emitBuiltin(snapshot.attacker(),snapshot.effect(),HEALING,healed);
+        if(holder!=null&&attacker.hasEffect(holder))InfusionWear.emitBuiltin(attacker,holder,HEALING,healed);
     }
 }
