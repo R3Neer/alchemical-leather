@@ -1,6 +1,6 @@
 # Compatibility and infusion-wear protocol
 
-This document describes the post-beta.1 development architecture for optional potion-effect compatibility and causal infusion wear.
+This document describes the optional potion-effect compatibility and causal infusion-wear protocol shipped with **Alchemical Leather 0.1.0-beta.2**.
 
 ## Ownership model
 
@@ -19,7 +19,7 @@ First-party ownership is deliberately split:
 
 - **Clinging: Reoriented** owns Reorientation's boots slot and publishes successful gravity-turn / controlled-flight facts. It also publishes the successful-turn fact used by Alex's Mobs Clinging without redefining Alex's Mobs registry ownership.
 - **Scale Brews** owns Growth/Shrinking slot declarations and explicitly classifies both as `wear: none`.
-- **Alchemical Leather** bundles data-only compatibility for selected third-party effects used by VanillaPlus, including Alex's Mobs Continued, Friends & Foes, Wilder Wild and Deeper Dark where appropriate.
+- **Alchemical Leather** bundles data-only compatibility and generic causal detectors for selected third-party effects used by VanillaPlus, including Alex's Mobs Continued, Friends & Foes, Wilder Wild and Deeper Dark where appropriate.
 
 Optional mods remain optional. Alchemical Leather works standalone, and first-party companions work without Alchemical Leather.
 
@@ -158,19 +158,30 @@ The companion integration is linkage-safe and adds no hard Alchemical Leather de
 
 Growth and Shrinking are chestplate effects and explicitly use `wear: none`. Scale Brews owns those resources in its own JAR.
 
+## Generic third-party mechanics
+
+Some third-party effects use generic Minecraft mechanics that Alchemical Leather can observe causally without asking the owning mod to publish an event.
+
+**Knockback Resistance** is the important beta.2 example. The final audit inventories the direct attribute consumers that can reduce knockback on the infused wearer rather than assuming every mechanic funnels through `LivingEntity#knockback`.
+
+For Minecraft 26.2 the validated vanilla target routes include ordinary living-entity knockback plus Hoglin, Warden Sonic Boom, Mace, Iron Golem and Arrow knockback. For Alex's Mobs Continued 2.1.9 the validated target routes include Guster, Bison, Tusklin and Rhinoceros. Optional Alex adapters are linkage-safe and do not make Alex's Mobs a runtime dependency.
+
+The detector reports only the impulse magnitude actually suppressed by the effective armor-owned effect. Routes that read Knockback Resistance from the **attacking mob itself** are intentionally outside this target-armor accounting.
+
 ## VanillaPlus compatibility gate
 
 CI builds a focused compatibility profile using the exact potion/effect contributors from `R3Neer/VanillaPlus-26.2` plus BedrockIfy for cauldron ownership:
 
-- Alex's Mobs Continued;
-- Clinging: Reoriented;
-- Scale Brews;
-- Friends & Foes;
-- Wilder Wild;
-- Deeper Dark;
-- BedrockIfy and the runtime libraries required by those mods.
+- Alex's Mobs Continued 2.1.9;
+- Clinging: Reoriented at commit `df1cff3a2fb9baf69d3bb8594159681b6966096d`;
+- Scale Brews at commit `74066349eb33872d1f2b8584dfd05ffd96eae0f8`;
+- Friends & Foes 4.0.27+mc26.2;
+- Wilder Wild 4.2.11-mc26.2;
+- Deeper Dark 4.4.1;
+- BedrockIfy 1.11.8+mc26.2;
+- the runtime libraries required by those exact pack entries.
 
-The first-party companions are pinned to the exact TM-converged commits merged to their `main` branches. The third-party JARs are fetched from the exact packwiz-pinned Modrinth CDN URLs.
+The first-party companions are fetched by exact commit SHA and built as part of CI. The third-party JARs are fetched from the exact packwiz-pinned Modrinth CDN URLs.
 
 The registry-driven gate asserts that every loaded potion effect has an explicit wear classification. Additional sentinels pin the intended slot/wear policy for Growth, Shrinking, Reorientation, Clinging, Friends & Foes Reach, Wilder Wild Reach Boost/Scorching and Deeper Dark's Blindness potion path.
 
@@ -178,4 +189,4 @@ The registry-driven gate asserts that every loaded potion effect has an explicit
 
 Alchemical Leather does not promise arbitrary compatibility with every mod or datapack. The protocol is designed so new effects can declare a slot and wear policy without patching core code, but causal semantics still need a trustworthy detector or a semantic event from the owning mod.
 
-See [`TM_INFUSION_WEAR_SPEC.md`](TM_INFUSION_WEAR_SPEC.md) for the frozen design specification and [`TM_INFUSION_WEAR_CLOSEOUT.md`](TM_INFUSION_WEAR_CLOSEOUT.md) for the implementation/adversarial record.
+See [validation.md](validation.md) for the exact tested matrix and [architecture.md](architecture.md) for implementation details.

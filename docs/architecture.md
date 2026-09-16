@@ -1,8 +1,6 @@
 # Architecture and implementation notes
 
-This document describes the current Alchemical Leather development architecture built on top of the published **0.1.0-beta.1** baseline. The causal infusion-wear and humanoid multi-effect work documented here is intentionally separate from release/version claims until its final main-branch validation is complete.
-
-Player-facing mechanics live in [GUIDE.md](GUIDE.md). Optional-mod contracts live in [COMPATIBILITY.md](COMPATIBILITY.md).
+This document describes the architecture shipped with **Alchemical Leather 0.1.0-beta.2**. Player-facing mechanics live in [GUIDE.md](GUIDE.md). Optional-mod contracts live in [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ## Armor classification
 
@@ -18,7 +16,7 @@ The recipe index is built on server-data reload, honors Fabric load conditions a
 
 ## Infusion data model
 
-The item is the durable source of truth. Alchemical Leather currently has four persistent item components relevant to infusion/wear:
+The item is the durable source of truth. Alchemical Leather has four persistent item components relevant to infusion/wear:
 
 - `alchemical_leather:infusion` — the original single-effect humanoid representation, retained for backwards-compatible decoding and still used for one-effect humanoid infusions;
 - `alchemical_leather:humanoid_infusion` — a non-empty bundle of at least two **distinct** humanoid effects that all belong to the same equipment slot;
@@ -106,17 +104,26 @@ Mixin hooks are placed at causal decision/consumption sites instead of inferring
 Examples include:
 
 - self-propelled movement contribution rather than raw displacement;
-- actual jump contribution;
+- actual jump contribution and fall damage prevented by Jump Boost;
 - Slow Falling at gravity application;
 - effect-owned healing/damage ticks;
-- damage genuinely prevented by Resistance/Fire Resistance;
-- attack contribution from Strength/Weakness;
-- breath/drowning prevention;
-- extended reach only when baseline reach was insufficient;
-- knockback-resistance consumption;
+- damage genuinely prevented by Resistance/Fire Resistance after ordinary damage gates;
+- attack contribution from Strength/Weakness only when damage is actually accepted;
+- Weakness consumed by a successful zombie-villager cure;
+- Water Breathing at both drowning prevention and underwater air-recovery decisions;
+- extended reach only when baseline reach was insufficient across entity, block, item-use, raycast and brushing paths;
+- knockback-resistance consumption at every audited target path rather than assuming all callers funnel through `LivingEntity#knockback`;
 - successful proc sites such as Infested/Oozing/Wind Charged/Scorching/Soulsteal where appropriate.
 
 Movement predicates explicitly exclude vehicle/passenger travel, passive support displacement, teleportation, knockback/external impulses and locomotion modes the effect does not actually modify.
+
+### Knockback Resistance audit
+
+Minecraft 26.2 reads `KNOCKBACK_RESISTANCE` directly in several mechanics. Beta.2 therefore routes ordinary living knockback, Hoglin, Sonic Boom, Mace, Iron Golem and Arrow reductions through the same `alchemical_leather:knockback_reduced` detector.
+
+Alex's Mobs Continued 2.1.9 also has target-side direct consumers. Linkage-safe `@Pseudo` adapters cover Guster, Bison, Tusklin and Rhinoceros. Reads that belong to the attacking mob itself are not billed to the target's infused armor.
+
+All routes report suppressed impulse magnitude into the same JSON-owned economy. Java does not contain route-specific durability prices. Reconstruction follows the arithmetic of the real consumer, including Guster's `[0,1]` multiplier clamp; the other audited routes follow their actual lower-clamped resistance behavior. The effective Minecraft attribute itself is sanitized to `[-2,1]` before these consumers see it.
 
 ### Public semantic-event API
 
@@ -233,20 +240,20 @@ Standard component-preserving transforms such as trims can retain infusion and w
 
 ## VanillaPlus validation architecture
 
-The S05 compatibility gate is deliberately narrower than loading every decorative/client mod in VanillaPlus but broader than the historical beta.1 fixture. It loads the exact pack-pinned **potion/effect contributors** plus BedrockIfy:
+The beta.2 compatibility gate loads the exact pack-pinned **potion/effect contributors** plus BedrockIfy:
 
-- Alex's Mobs Continued;
-- Clinging: Reoriented;
-- Scale Brews;
-- Friends & Foes;
-- Wilder Wild;
-- Deeper Dark;
-- BedrockIfy and required runtime libraries.
+- Alex's Mobs Continued 2.1.9;
+- Clinging: Reoriented at `df1cff3a2fb9baf69d3bb8594159681b6966096d`;
+- Scale Brews at `74066349eb33872d1f2b8584dfd05ffd96eae0f8`;
+- Friends & Foes 4.0.27+mc26.2;
+- Wilder Wild 4.2.11-mc26.2;
+- Deeper Dark 4.4.1;
+- BedrockIfy 1.11.8+mc26.2 and required runtime libraries.
 
-Clinging and Scale are built from exact TM-converged commits merged to their `main` branches. Third-party JARs come from the exact CDN URLs recorded by `R3Neer/VanillaPlus-26.2` packwiz metadata.
+Clinging and Scale are fetched by exact commit SHA and built inside CI. Third-party JARs come from the exact CDN URLs recorded by `R3Neer/VanillaPlus-26.2` packwiz metadata.
 
-`PotionCoverageTests` walks the **loaded potion registry** and fails if any effect lacks an explicit wear classification. Additional policy sentinels pin important slots and no-wear/wear decisions. `CompanionWearBridgeTests` exercises the real Clinging semantic bridge through the public API into slot-aware Alchemical Leather accounting.
+`PotionCoverageTests` walks the **loaded potion registry** and fails if any effect lacks an explicit wear classification. Additional policy sentinels pin important slots and no-wear/wear decisions. `CompanionWearBridgeTests` exercises the real Clinging semantic bridge through the public API into slot-aware Alchemical Leather accounting, while the beta.2 final audit adds direct-route holdouts including real vanilla knockback consumers and a real Alex's Mobs Bison path.
 
 The standalone server suite, client GameTest and compatibility fixture are all required. `verifyGameTestEntrypoints` additionally prevents compiled server GameTests from silently disappearing because somebody forgot to register them, an historical failure mode sufficiently embarrassing to deserve permanent automation.
 
-See [validation.md](validation.md) and [TM_INFUSION_WEAR_CLOSEOUT.md](TM_INFUSION_WEAR_CLOSEOUT.md) for execution evidence.
+See [validation.md](validation.md) for execution evidence.

@@ -2,7 +2,7 @@
 
 [← Back to README](../README.md)
 
-This is the detailed reference for the current development line after the published **0.1.0-beta.1**. It includes the causal infusion-wear and humanoid multi-effect work that is being validated before any later release tag is assigned.
+This guide describes **Alchemical Leather 0.1.0-beta.2** for Minecraft 26.2 Fabric, including causal infusion wear, same-slot humanoid multi-effect potions and the optional compatibility protocol.
 
 ## Contents
 
@@ -121,14 +121,14 @@ The system first verifies that wear is enabled, the relevant infusion is current
 ### Examples
 
 - **Speed / Slowness:** self-propelled locomotion actually modified by movement speed. Vehicle travel, passive moving platforms, teleports, knockback and unrelated external impulses do not count.
-- **Jump Boost:** a real wearer jump to which Jump Boost contributes. Vehicle jumps and external launches do not count.
+- **Jump Boost:** a real boosted jump, plus fall damage actually prevented by Jump Boost. Vehicle jumps and external launches do not count.
 - **Slow Falling:** physics ticks where Slow Falling actually changes gravity/fall-flying behavior; it is not charged for a rocket impulse merely because an Elytra flight exists.
 - **Regeneration / Poison:** HP actually restored/removed by the effect's own tick.
-- **Fire Resistance / Resistance:** damage genuinely prevented by that effect rather than damage already cancelled by another immunity.
-- **Strength / Weakness:** the attributable contribution/suppression on a successful attack result.
-- **Water Breathing:** drowning/breath loss actually prevented.
-- **Reach / Reach Boost:** a successful interaction or attack that required the extra range.
-- **Knockback Resistance:** knockback actually reduced at the attribute-consumption point.
+- **Fire Resistance / Resistance:** damage genuinely prevented by that effect rather than damage already cancelled by another immunity or invulnerability gate.
+- **Strength / Weakness:** the attributable contribution/suppression on a successful damage result. Weakness also pays once when a successful zombie-villager cure actually requires and consumes the effect.
+- **Water Breathing:** drowning/breath loss actually prevented, plus underwater air recovery when Water Breathing is what enables it.
+- **Reach / Reach Boost:** successful entity, block, item-use, raycast or brushing work that really required the extra range.
+- **Knockback Resistance:** impulse magnitude genuinely suppressed where the mechanic consumes the attribute. Beta.2 covers the direct vanilla consumers and the supported Alex's Mobs Continued 2.1.9 target-knockback routes exercised by the compatibility fixture.
 - **Soulsteal:** HP actually restored by the successful Soulsteal proc.
 - **Scorching:** attributable fire/ignition work at the real mechanic's origin.
 - **Clinging:** successful voluntary gravity turns only.
@@ -231,22 +231,22 @@ Colored water changes dye but preserves infusion. Effectless potion dye baths se
 
 Alchemical Leather works without optional content mods.
 
-The current causal-wear gate exercises the actual potion/effect contributors used by `R3Neer/VanillaPlus-26.2`:
+The beta.2 compatibility gate exercises the actual potion/effect contributors used by `R3Neer/VanillaPlus-26.2`:
 
 - Alex's Mobs Continued 2.1.9;
-- current TM-converged **Clinging: Reoriented** `main` integration;
-- current TM-converged **Scale Brews** `main` integration;
-- Friends & Foes;
-- Wilder Wild;
-- Deeper Dark;
-- BedrockIfy for foreign-cauldron ownership;
-- their required runtime libraries.
+- **Clinging: Reoriented** at validated commit `df1cff3a2fb9baf69d3bb8594159681b6966096d`;
+- **Scale Brews** at validated commit `74066349eb33872d1f2b8584dfd05ffd96eae0f8`;
+- Friends & Foes 4.0.27+mc26.2;
+- Wilder Wild 4.2.11-mc26.2;
+- Deeper Dark 4.4.1;
+- BedrockIfy 1.11.8+mc26.2;
+- their exact required runtime libraries from the VanillaPlus pack metadata.
 
-The first-party repositories own their own compatibility resources. Alchemical Leather's CI verifies the exact merged companion commits instead of following moving development branches.
+The first-party repositories own their own compatibility resources. Alchemical Leather's CI fetches the exact validated companion commits rather than following moving development branches.
 
-The loaded potion registry is audited dynamically: every effect appearing in a loaded potion must be classified by a concrete wear rule, explicit `wear: none`, or its intentional instantaneous semantics. Separate sentinels pin important slot/wear expectations so a resource can not silently migrate to a semantically wrong slot while still being “classified”.
+The loaded potion registry is audited dynamically: every effect appearing in a loaded potion must be classified by a concrete wear rule, explicit `wear: none`, or its intentional instantaneous semantics. Separate sentinels pin important slot/wear expectations so a resource cannot silently migrate to a semantically wrong slot while still being “classified”.
 
-The cross-mod holdout invokes the real Clinging semantic bridge and verifies that repeated Reorientation turns accumulate fractional work on the **owning equipped boots** and eventually produce ordinary durability damage at the configured threshold.
+The cross-mod holdout invokes the real Clinging semantic bridge and verifies that repeated Reorientation turns accumulate fractional work on the **owning equipped boots** and eventually produce ordinary durability damage at the configured threshold. The final beta.2 audit also exercises a real Alex's Mobs Bison knockback route so optional target-knockback linkage is not validated merely by successful class loading.
 
 See [COMPATIBILITY.md](COMPATIBILITY.md) for the JSON/API contract and ownership boundaries.
 
@@ -371,7 +371,7 @@ Unix-like systems:
 
 `check` also runs `verifyGameTestEntrypoints`, which fails if a server `@GameTest` class is compiled but missing from the Fabric test descriptor, or if the descriptor contains a stale test class. This guard exists because a historically green CI once managed the impressive feat of not actually running every compiled GameTest.
 
-The main CI additionally assembles the pinned VanillaPlus potion-contributor fixture and runs the registry/compatibility matrix. See [validation.md](validation.md).
+The main CI additionally assembles the exact pinned VanillaPlus potion-contributor fixture, builds the two first-party companions and runs the registry/compatibility matrix. See [validation.md](validation.md).
 
 ## License
 

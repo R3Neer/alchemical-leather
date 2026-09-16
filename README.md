@@ -4,7 +4,7 @@ What if **dyeable armor** could carry your potions, and pay for their useful wor
 
 A **Fabric mod for Minecraft 26.2** that turns familiar armor into alchemical equipment. Pour a potion into a cauldron, infuse a compatible piece, equip it, and take the effect with you.
 
-Current published prerelease: **0.1.0-beta.1**. The current development line adds causal infusion wear, multi-effect humanoid potions and the optional compatibility protocol described below; no new release tag is implied by this documentation.
+Current prerelease: **0.1.0-beta.2**. This beta adds causal infusion wear, same-slot multi-effect humanoid potions, a data/API compatibility protocol and substantially broader VanillaPlus effect coverage.
 
 ![Potion-filled cauldrons in game](docs/images/vanilla-cauldron.png)
 
@@ -39,9 +39,13 @@ The rule is deliberately stricter than “effect active = armor ticking down”.
 Examples:
 
 - Speed/Slowness charge self-propelled locomotion they actually modify, not a horse, platform, teleport, knockback or unrelated transport.
+- Jump Boost charges real boosted jumps and fall damage actually prevented by the boost.
 - Regeneration and Poison charge HP really changed by their own ticks.
-- Fire Resistance and Resistance charge damage actually prevented by those effects.
+- Fire Resistance and Resistance charge damage actually prevented by those effects, after ordinary damage gates such as invulnerability frames have had their say.
+- Strength/Weakness charge only the attributable attack delta that reaches a successful damage result; Weakness also pays when it is actually consumed as part of a successful zombie-villager cure.
+- Water Breathing charges drowning/breath loss actually prevented and underwater air recovery it actually enables.
 - Reach charges only interactions that needed the extra reach.
+- Knockback Resistance charges only impulse magnitude actually suppressed at the mechanic consuming the attribute, including the supported vanilla and Alex's Mobs routes exercised by the beta.2 fixture.
 - Slow Falling charges where its gravity branch actually changes the fall/fall-flying physics.
 - Clinging charges successful voluntary gravity turns.
 - Reorientation charges successful turns plus controlled self-flight, but not Elytra, fluid locomotion, passenger/support transport or independent player flight.
@@ -59,7 +63,7 @@ Alchemical Leather owns the generic protocol, not every other mod's internal mec
 
 - **Clinging: Reoriented** owns Reorientation's boots slot and publishes semantic events only after authoritative successful gravity work. The integration is optional and linkage-safe.
 - **Scale Brews** owns Growth/Shrinking slot and wear resources; both are chestplate effects with explicit `wear: none`.
-- Alchemical Leather ships selected data-only rules/detectors for third-party potion effects used by VanillaPlus where no hard runtime link is required.
+- Alchemical Leather ships selected data-only rules and generic-mechanic detectors for third-party potion effects used by VanillaPlus where no hard runtime dependency is required.
 
 Third-party mods can define slot/wear JSON and, when only they know that an action succeeded, report a semantic event through the small public `InfusionWearApi`. Alchemical Leather still decides which equipped item owns the effect, whether the armor is the effective source, how fractional work is accumulated and when durability changes.
 
@@ -73,11 +77,11 @@ When BedrockIfy is installed and its cauldrons are active, BedrockIfy remains th
 
 ## Validation
 
-The wear branch is validated standalone and against a focused **VanillaPlus potion-contributor fixture** using the exact pack-pinned versions of Alex's Mobs Continued, Friends & Foes, Wilder Wild, Deeper Dark and BedrockIfy, plus the TM-converged `main` commits of Clinging: Reoriented and Scale Brews.
+The beta.2 candidate is validated standalone and against a focused **VanillaPlus potion-contributor fixture** using the exact pack-pinned versions of Alex's Mobs Continued, Friends & Foes, Wilder Wild, Deeper Dark and BedrockIfy, plus exact validated commits of Clinging: Reoriented and Scale Brews.
 
-The registry audit fails when any loaded potion effect lacks an explicit wear classification. A cross-mod holdout drives a real Clinging Reorientation turn event through the public API into the owning infused boots and checks fractional work plus terminal durability damage.
+The registry audit fails when any loaded potion effect lacks an explicit wear classification. The final durability audit additionally inventories direct consumers of mechanics such as Knockback Resistance so a correct JSON classification cannot hide an unobserved execution path.
 
-See [validation](docs/validation.md) and the [TM closeout](docs/TM_INFUSION_WEAR_CLOSEOUT.md) for the evidence and failure classifications.
+The final pre-release functional candidate passed **140/140 standalone server GameTests**, the client GameTest, both pinned companion builds/test suites and **140/140 integrated VanillaPlus GameTests**. See [validation](docs/validation.md) for the exact fixture and evidence.
 
 ## Install
 
@@ -91,7 +95,8 @@ This is beta software. Back up worlds before updating; tested integrations are e
 
 - [Player guide / wiki](docs/GUIDE.md) — complete mechanics, with spoilers.
 - [Compatibility and infusion-wear API](docs/COMPATIBILITY.md) — slot/wear resources, semantic events and ownership boundaries.
-- [Frozen TM design specification](docs/TM_INFUSION_WEAR_SPEC.md) · [TM implementation closeout](docs/TM_INFUSION_WEAR_CLOSEOUT.md)
-- [Build and tests](docs/GUIDE.md#building) · [Architecture](docs/architecture.md) · [Validation](docs/validation.md) · [Issues](https://github.com/R3Neer/alchemical-leather/issues)
+- [Architecture](docs/architecture.md) — persistent data, runtime ownership and causal detector design.
+- [Validation](docs/validation.md) — test matrix, companion pins and audit evidence.
+- [Build and tests](docs/GUIDE.md#building) · [Issues](https://github.com/R3Neer/alchemical-leather/issues)
 
 [GPL-3.0-or-later](LICENSE). Not an official Minecraft product; not approved by or associated with Mojang or Microsoft.
