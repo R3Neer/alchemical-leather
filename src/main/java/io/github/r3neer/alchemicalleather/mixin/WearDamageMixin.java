@@ -18,6 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -32,6 +33,7 @@ public abstract class WearDamageMixin {
     private static final Identifier KNOCKBACK_REDUCED=Identifier.fromNamespaceAndPath("alchemical_leather","knockback_reduced");
     private static final Identifier ALEX_KNOCKBACK=Identifier.fromNamespaceAndPath("alexsmobs","knockback_resistance");
 
+    @Shadow protected float lastHurt;
     @Unique private DamageSource alchemical$fallDamageSource;
 
     /**
@@ -82,9 +84,9 @@ public abstract class WearDamageMixin {
     }
 
     /**
-     * Jump Boost in 26.2 contributes +1 SAFE_FALL_DISTANCE per level. Meter only integer damage
-     * points removed at vanilla's exact fall-damage calculation boundary, and never when a prior
-     * entity/death/invulnerability condition would make fall damage irrelevant anyway.
+     * Jump Boost in 26.2 contributes +1 SAFE_FALL_DISTANCE per level. Meter only damage that its
+     * contribution prevents after vanilla's flooring and hurt cooldown gate. This excludes falls
+     * that the active i-frame window would have rejected even without Jump Boost.
      */
     @Inject(method="calculateFallDamage",at=@At("RETURN"))
     private void alchemical$jumpBoostFallProtection(double fallDistance,float damageModifier,CallbackInfoReturnable<Integer> cir){
@@ -97,7 +99,8 @@ public abstract class WearDamageMixin {
         double safeWithout=EffectAttributes.without(self,Attributes.SAFE_FALL_DISTANCE,effect);
         double prevented=WearPredicates.jumpBoostFallDamagePrevented(
             fallDistance,damageModifier,self.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER),
-            safeWith,safeWithout,cir.getReturnValue());
+            safeWith,safeWithout,cir.getReturnValue(),self.invulnerableTime,lastHurt,
+            source.is(DamageTypeTags.BYPASSES_COOLDOWN));
         if(prevented>0.0)InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP_FALL_PREVENTED,prevented);
     }
 
