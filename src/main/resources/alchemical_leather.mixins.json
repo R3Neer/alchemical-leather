@@ -18,6 +18,7 @@
     "WearEffectProcMixin",
     "WearBlockReachMixin",
     "WearEntityReachMixin",
+    "WearItemUseReachMixin",
     "WearWebMixin",
     "AlexSoulstealWearMixin",
     "AlexBugPheromonesWearMixin"
