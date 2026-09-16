@@ -5,6 +5,7 @@
   "mixins": [
     "LivingEffectsMixin",
     "LivingEffectsAccess",
+    "LivingHurtAccess",
     "EffectAccess",
     "ItemStackDamageAccess",
     "EnchantableStackMixin",
