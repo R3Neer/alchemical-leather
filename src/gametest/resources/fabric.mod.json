@@ -31,6 +31,7 @@
       "io.github.r3neer.alchemicalleather.effect.SlowFallingContextTests",
       "io.github.r3neer.alchemicalleather.effect.DamageCooldownWearTests",
       "io.github.r3neer.alchemicalleather.effect.CombatCooldownWearTests",
+      "io.github.r3neer.alchemicalleather.effect.KnockbackWearTests",
       "io.github.r3neer.alchemicalleather.trade.LeatherworkerTradeTests",
       "io.github.r3neer.alchemicalleather.trade.TradeEnchantmentGuardTest"
     ],
