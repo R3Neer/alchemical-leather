@@ -26,6 +26,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
         id("effect_proc"),
         id("weaving_movement"),
         id("attack_damage_delta"),
+        id("weakness_zombie_cure"),
         id("extra_reach_use"),
         id("knockback_reduced"),
         id("poison_removed"),
