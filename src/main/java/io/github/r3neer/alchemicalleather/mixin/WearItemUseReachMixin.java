@@ -26,7 +26,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class WearItemUseReachMixin {
     @Inject(method="use",at=@At("HEAD"))
     private void alchemical$beginReachUse(Level level,Player player,InteractionHand hand,CallbackInfoReturnable<InteractionResult> cir){
-        ReachUseContext.begin(player);
+        // SpawnEggItem reports SUCCESS even when EntityType#spawn returned null; for that one path
+        // require the server-side stack to have been consumed/changed before billing reach.
+        ReachUseContext.begin(player,hand,(Object)this instanceof SpawnEggItem);
     }
 
     @Inject(method="use",at=@At("RETURN"))
