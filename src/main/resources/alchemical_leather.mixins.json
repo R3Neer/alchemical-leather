@@ -19,7 +19,8 @@
     "WearBlockReachMixin",
     "WearEntityReachMixin",
     "WearWebMixin",
-    "AlexSoulstealWearMixin"
+    "AlexSoulstealWearMixin",
+    "AlexBugPheromonesWearMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
