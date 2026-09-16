@@ -1,1 +1,11 @@
-{"requires_mod":"alexsmobs","wear":"none"}
+{
+  "requires_mod": "alexsmobs",
+  "requires_effect": "alexsmobs:bug_pheromones",
+  "work_per_damage": 64.0,
+  "sources": [
+    {
+      "type": "builtin",
+      "detector": "alchemical_leather:bug_pheromones_target_rejection"
+    }
+  ]
+}
