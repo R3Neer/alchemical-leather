@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
+import io.github.r3neer.alchemicalleather.effect.SlowFallingWear;
 import io.github.r3neer.alchemicalleather.effect.WearPredicates;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -42,6 +43,8 @@ public abstract class WearLivingMixin {
     @Unique private double alchemical$waterDistanceLimit;
     @Unique private double alchemical$waterDrag;
     @Unique private double alchemical$jumpPreY=Double.NaN;
+    @Unique private float alchemical$slowFallingPreAiStepFallDistance=Float.NaN;
+    @Unique private long alchemical$slowFallingWearTick=Long.MIN_VALUE;
 
     @Inject(method="travel",at=@At("HEAD"))
     private void alchemical$beforeSelfMovement(Vec3 input,CallbackInfo ci){
@@ -145,6 +148,29 @@ public abstract class WearLivingMixin {
         if(work>0.0)InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP,work);
     }
 
+    /** Capture fall distance before aiStep reaches Slow Falling/Levitation's shared reset branch. */
+    @Inject(method="aiStep",at=@At("HEAD"))
+    private void alchemical$beforeAiStep(CallbackInfo ci){
+        alchemical$slowFallingPreAiStepFallDistance=((LivingEntity)(Object)this).fallDistance;
+    }
+
+    /**
+     * The reset happens immediately before travel. Confirm that accumulated fall distance was
+     * actually erased, exclude Levitation's independent cause, and share the same once-per-tick
+     * meter as the gravity-clamp hooks so ordinary Slow Falling does not pay twice.
+     */
+    @Inject(method="aiStep",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/entity/LivingEntity;travel(Lnet/minecraft/world/phys/Vec3;)V"))
+    private void alchemical$slowFallingFallDistanceReset(CallbackInfo ci){
+        var self=(LivingEntity)(Object)this;
+        float before=alchemical$slowFallingPreAiStepFallDistance;
+        alchemical$slowFallingPreAiStepFallDistance=Float.NaN;
+        if(self.level().isClientSide()||self.hasEffect(MobEffects.LEVITATION))return;
+        var effect=self.getEffect(MobEffects.SLOW_FALLING);
+        if(effect!=null&&SlowFallingWear.fallDistanceResetNeeded(before,self.fallDistance,false))
+            alchemical$emitSlowFallingWork(self,effect);
+    }
+
     /**
      * Wrap the exact water-breathing query inside LivingEntity#baseTick. Reaching this call means
      * the eyes are submerged, the eye block is not a bubble column, and natural underwater
@@ -168,7 +194,7 @@ public abstract class WearLivingMixin {
         target="Lnet/minecraft/world/entity/LivingEntity;getEffectiveGravity()D"))
     private double alchemical$slowFallingAirGravity(LivingEntity entity,Operation<Double> original,Vec3 input){
         double gravity=original.call(entity);
-        emitSlowFallingGravity(entity,gravity,true);
+        alchemical$emitSlowFallingGravity(entity,gravity,true);
         return gravity;
     }
 
@@ -176,7 +202,7 @@ public abstract class WearLivingMixin {
         target="Lnet/minecraft/world/entity/LivingEntity;getEffectiveGravity()D"))
     private double alchemical$slowFallingElytraGravity(LivingEntity entity,Operation<Double> original,Vec3 movement){
         double gravity=original.call(entity);
-        emitSlowFallingGravity(entity,gravity,true);
+        alchemical$emitSlowFallingGravity(entity,gravity,true);
         return gravity;
     }
 
@@ -187,18 +213,26 @@ public abstract class WearLivingMixin {
         // Water sprinting bypasses getFluidFallingAdjustedMovement's gravity subtraction. Lava
         // always consumes baseGravity in its final vertical adjustment.
         boolean consumed=entity.isInLava()||(entity.isInWater()&&!entity.isSprinting());
-        emitSlowFallingGravity(entity,gravity,consumed);
+        alchemical$emitSlowFallingGravity(entity,gravity,consumed);
         return gravity;
     }
 
     @Unique
-    private static void emitSlowFallingGravity(LivingEntity entity,double effectiveGravity,boolean consumed){
+    private void alchemical$emitSlowFallingGravity(LivingEntity entity,double effectiveGravity,boolean consumed){
         if(!consumed||entity.level().isClientSide()||entity.onGround()||entity.isPassenger())return;
         if(entity instanceof Player player&&player.getAbilities().flying)return;
         var effect=entity.getEffect(MobEffects.SLOW_FALLING);
         if(effect==null)return;
         if(WearPredicates.slowFallingGravityApplied(entity.getGravity(),entity.getDeltaMovement().y,effectiveGravity))
-            InfusionWear.emitBuiltin(entity,effect.getEffect(),SLOW_FALLING,1.0);
+            alchemical$emitSlowFallingWork(entity,effect);
+    }
+
+    @Unique
+    private void alchemical$emitSlowFallingWork(LivingEntity entity,MobEffectInstance effect){
+        long tick=entity.level().getGameTime();
+        if(alchemical$slowFallingWearTick==tick)return;
+        alchemical$slowFallingWearTick=tick;
+        InfusionWear.emitBuiltin(entity,effect.getEffect(),SLOW_FALLING,1.0);
     }
 
     private static void emitMovement(LivingEntity self,Vec3 origin,double limit){
