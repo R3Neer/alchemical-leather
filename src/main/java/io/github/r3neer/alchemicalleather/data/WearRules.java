@@ -18,6 +18,7 @@ public final class WearRules implements SimpleSynchronousResourceReloadListener 
     private static final Set<Identifier> BUILTIN_DETECTORS=Set.of(
         id("self_propelled_movement_speed"),
         id("jump_boost_jump"),
+        id("jump_boost_fall_damage_prevented"),
         id("damage_prevented"),
         id("effect_health_delta"),
         id("water_breathing_tick"),
