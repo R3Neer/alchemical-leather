@@ -83,10 +83,23 @@ public final class WearPredicates {
         int withEffect=positiveFallDamage(fallDistance,safeFallWith,scale);
         int withoutEffect=positiveFallDamage(fallDistance,safeFallWithout,scale);
         if(actualDamage!=withEffect)return 0.0;
-        double withDelivered=damageAfterCooldown(withEffect,invulnerableTime,lastHurt,bypassesCooldown);
-        double withoutDelivered=damageAfterCooldown(withoutEffect,invulnerableTime,lastHurt,bypassesCooldown);
+        double withDelivered=damagePassingCooldown(withEffect,invulnerableTime,lastHurt,bypassesCooldown);
+        double withoutDelivered=damagePassingCooldown(withoutEffect,invulnerableTime,lastHurt,bypassesCooldown);
         double prevented=withoutDelivered-withDelivered;
         return Double.isFinite(prevented)&&prevented>0.0?prevented:0.0;
+    }
+
+    /**
+     * Mirrors the 26.2 LivingEntity#hurtServer i-frame gate immediately before actuallyHurt.
+     * Returning zero means the incoming damage would be rejected before any health/absorption work.
+     */
+    public static double damagePassingCooldown(double damage,int invulnerableTime,float lastHurt,boolean bypassesCooldown){
+        if(!Double.isFinite(damage)||!Float.isFinite(lastHurt)||damage<=0.0)return 0.0;
+        if(invulnerableTime>10&&!bypassesCooldown){
+            if(damage<=lastHurt)return 0.0;
+            return Math.max(0.0,damage-lastHurt);
+        }
+        return damage;
     }
 
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
@@ -181,15 +194,6 @@ public final class WearPredicates {
         if(!Double.isFinite(actualHorizontalDistance)||!Double.isFinite(impulseDistanceLimit)
             ||actualHorizontalDistance<=MOVEMENT_EPSILON||impulseDistanceLimit<=MOVEMENT_EPSILON)return 0.0;
         return Math.min(actualHorizontalDistance,impulseDistanceLimit);
-    }
-
-    private static double damageAfterCooldown(int damage,int invulnerableTime,float lastHurt,boolean bypassesCooldown){
-        if(damage<=0)return 0.0;
-        if(invulnerableTime>10&&!bypassesCooldown){
-            if(damage<=lastHurt)return 0.0;
-            return Math.max(0.0,damage-lastHurt);
-        }
-        return damage;
     }
 
     private static int positiveFallDamage(double fallDistance,double safeFall,double scale){
