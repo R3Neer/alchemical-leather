@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.r3neer.alchemicalleather.effect.EffectAttributes;
 import io.github.r3neer.alchemicalleather.effect.InfusionWear;
 import io.github.r3neer.alchemicalleather.effect.SlowFallingWear;
+import io.github.r3neer.alchemicalleather.effect.WaterBreathingWear;
 import io.github.r3neer.alchemicalleather.effect.WearPredicates;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -175,7 +176,7 @@ public abstract class WearLivingMixin {
      * Wrap the exact water-breathing query inside LivingEntity#baseTick. Reaching this call means
      * the eyes are submerged, the eye block is not a bubble column, and natural underwater
      * breathing has already failed. We still exclude creative invulnerability and independent
-     * Conduit/Nautilus breathing because those make Water Breathing non-causal.
+     * Conduit/Nautilus breathing because those make Water Breathing non-causal for drowning.
      */
     @WrapOperation(method="baseTick",at=@At(value="INVOKE",
         target="Lnet/minecraft/world/effect/MobEffectUtil;hasWaterBreathing(Lnet/minecraft/world/entity/LivingEntity;)Z"))
@@ -188,6 +189,24 @@ public abstract class WearLivingMixin {
         boolean alternate=entity.hasEffect(MobEffects.CONDUIT_POWER)||entity.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
         if(!creative&&!alternate)InfusionWear.emitBuiltin(entity,effect.getEffect(),WATER_BREATHING,1.0);
         return breathes;
+    }
+
+    /**
+     * Breath of the Nautilus independently prevents drowning but suppresses underwater air refill.
+     * At this exact helper call the air supply is already known to be below max. If vanilla says
+     * refill is allowed, Water Breathing is the but-for cause only when Nautilus is present and
+     * Conduit Power is not independently enabling the same refill.
+     */
+    @WrapOperation(method="baseTick",at=@At(value="INVOKE",
+        target="Lnet/minecraft/world/effect/MobEffectUtil;shouldEffectsRefillAirsupply(Lnet/minecraft/world/entity/LivingEntity;)Z"))
+    private boolean alchemical$waterBreathingRefillDecision(LivingEntity entity,Operation<Boolean> original){
+        boolean refill=original.call(entity);
+        if(!refill||entity.level().isClientSide())return refill;
+        var effect=entity.getEffect(MobEffects.WATER_BREATHING);
+        if(effect==null)return refill;
+        if(WaterBreathingWear.refillNeeded(entity.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS),entity.hasEffect(MobEffects.CONDUIT_POWER)))
+            InfusionWear.emitBuiltin(entity,effect.getEffect(),WATER_BREATHING,1.0);
+        return refill;
     }
 
     @WrapOperation(method="travelInAir",at=@At(value="INVOKE",
