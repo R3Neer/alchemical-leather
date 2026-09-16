@@ -71,6 +71,18 @@ public final class WearFinalAuditTests {
         h.succeed();
     }
 
+    @GameTest public void jumpBoostFallProtectionRespectsVanillaDamageCooldown(GameTestHelper h){
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(5.0D,1.0D,1.0D,4.0D,3.0D,1,20,2.0F,false)==0.0D,
+            "If i-frames would reject both fall-damage values, Jump Boost did no causal protective work");
+        h.assertTrue(Math.abs(WearPredicates.jumpBoostFallDamagePrevented(6.0D,1.0D,1.0D,4.0D,3.0D,2,20,2.5F,false)-0.5D)<1.0E-9,
+            "When only the larger counterfactual crosses lastHurt, Jump Boost bills the incremental damage it really prevents");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(5.0D,1.0D,1.0D,4.0D,3.0D,1,20,2.0F,true)==1.0D,
+            "A source that bypasses cooldown retains the ordinary Jump Boost contribution");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(5.0D,1.0D,1.0D,4.0D,3.0D,0,0,0.0F,true)==0.0D,
+            "If a foreign hook changes calculateFallDamage away from vanilla's live result, attribution fails closed");
+        h.succeed();
+    }
+
     @GameTest public void slowFallingResetOnlyPaysWhenItActuallyErasesFallDistance(GameTestHelper h){
         h.assertTrue(SlowFallingWear.fallDistanceResetNeeded(5.0F,0.0F,false),
             "Slow Falling performs real work when it erases accumulated fall distance");
