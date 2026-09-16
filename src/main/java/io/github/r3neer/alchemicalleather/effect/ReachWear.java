@@ -20,7 +20,18 @@ public final class ReachWear {
     private record Candidate(MobEffectInstance effect,double contribution){}
 
     public static void emit(Player player,Holder<Attribute> attribute,double targetDistanceSqr){
-        if(player.level().isClientSide()||!Double.isFinite(targetDistanceSqr)||targetDistanceSqr<0)return;
+        emit(player,attribute,targetDistanceSqr,0.0D);
+    }
+
+    /**
+     * baselineBuffer is a vanilla acceptance margin that remains available in the counterfactual
+     * where the reach effect is removed. It is normally zero. The only current non-zero caller is
+     * 26.2 entity interaction after an explicit ATTACK_RANGE item supplied the client-side target:
+     * the server then accepts that packet within ENTITY_INTERACTION_RANGE + 3.
+     */
+    public static void emit(Player player,Holder<Attribute> attribute,double targetDistanceSqr,double baselineBuffer){
+        if(player.level().isClientSide()||!Double.isFinite(targetDistanceSqr)||targetDistanceSqr<0
+            ||!Double.isFinite(baselineBuffer)||baselineBuffer<0)return;
         var necessary=new ArrayList<Candidate>();
         double totalWeight=0.0;
         for(var effect:player.getActiveEffects()){
@@ -30,10 +41,11 @@ public final class ReachWear {
             double contribution=EffectAttributes.contribution(player,attribute,effect);
             if(contribution<=1.0E-9)continue;
 
-            // But-for test per effect. If every other active source still reaches the target after
-            // removing this one, this effect did no necessary work and must not share the bill.
+            // But-for test per effect. If every other active source plus any vanilla acceptance
+            // margin still reaches the target after removing this one, this effect did no necessary
+            // work and must not share the bill.
             double without=EffectAttributes.without(player,attribute,effect);
-            if(!needed(targetDistanceSqr,without))continue;
+            if(!needed(targetDistanceSqr,without,baselineBuffer))continue;
             necessary.add(new Candidate(effect,contribution));
             totalWeight+=contribution;
         }
@@ -54,9 +66,14 @@ public final class ReachWear {
     }
 
     static boolean needed(double targetDistanceSqr,double rangeWithoutEffect){
-        return Double.isFinite(targetDistanceSqr)&&Double.isFinite(rangeWithoutEffect)
-            &&targetDistanceSqr>=0.0&&rangeWithoutEffect>=0.0
-            &&targetDistanceSqr>rangeWithoutEffect*rangeWithoutEffect+EPS;
+        return needed(targetDistanceSqr,rangeWithoutEffect,0.0D);
+    }
+
+    static boolean needed(double targetDistanceSqr,double rangeWithoutEffect,double baselineBuffer){
+        if(!Double.isFinite(targetDistanceSqr)||!Double.isFinite(rangeWithoutEffect)||!Double.isFinite(baselineBuffer)
+            ||targetDistanceSqr<0.0||rangeWithoutEffect<0.0||baselineBuffer<0.0)return false;
+        double counterfactual=rangeWithoutEffect+baselineBuffer;
+        return Double.isFinite(counterfactual)&&targetDistanceSqr>counterfactual*counterfactual+EPS;
     }
 
     static double share(double contribution,double totalNecessaryContribution){
