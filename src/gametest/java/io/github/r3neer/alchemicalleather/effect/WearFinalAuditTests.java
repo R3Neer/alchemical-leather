@@ -57,6 +57,20 @@ public final class WearFinalAuditTests {
         h.succeed();
     }
 
+    @GameTest public void jumpBoostBillsOnlyFallDamageItsSafeDistanceActuallyPrevents(GameTestHelper h){
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(5.0D,1.0D,1.0D,4.0D,3.0D,1)==1.0D,
+            "Jump Boost I gets credit for exactly one damage point removed by its +1 safe fall distance");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(4.0D,1.0D,1.0D,4.0D,3.0D,0)==1.0D,
+            "A fully prevented first point of fall damage is still real Jump Boost work");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(3.0D,1.0D,1.0D,4.0D,3.0D,0)==0.0D,
+            "A fall already safe without Jump Boost performs no defensive work");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(8.0D,0.0D,1.0D,4.0D,3.0D,0)==0.0D,
+            "A zero fall-damage modifier makes the potion redundant and cannot create wear");
+        h.assertTrue(WearPredicates.jumpBoostFallDamagePrevented(5.0D,1.0D,1.0D,3.0D,3.0D,1)==0.0D,
+            "No effective SAFE_FALL_DISTANCE contribution means no Jump Boost credit");
+        h.succeed();
+    }
+
     @GameTest public void alexBugPheromonesBillsOnlyARealArthropodTargetVeto(GameTestHelper h){
         if(!BuiltInRegistries.MOB_EFFECT.containsKey(BUG_PHEROMONES)){h.succeed();return;}
         var player=h.makeMockPlayer(GameType.SURVIVAL);
