@@ -3,6 +3,7 @@ package io.github.r3neer.alchemicalleather.effect;
 /** Pure causal gates shared by runtime detectors and adversarial tests. */
 public final class WearPredicates {
     private static final double MOVEMENT_EPSILON=1.0E-8;
+    private static final double FALL_POWER_EPSILON=1.0E-6;
     private static final double BASE_AIR_DRAG=0.91;
     private static final double DEPTH_STRIDER_TARGET_DRAG=0.54600006;
     private static final double WEB_NORMAL_XZ=0.25;
@@ -55,6 +56,26 @@ public final class WearPredicates {
         if(contribution<=MOVEMENT_EPSILON)return 0.0;
         double work=contribution/0.1D;
         return Double.isFinite(work)&&work>0.0?work:0.0;
+    }
+
+    /**
+     * Mirrors 26.2 fall-damage flooring and measures only integer damage points that the Jump Boost
+     * SAFE_FALL_DISTANCE modifier can explain. The actual return value caps attribution so a
+     * foreign hook that raises damage cannot be hidden inside the potion's credit; a foreign
+     * reduction can never make us charge more than Jump Boost's own theoretical contribution.
+     */
+    public static double jumpBoostFallDamagePrevented(double fallDistance,double damageModifier,double fallDamageMultiplier,
+                                                       double safeFallWith,double safeFallWithout,int actualDamage){
+        if(!finite(fallDistance,damageModifier,fallDamageMultiplier,safeFallWith,safeFallWithout)
+            ||fallDistance<0.0||damageModifier<=0.0||fallDamageMultiplier<=0.0
+            ||safeFallWith<=safeFallWithout+MOVEMENT_EPSILON)return 0.0;
+        double scale=damageModifier*fallDamageMultiplier;
+        if(!Double.isFinite(scale)||scale<=0.0)return 0.0;
+        int withEffect=positiveFallDamage(fallDistance,safeFallWith,scale);
+        int withoutEffect=positiveFallDamage(fallDistance,safeFallWithout,scale);
+        int theoretical=Math.max(0,withoutEffect-withEffect);
+        int realized=Math.max(0,withoutEffect-Math.max(0,actualDamage));
+        return Math.min(theoretical,realized);
     }
 
     /** Speed/Slowness use MOVEMENT_SPEED for ordinary grounded travel, not airborne travel. */
@@ -149,6 +170,13 @@ public final class WearPredicates {
         if(!Double.isFinite(actualHorizontalDistance)||!Double.isFinite(impulseDistanceLimit)
             ||actualHorizontalDistance<=MOVEMENT_EPSILON||impulseDistanceLimit<=MOVEMENT_EPSILON)return 0.0;
         return Math.min(actualHorizontalDistance,impulseDistanceLimit);
+    }
+
+    private static int positiveFallDamage(double fallDistance,double safeFall,double scale){
+        double raw=(fallDistance+FALL_POWER_EPSILON-safeFall)*scale;
+        if(!Double.isFinite(raw)||raw<=0.0)return 0;
+        if(raw>=Integer.MAX_VALUE)return Integer.MAX_VALUE;
+        return Math.max(0,(int)Math.floor(raw));
     }
 
     private static double realizedAxisBenefit(double requested,double actual,double normalMultiplier,double weavingMultiplier){
