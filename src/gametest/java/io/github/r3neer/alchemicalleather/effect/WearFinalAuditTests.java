@@ -71,6 +71,18 @@ public final class WearFinalAuditTests {
         h.succeed();
     }
 
+    @GameTest public void slowFallingResetOnlyPaysWhenItActuallyErasesFallDistance(GameTestHelper h){
+        h.assertTrue(SlowFallingWear.fallDistanceResetNeeded(5.0F,0.0F,false),
+            "Slow Falling performs real work when it erases accumulated fall distance");
+        h.assertFalse(SlowFallingWear.fallDistanceResetNeeded(0.0F,0.0F,false),
+            "An already-zero fall distance must not manufacture Slow Falling work");
+        h.assertFalse(SlowFallingWear.fallDistanceResetNeeded(5.0F,5.0F,false),
+            "An active effect that did not reset fall distance performs no reset work");
+        h.assertFalse(SlowFallingWear.fallDistanceResetNeeded(5.0F,0.0F,true),
+            "Levitation independently causes the same reset and eclipses Slow Falling attribution");
+        h.succeed();
+    }
+
     @GameTest public void alexBugPheromonesBillsOnlyARealArthropodTargetVeto(GameTestHelper h){
         if(!BuiltInRegistries.MOB_EFFECT.containsKey(BUG_PHEROMONES)){h.succeed();return;}
         var player=h.makeMockPlayer(GameType.SURVIVAL);
