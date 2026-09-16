@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Exact 2.1.9 Guster lift: the lifted target's whole commanded velocity is scaled by 1-resistance. */
+/** Exact 2.1.9 Guster lift: the lifted target's commanded velocity uses clamp(1-resistance,0,1). */
 @Pseudo
 @Mixin(targets="com.github.alexthe666.alexsmobs.entity.EntityGuster",remap=false)
 public abstract class AlexGusterKnockbackWearMixin {
@@ -32,7 +32,7 @@ public abstract class AlexGusterKnockbackWearMixin {
         double dx=extraX-lifted.getX();
         double dz=extraZ-lifted.getZ();
         double base=Math.sqrt(dx*dx+0.01D+dz*dz);
-        KnockbackWear.emitMultiplicative(lifted,base,withResistance);
+        KnockbackWear.emitUnitClampedMultiplicative(lifted,base,withResistance);
         return withResistance;
     }
 }
