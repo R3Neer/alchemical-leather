@@ -25,27 +25,18 @@ public final class KnockbackWearTests {
 
     @GameTest public void directKnockbackFormulasUseTheActualMechanicContract(GameTestHelper h){
         h.assertTrue(Math.abs(KnockbackWear.multiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
-            "A 0.5 resistance contribution removes half of a lower-clamped multiplicative two-unit impulse");
-        h.assertTrue(KnockbackWear.multiplicativeReduction(2.0D,1.5D,1.0D)==0.0D,
-            "An effect already eclipsed beyond a lower-clamped zero multiplier cannot manufacture work");
+            "A 0.5 resistance contribution removes half of a multiplicative two-unit impulse");
+        h.assertTrue(KnockbackWear.multiplicativeReduction(2.0D,1.0D,0.5D)==1.0D,
+            "The 26.2 maximum resistance value can fully suppress the remaining positive impulse");
         h.assertTrue(Math.abs(KnockbackWear.multiplicativeReduction(2.0D,0.0D,-0.5D)-1.0D)<1.0E-9,
-            "Lower-clamped mechanics preserve extra impulse from negative resistance in the counterfactual");
+            "Ordinary mechanics preserve extra impulse from reachable negative resistance in the counterfactual");
 
         h.assertTrue(Math.abs(KnockbackWear.unitClampedMultiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
-            "Unit-clamped mechanics agree below their upper clamp");
+            "Guster's unit-clamped mechanic agrees for ordinary non-negative resistance");
         h.assertTrue(KnockbackWear.unitClampedMultiplicativeReduction(2.0D,0.0D,-0.5D)==0.0D,
-            "Guster already caps negative-resistance amplification at one, so the potion cannot claim that fictional excess");
+            "Guster caps negative-resistance amplification at one, so the potion cannot claim fictional excess");
         h.assertTrue(Math.abs(KnockbackWear.unitClampedMultiplicativeReduction(2.0D,1.0D,0.0D)-2.0D)<1.0E-9,
             "A unit-clamped path credits a real transition from full impulse to zero");
-
-        h.assertTrue(Math.abs(KnockbackWear.signedMultiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
-            "Signed mechanics agree with the ordinary multiplier below one resistance");
-        h.assertTrue(KnockbackWear.signedMultiplicativeReduction(2.0D,1.5D,0.5D)==0.0D,
-            "Reversing an impulse with equal magnitude is not prevented knockback");
-        h.assertTrue(KnockbackWear.signedMultiplicativeReduction(2.0D,1.8D,0.5D)==0.0D,
-            "Increasing reversed impulse magnitude must never be billed as protection");
-        h.assertTrue(Math.abs(KnockbackWear.signedMultiplicativeReduction(2.0D,1.2D,0.7D)-0.2D)<1.0E-9,
-            "Crossing one may still reduce absolute impulse magnitude; only that reduction is work");
 
         h.assertTrue(Math.abs(KnockbackWear.subtractiveReduction(1.0D,0.75D,0.25D)-0.5D)<1.0E-9,
             "Hoglin-style subtraction bills the exact effective-power difference");
