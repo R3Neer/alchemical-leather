@@ -29,6 +29,10 @@
     "WearHoglinKnockbackMixin",
     "WearArrowKnockbackMixin",
     "WearSonicBoomKnockbackMixin",
+    "AlexGusterKnockbackWearMixin",
+    "AlexBisonKnockbackWearMixin",
+    "AlexTusklinKnockbackWearMixin",
+    "AlexRhinocerosKnockbackWearMixin",
     "AlexSoulstealWearMixin",
     "AlexBugPheromonesWearMixin"
   ],
