@@ -23,7 +23,7 @@ public abstract class WearMaceKnockbackMixin {
                                                      LivingEntity target,Vec3 direction){
         double withResistance=original.call(nearby,attribute);
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE)){
-            double base=(3.5D-direction.length())*0.7D*(attacker.fallDistance>5.0D?2.0D:1.0D);
+            double base=(3.5D-direction.length())*0.7F*(attacker.fallDistance>5.0D?2:1);
             KnockbackWear.emitMultiplicative(nearby,base,withResistance);
         }
         return withResistance;
