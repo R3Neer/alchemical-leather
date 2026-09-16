@@ -26,13 +26,22 @@ public final class WearFinalAuditTests {
     private static final Identifier SOULSTEAL=Identifier.parse("alexsmobs:soulsteal");
     private static final Identifier SPIKED_SHELL=Identifier.parse("alexsmobs:spiked_turtle_shell");
 
-    @GameTest public void explicitItemAttackRangeMakesPotionReachRedundantForAttacks(GameTestHelper h){
+    @GameTest public void explicitItemAttackRangeDoesNotLeakWorkIntoPotionReach(GameTestHelper h){
         var stack=new ItemStack(Items.STICK);
         h.assertTrue(ReachWear.attackUsesInteractionRange(stack),
             "Ordinary attacks inherit ENTITY_INTERACTION_RANGE and may therefore consume reach-effect work");
         stack.set(DataComponents.ATTACK_RANGE,new AttackRange(0.0F,6.0F,0.0F,6.0F,0.0F,1.0F));
         h.assertFalse(ReachWear.attackUsesInteractionRange(stack),
             "An explicit ATTACK_RANGE component replaces ENTITY_INTERACTION_RANGE for 26.2 attacks");
+
+        double withinServerTolerance=5.5D;
+        h.assertTrue(ReachWear.needed(withinServerTolerance*withinServerTolerance,3.0D),
+            "Without item-range context the same distance genuinely needs extra entity reach");
+        h.assertFalse(ReachWear.needed(withinServerTolerance*withinServerTolerance,3.0D,3.0D),
+            "An ATTACK_RANGE-selected entity inside vanilla's +3 server tolerance must not be billed to Reach");
+        double beyondServerTolerance=6.5D;
+        h.assertTrue(ReachWear.needed(beyondServerTolerance*beyondServerTolerance,3.0D,3.0D),
+            "Reach remains causal when even the item-range interaction tolerance cannot accept the target without it");
         h.succeed();
     }
 
