@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Exact 2.1.9 Bison launch: target resistance scales the 0.6/4.0 horizontal launch contribution. */
+/** Exact 2.1.9 Bison launch: target resistance scales the signed 0.6/4.0 horizontal contribution. */
 @Pseudo
 @Mixin(targets="com.github.alexthe666.alexsmobs.entity.EntityBison",remap=false)
 public abstract class AlexBisonKnockbackWearMixin {
@@ -22,7 +22,7 @@ public abstract class AlexBisonKnockbackWearMixin {
                                                Entity launch,boolean huge){
         double withResistance=original.call(target,attribute);
         if(attribute.equals(Attributes.KNOCKBACK_RESISTANCE))
-            KnockbackWear.emitMultiplicative(target,huge?4.0D:0.6D,withResistance);
+            KnockbackWear.emitSignedMultiplicative(target,huge?4.0D:0.6D,withResistance);
         return withResistance;
     }
 }
