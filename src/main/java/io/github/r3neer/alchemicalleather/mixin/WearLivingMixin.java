@@ -30,6 +30,7 @@ public abstract class WearLivingMixin {
     private static final Identifier SLOW_FALLING=Identifier.fromNamespaceAndPath("alchemical_leather","slow_falling_tick");
 
     @Shadow protected abstract float getWaterSlowDown();
+    @Shadow protected abstract float getJumpPower();
 
     @Unique private Vec3 alchemical$travelOrigin;
     @Unique private Vec3 alchemical$preRelativeVelocity;
@@ -40,6 +41,7 @@ public abstract class WearLivingMixin {
     @Unique private boolean alchemical$meterWaterTravel;
     @Unique private double alchemical$waterDistanceLimit;
     @Unique private double alchemical$waterDrag;
+    @Unique private double alchemical$jumpPreY=Double.NaN;
 
     @Inject(method="travel",at=@At("HEAD"))
     private void alchemical$beforeSelfMovement(Vec3 input,CallbackInfo ci){
@@ -124,18 +126,23 @@ public abstract class WearLivingMixin {
         emitMovement((LivingEntity)(Object)this,origin,limit);
     }
 
+    @Inject(method="jumpFromGround",at=@At("HEAD"))
+    private void alchemical$beforeJump(CallbackInfo ci){
+        alchemical$jumpPreY=((LivingEntity)(Object)this).getDeltaMovement().y;
+    }
+
     @Inject(method="jumpFromGround",at=@At("RETURN"))
     private void alchemical$jump(CallbackInfo ci){
         var self=(LivingEntity)(Object)this;
-        if(self.level().isClientSide()||self.isPassenger())return;
+        double preY=alchemical$jumpPreY;
+        alchemical$jumpPreY=Double.NaN;
+        if(self.level().isClientSide()||self.isPassenger()||!Double.isFinite(preY))return;
         var effect=self.getEffect(MobEffects.JUMP_BOOST);
         if(effect==null)return;
         float boost=self.getJumpBoostPower();
-        if(Float.isFinite(boost)&&boost>0.0F){
-            // Vanilla is 0.1 * level. Normalizing by 0.1 preserves the existing balance while
-            // following the contribution actually supplied by the current mechanics/mod stack.
-            InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP,boost/0.1F);
-        }
+        float boostedJumpPower=getJumpPower();
+        double work=WearPredicates.jumpBoostWork(preY,boostedJumpPower,boost,self.getDeltaMovement().y);
+        if(work>0.0)InfusionWear.emitBuiltin(self,effect.getEffect(),JUMP,work);
     }
 
     /**
