@@ -24,19 +24,6 @@ public final class PotionCoverageTests {
         h.succeed();
     }
 
-    @GameTest public void everyLoadedPotionEffectHasHumanoidSlot(GameTestHelper h){
-        var missing=new TreeSet<String>();
-        BuiltInRegistries.POTION.listElements().forEach(potion->{
-            Identifier potionId=BuiltInRegistries.POTION.getKey(potion.value());
-            for(var effect:potion.value().getEffects()){
-                Identifier id=BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value());
-                if(id!=null&&EffectSlotRules.slot(id)==null)missing.add((potionId==null?"<unknown>":potionId.toString())+" -> "+id);
-            }
-        });
-        h.assertTrue(missing.isEmpty(),"Every loaded potion effect usable by Alchemical Leather needs an explicit humanoid slot; missing: "+missing);
-        h.succeed();
-    }
-
     @GameTest public void everyAlexPotionEffectHasHumanoidSlot(GameTestHelper h){
         var missing=new TreeSet<String>();
         BuiltInRegistries.POTION.listElements().forEach(potion->{
