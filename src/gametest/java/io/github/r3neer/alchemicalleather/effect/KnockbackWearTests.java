@@ -15,15 +15,25 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 
-/** Reserved coverage for vanilla mechanics that consume KNOCKBACK_RESISTANCE outside LivingEntity#knockback. */
+/** Reserved coverage for mechanics that consume KNOCKBACK_RESISTANCE outside LivingEntity#knockback. */
 public final class KnockbackWearTests {
     private static final Identifier EFFECT=Identifier.parse("alexsmobs:knockback_resistance");
 
-    @GameTest public void directKnockbackFormulasUseTheActualVanillaContract(GameTestHelper h){
+    @GameTest public void directKnockbackFormulasUseTheActualMechanicContract(GameTestHelper h){
         h.assertTrue(Math.abs(KnockbackWear.multiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
-            "A 0.5 resistance contribution removes half of a multiplicative two-unit impulse");
+            "A 0.5 resistance contribution removes half of a clamped multiplicative two-unit impulse");
         h.assertTrue(KnockbackWear.multiplicativeReduction(2.0D,1.5D,1.0D)==0.0D,
-            "An effect already eclipsed beyond vanilla's zero multiplier cannot manufacture work");
+            "An effect already eclipsed beyond a clamped zero multiplier cannot manufacture work");
+
+        h.assertTrue(Math.abs(KnockbackWear.signedMultiplicativeReduction(2.0D,0.5D,0.0D)-1.0D)<1.0E-9,
+            "Signed mechanics agree with the ordinary multiplier below one resistance");
+        h.assertTrue(KnockbackWear.signedMultiplicativeReduction(2.0D,1.5D,0.5D)==0.0D,
+            "Reversing an impulse with equal magnitude is not prevented knockback");
+        h.assertTrue(KnockbackWear.signedMultiplicativeReduction(2.0D,1.8D,0.5D)==0.0D,
+            "Increasing reversed impulse magnitude must never be billed as protection");
+        h.assertTrue(Math.abs(KnockbackWear.signedMultiplicativeReduction(2.0D,1.2D,0.7D)-0.2D)<1.0E-9,
+            "Crossing one may still reduce absolute impulse magnitude; only that reduction is work");
+
         h.assertTrue(Math.abs(KnockbackWear.subtractiveReduction(1.0D,0.75D,0.25D)-0.5D)<1.0E-9,
             "Hoglin-style subtraction bills the exact effective-power difference");
         h.assertTrue(Math.abs(KnockbackWear.subtractiveReduction(0.4D,0.75D,0.25D)-0.15D)<1.0E-9,
